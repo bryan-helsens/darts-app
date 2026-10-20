@@ -59,7 +59,11 @@
   5. ~~first account~~ → **done 2026-10-20**: Bryan created his account after enabling signups; as the first account it is admin.
 - **First live test evening:** Saturday **21/11/2026** (December: 19/12/2026). The seed contains a planned demo event on 21/11/2026 with pin `1234`.
 - **Never verified against a real Supabase project or Netlify:** supabase.com is blocked from the container. Watch for differences between the local emulator and the real PostgREST/Auth/Realtime (see §6).
-- **Open question to Bryan:** guide the installation step by step, or start phase 2?
+- **2026-10-20, before phase 2 (Bryan's request):** fake data + redesign + manual score entry. Answers: fake data = **button in Beheer**; theme = **light with black header**; score entry = no preference → I did **both** (legs per player + a Matchen tab).
+  - Demo-data button: `DemoDataCard` on the dashboard (admins). Migration `20261020130000_demo_data.sql` adds `has_demo_data()`, `load_demo_data(jsonb)`, `remove_demo_data()`. Dataset built in the browser by `src/demo/demoData.ts` (same builder as `scripts/seed`): "Demoseizoen", 25 players, 6 played evenings on the previous 3rd Saturdays, practice evening today (pin 1234). Only ids starting with `de000000-` are touched.
+  - Redesign: light, compact; black header (`ink` #0a0a0b), blue primary (`brand`, #2563eb), red accent (`accent`, #dc2626; live badges); Inter Variable font (only Latin subsets precached). Status tones: gepland = blue, bezig = red, afgelopen = dark. Header scrolls away on phones, sticky from `md`. Sign-out sits in the staff nav. The sync badge shows "Online" on phones (full label as aria-label).
+  - Score entry: per player tap the legs won (0…need), "Verder" → confirm. Leader tab **Matchen**: all matches with filters (te spelen / gespeeld / alle) and search; tap to enter or correct. `/score` has "Andere match invoeren".
+- **Next:** phase 2 after Bryan has tried the redesign.
 
 ## 4. Phase backlog
 
@@ -82,7 +86,7 @@
 - **`src/engine`:** pure, tested tournament logic.
   - Board planning is a **deterministic replay** of `matches.finished_at` + `event_log` (boards/assign/hold/release); it is never stored. `buildEventView` uses now = max(clock, latest server timestamp incl. `started_at`).
   - Match ids are codes (`P1-R2-1`, `A-R1-3`, `P2-BAR-1`), stored as `matches.code`, unique per event.
-- **DB (`supabase/migrations`, 3 files, bundled into `supabase/setup.sql` via `npm run db:bundle`):**
+- **DB (`supabase/migrations`, 4 files, bundled into `supabase/setup.sql` via `npm run db:bundle`):**
   - triggers derive the winner from legs, advance players and apply walk-overs for withdrawn players;
   - RLS on all tables; private helpers live in schema `private`;
   - `submit_score` is the PIN RPC: idempotent via `result_client_id`;
@@ -94,7 +98,7 @@
 ## 6. Gotchas and environment notes
 
 - **Environment:** Node 22. The container has no Docker daemon (no real local Supabase) and cannot reach supabase.com. Use Chromium at `/opt/pw-browsers/chromium`; Playwright picks it up via `playwright.config.ts`. Never run `playwright install` here.
-- **Test runtimes:** `npm test` ≈ 45 s (484 tests: 4 matrix files + PGlite DB tests). `npm run test:e2e` ≈ 30 s (one full evening, including an offline scorer).
+- **Test runtimes:** `npm test` ≈ 50 s (491 tests: 4 matrix files + PGlite DB tests). `npm run test:e2e` ≈ 30 s on a **Pixel 7 viewport** (one full evening, including an offline scorer). E2e selectors: legs buttons via `[data-legs-row="1"] button`, pin via `[data-pin]`, sync badge via its accessible name.
 - **Generated files are checked by tests.** After changing migrations, run `npm run db:bundle`. After changing the seed schema or engine output, run `npm run seed`.
 - **PGlite:** pass `parsers` per query (DATE/TIME as text, TIMESTAMPTZ → ISO, INT8 → number). Script imports from the scratchpad need absolute paths; use `.mjs`/`.mts` for top-level await.
 - **E2e lesson:** never `page.goto` right after a click that fires a request; wait for the resulting URL or state (CI is slower).
@@ -110,3 +114,5 @@
 
 - 2026-10-20: created after phase 1 was merged (PR #1).
 - 2026-10-20: Supabase account created and linked to the repo by Bryan (GitHub integration, Deploy to production ON); `supabase/config.toml` added and README/CLAUDE.md adapted (PR #3). The production deploy succeeded and the tables exist.
+- 2026-10-20: site live on Netlify, first admin account created, Dutch auth errors (PR #4).
+- 2026-10-20: demo-data button, redesign (blue/black/red, compact) and manual score entry (legs per player + Matchen tab) on branch `claude/new-session-bpbx7g`; not merged yet.

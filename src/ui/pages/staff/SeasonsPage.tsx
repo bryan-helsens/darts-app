@@ -7,10 +7,10 @@ import { useAuth } from '../../../data/auth';
 import { keys, useEvents, useSeasons } from '../../../data/queries';
 import type { EventRow, SeasonRow } from '../../../data/rows';
 import { formatDate, formatLongDate, shortTime, thirdSaturday, todayInBrussels } from '../../../lib/time';
-import { Badge, Button, Card, ConfirmModal, Empty, ErrorBox, Field, InfoBox, Modal, PageTitle, SectionTitle, Spinner, TextInput } from '../../components/ui';
+import { Badge, Button, Card, ConfirmModal, Empty, ErrorBox, Field, Icon, InfoBox, Modal, PageTitle, SectionTitle, Select, Spinner, TextInput } from '../../components/ui';
 import { seasonSettings } from '../../hooks';
 
-export const STATUS_TONE = { gepland: 'blue', bezig: 'amber', afgelopen: 'green' } as const;
+export const STATUS_TONE = { gepland: 'blue', bezig: 'red', afgelopen: 'dark' } as const;
 
 export function SeasonsPage() {
   const { isAdmin } = useAuth();
@@ -45,26 +45,24 @@ export function SeasonsPage() {
       </PageTitle>
       {create.error && <ErrorBox error={create.error} />}
       {(seasons ?? []).length === 0 && <Empty>Nog geen seizoenen. Maak er een aan om te beginnen.</Empty>}
-      <div className="space-y-3">
-        {(seasons ?? []).map((s) => {
-          const own = (events ?? []).filter((e) => e.season_id === s.id);
-          return (
-            <Link key={s.id} to={`/beheer/seizoenen/${s.id}`} className="block">
-              <Card className="hover:border-brand-700">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <div className="text-lg font-semibold">{s.name}</div>
-                    <div className="text-sm text-stone-500">
-                      {formatDate(s.starts_on)} – {formatDate(s.ends_on)} · {own.length} speelavonden ({own.filter((e) => e.status === 'afgelopen').length} gespeeld)
-                    </div>
+      {(seasons ?? []).length > 0 && (
+        <div className="divide-y divide-zinc-100 overflow-hidden rounded-xl border border-zinc-200 bg-white">
+          {(seasons ?? []).map((s) => {
+            const own = (events ?? []).filter((e) => e.season_id === s.id);
+            return (
+              <Link key={s.id} to={`/beheer/seizoenen/${s.id}`} className="flex items-center justify-between gap-3 px-3 py-2.5 hover:bg-zinc-50">
+                <div className="min-w-0">
+                  <div className="font-semibold text-zinc-950">{s.name}</div>
+                  <div className="text-xs text-zinc-500">
+                    {formatDate(s.starts_on)} – {formatDate(s.ends_on)} · {own.length} speelavonden ({own.filter((e) => e.status === 'afgelopen').length} gespeeld)
                   </div>
-                  <span className="text-brand-800">›</span>
                 </div>
-              </Card>
-            </Link>
-          );
-        })}
-      </div>
+                <Icon name="chevron" className="text-zinc-400" />
+              </Link>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }
@@ -120,12 +118,12 @@ export function SeasonDetailPage() {
       {own.length === 0 ? (
         <Empty>Nog geen speelavonden in dit seizoen.</Empty>
       ) : (
-        <div className="space-y-2">
+        <div className="divide-y divide-zinc-100 overflow-hidden rounded-xl border border-zinc-200 bg-white">
           {own.map((e) => (
-            <Card key={e.id} className="flex flex-wrap items-center justify-between gap-3">
-              <div>
-                <div className="font-semibold">{formatLongDate(e.event_date)}</div>
-                <div className="text-sm text-stone-500">
+            <div key={e.id} className="flex flex-wrap items-center justify-between gap-2 px-3 py-2">
+              <div className="min-w-0">
+                <div className="text-sm font-semibold text-zinc-950">{formatLongDate(e.event_date)}</div>
+                <div className="text-xs text-zinc-500">
                   {shortTime(e.start_time).replace(':', 'u')} · {e.boards} borden {e.notes && `· ${e.notes}`}
                 </div>
               </div>
@@ -140,7 +138,7 @@ export function SeasonDetailPage() {
                   <Button size="sm">Openen</Button>
                 </Link>
               </div>
-            </Card>
+            </div>
           ))}
         </div>
       )}
@@ -236,13 +234,13 @@ function NumberInput({ value, onChange, min = 0, max = 999, step = 1 }: { value:
 function LegsInput({ label, value, onChange }: { label: string; value: number; onChange: (v: number) => void }) {
   return (
     <Field label={label}>
-      <select className="w-full rounded-xl border border-stone-300 bg-white px-3 py-2.5" value={value} onChange={(e) => onChange(Number(e.target.value))}>
+      <Select value={value} onChange={(e) => onChange(Number(e.target.value))}>
         {[1, 3, 5, 7, 9].map((n) => (
           <option key={n} value={n}>
             best of {n}
           </option>
         ))}
-      </select>
+      </Select>
     </Field>
   );
 }
@@ -269,15 +267,15 @@ function SeasonSettingsForm({ season }: { season: SeasonRow }) {
   return (
     <div>
       <SectionTitle>Instellingen van het seizoen</SectionTitle>
-      <Card className="space-y-6">
+      <Card className="space-y-5">
         <Field label="Naam van het seizoen">
           <TextInput value={name} onChange={(e) => setName(e.target.value)} />
         </Field>
 
         <div>
-          <h3 className="mb-2 font-semibold">Puntentabel</h3>
+          <h3 className="mb-2 text-sm font-semibold text-zinc-950">Puntentabel</h3>
           <table className="w-full text-sm">
-            <thead className="text-stone-500">
+            <thead className="text-zinc-500">
               <tr>
                 <th className="text-left">Van plaats</th>
                 <th className="text-left">Tot plaats</th>
@@ -293,7 +291,7 @@ function SeasonSettingsForm({ season }: { season: SeasonRow }) {
                   </td>
                   <td className="py-1 pr-2">
                     {r.to === null ? (
-                      <span className="text-stone-500">en verder</span>
+                      <span className="text-zinc-500">en verder</span>
                     ) : (
                       <NumberInput value={r.to} min={1} onChange={(v) => setRule(i, { to: v })} />
                     )}
@@ -331,7 +329,7 @@ function SeasonSettingsForm({ season }: { season: SeasonRow }) {
           >
             + Regel
           </Button>
-          {tableError && <p className="mt-2 text-sm text-red-700">{tableError}</p>}
+          {tableError && <p className="mt-2 text-sm text-accent-700">{tableError}</p>}
           <div className="mt-3 max-w-xs">
             <Field label="Deelnamepunten per avond">
               <NumberInput value={s.points.participation} onChange={(v) => setS((x) => ({ ...x, points: { ...x.points, participation: v } }))} />
@@ -340,9 +338,9 @@ function SeasonSettingsForm({ season }: { season: SeasonRow }) {
         </div>
 
         <div>
-          <h3 className="mb-2 font-semibold">Beste X van Y</h3>
-          <label className="mb-2 flex items-center gap-3">
-            <input type="checkbox" className="h-6 w-6" checked={s.bestOf.enabled} onChange={(e) => setS((x) => ({ ...x, bestOf: { ...x.bestOf, enabled: e.target.checked } }))} />
+          <h3 className="mb-2 text-sm font-semibold text-zinc-950">Beste X van Y</h3>
+          <label className="mb-2 flex items-center gap-2.5 text-sm">
+            <input type="checkbox" className="h-5 w-5 accent-brand-600" checked={s.bestOf.enabled} onChange={(e) => setS((x) => ({ ...x, bestOf: { ...x.bestOf, enabled: e.target.checked } }))} />
             Enkel de beste avonden tellen mee (deelnamepunten inbegrepen)
           </label>
           {s.bestOf.enabled && (
@@ -358,7 +356,7 @@ function SeasonSettingsForm({ season }: { season: SeasonRow }) {
         </div>
 
         <div>
-          <h3 className="mb-2 font-semibold">Legs per ronde</h3>
+          <h3 className="mb-2 text-sm font-semibold text-zinc-950">Legs per ronde</h3>
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
             <LegsInput label="Poules" value={s.legs.pool} onChange={(v) => setS((x) => ({ ...x, legs: { ...x.legs, pool: v } }))} />
             <LegsInput label="Barrage" value={s.legs.barrage} onChange={(v) => setS((x) => ({ ...x, legs: { ...x.legs, barrage: v } }))} />
@@ -373,7 +371,7 @@ function SeasonSettingsForm({ season }: { season: SeasonRow }) {
         </div>
 
         <div>
-          <h3 className="mb-2 font-semibold">Avond en tijdsinschatting</h3>
+          <h3 className="mb-2 text-sm font-semibold text-zinc-950">Avond en tijdsinschatting</h3>
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
             <Field label="Start">
               <TextInput type="time" value={s.startTime} onChange={(e) => setS((x) => ({ ...x, startTime: e.target.value }))} />
@@ -400,18 +398,18 @@ function SeasonSettingsForm({ season }: { season: SeasonRow }) {
               <NumberInput value={s.advancePerPool} min={1} max={4} onChange={(v) => setS((x) => ({ ...x, advancePerPool: v }))} />
             </Field>
           </div>
-          <label className="mt-3 flex items-center gap-3">
-            <input type="checkbox" className="h-6 w-6" checked={s.holdFinal} onChange={(e) => setS((x) => ({ ...x, holdFinal: e.target.checked }))} />
+          <label className="mt-3 flex items-center gap-2.5 text-sm">
+            <input type="checkbox" className="h-5 w-5 accent-brand-600" checked={s.holdFinal} onChange={(e) => setS((x) => ({ ...x, holdFinal: e.target.checked }))} />
             De A-finale wordt als laatste op het hoofdbord gespeeld
           </label>
         </div>
 
         {save.error && <ErrorBox error={save.error} />}
-        {saved && <InfoBox tone="green">Opgeslagen.</InfoBox>}
+        {saved && <InfoBox>Opgeslagen.</InfoBox>}
         <Button size="lg" onClick={() => save.mutate()} disabled={save.isPending || Boolean(tableError)}>
           Instellingen opslaan
         </Button>
-        <p className="text-sm text-stone-500">
+        <p className="text-sm text-zinc-500">
           De puntentabel en “beste X van Y” gelden meteen voor de hele seizoensranking. Legs, tijden en doorstromers gelden voor avonden die nog moeten starten.
         </p>
       </Card>

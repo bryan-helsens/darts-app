@@ -227,3 +227,9 @@ export async function fetchPlayerData(playerId: string): Promise<{ results: Even
   ]);
   return { results, matches, stats };
 }
+
+// ---------- Demo-data (enkel admins) ----------
+
+export const hasDemoData = () => rpc<boolean>('has_demo_data', {});
+export const loadDemoData = (data: unknown) => rpc('load_demo_data', { p_data: data });
+export const removeDemoData = () => rpc('remove_demo_data', {});

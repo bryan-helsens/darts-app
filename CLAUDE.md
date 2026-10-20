@@ -33,6 +33,7 @@ src/engine/   Pure toernooilogica (geen React/Supabase; afgedwongen via ESLint)
 src/data/     Supabase-client, API, queries (TanStack Query), realtime, offline-outbox, eventView
 src/ui/       React-schermen (components/, layout/, pages/{public,staff,evening,print})
 src/lib/      Tijd (Europe/Brussels, dd/mm/jjjj, "19u00"), namen (dubbels zoeken)
+src/demo/     Demo-dataset (gedeeld door de knop "Demo-data laden" en scripts/seed)
 supabase/     migrations/ (bron van waarheid), config.toml, setup.sql (gebundeld), seed.sql, demo-cleanup.sql
 scripts/      seed-generator, migratiebundel, lokale Supabase-nabootsing (scripts/local)
 tests/        engine-invarianten + matrix, PGlite-databasetests
@@ -58,6 +59,7 @@ e2e/          Playwright
 - Eerste account wordt automatisch admin (`private.handle_new_user`); volgende accounts zijn `aanvraag` tot een admin ze goedkeurt.
 - Audit-log via triggers; `app.skip_audit` / `app.skip_advance` (transactie-lokaal) voor bulkbewerkingen (seed, samenvoegen, anonimiseren).
 - Matchcodes (`P1-R2-1`, `A-R1-3`, `P2-BAR-1`) zijn de engine-id's; `src/data/mappers.ts` zet rijen om.
+- Demo-data: `load_demo_data(jsonb)` / `remove_demo_data()` / `has_demo_data()` (admin). Alle demo-id's beginnen met `de000000-`; enkel die rijen worden geladen of verwijderd. De dataset bouwt `src/demo/demoData.ts` in de browser (zelfde bouwer als de seed).
 
 ### Data en offline (src/data)
 - `eventView.buildEventView(bundle, now)`: alles wat een avondscherm nodig heeft (fase, replay, forecast, stand, eindplaatsen). "Nu" = max(klok, laatste servertijdstip).
@@ -69,7 +71,9 @@ e2e/          Playwright
 - Alle tekst voor gebruikers in het Nederlands (Vlaams): datums `dd/mm/jjjj`, uren `19u00`, tijdzone Europe/Brussels (`src/lib/time.ts`). Gebruik nooit `toLocaleString` zonder tijdzone.
 - Codecommentaar in het Nederlands; namen van variabelen en functies in het Engels.
 - Engine-functies zijn puur en immutabel (geven nieuwe arrays terug). Schrijf tests mee, zeker voor alles in `src/engine`.
-- Grote aanraakdoelen (min. ±48 px), één-duimbediening, bevestigingsscherm voor uitslagen.
+- Grote aanraakdoelen (min. ±48 px) waar het telt (scores, check-in), één-duimbediening, bevestigingsscherm voor uitslagen.
+- Huisstijl: licht en compact, zwarte kop (`bg-ink`), blauw als hoofdkleur (`brand-*`), rood als accent (`accent-*`, ook voor "live"), lettertype Inter. Kleuren staan als tokens in `src/index.css` (`@theme`); bouwstenen in `src/ui/components/ui.tsx` (Button, Card, Badge, Stats, Segmented, SearchInput, Icon, …). Geen emerald/groen meer.
+- Scores invoeren: per speler het aantal gewonnen legs (`ScoreEntry`, rijen met `data-legs-row`). Het tabblad **Matchen** (`MatchesPanel`) laat de leider elke match achteraf invoeren of corrigeren.
 - Hardcodeer nergens een domein; Supabase-URL en -sleutel komen uit `VITE_SUPABASE_URL` / `VITE_SUPABASE_ANON_KEY`.
 - Privacy: publiek enkel naam en bijnaam. Contactgegevens nooit in publieke queries of logs.
 
