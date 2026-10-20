@@ -44,6 +44,7 @@
 
 - **Phase 1 (MVP) is DONE and merged** into `main`: PR bryan-helsens/darts-app#1, merge commit `0e0ff03`, 2026-10-20. CI (GitHub Actions "Tests") was green.
 - **Branch:** `claude/new-session-bpbx7g`, restarted from `main` after the merge. After a merge, always restart the branch from `origin/main` for follow-up work; never stack new commits on merged history.
+- **2026-10-20:** Bryan created a Supabase account and connected it to this GitHub repo; which integration features are on (migration deploys to production, branching) is still to be confirmed. With the GitHub integration, migrations in `supabase/migrations` may be applied automatically. Then do **not** also run `supabase/setup.sql` by hand: pick one way. Note that `supabase/seed.sql` is what Supabase preview branches load.
 - **Not yet done, by Bryan** (README §2):
   1. create a Supabase project and run `supabase/setup.sql` in the SQL editor;
   2. Auth → Email: turn **Confirm email OFF** (the free SMTP only mails team members);
@@ -102,3 +103,4 @@
 ## 7. Change log of this memory
 
 - 2026-10-20: created after phase 1 was merged (PR #1).
+- 2026-10-20: Supabase account created and linked to the repo by Bryan.
