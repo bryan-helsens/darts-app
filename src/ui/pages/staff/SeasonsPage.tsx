@@ -1,7 +1,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { DEFAULT_SEASON_SETTINGS, validatePointsTable, type BracketLegs, type PointsRule, type SeasonSettings } from '../../../engine';
+import { DEFAULT_SEASON_SETTINGS, validatePointsTable, type BracketLegs, type PointsRule, type SeasonSettings, type SeedingSource } from '../../../engine';
 import { createEvent, createSeason, deleteEvent, updateEvent, updateSeason } from '../../../data/api';
 import { useAuth } from '../../../data/auth';
 import { keys, useEvents, useSeasons } from '../../../data/queries';
@@ -402,6 +402,35 @@ function SeasonSettingsForm({ season }: { season: SeasonRow }) {
             <input type="checkbox" className="h-4 w-4 accent-brand-600" checked={s.holdFinal} onChange={(e) => setS((x) => ({ ...x, holdFinal: e.target.checked }))} />
             De A-finale wordt als laatste op het hoofdbord gespeeld
           </label>
+        </div>
+
+        <div>
+          <h3 className="mb-1.5 text-[13px] font-semibold text-zinc-950">Loting en Elo</h3>
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+            <Field label="Standaard seeding">
+              <Select value={s.seeding} onChange={(e) => setS((x) => ({ ...x, seeding: e.target.value as SeedingSource }))}>
+                <option value="elo">Elo</option>
+                <option value="ranking">Seizoensranking</option>
+                <option value="random">Willekeurig</option>
+              </Select>
+            </Field>
+            <Field label="Elo bij de start">
+              <NumberInput value={s.elo.start} min={100} max={3000} onChange={(v) => setS((x) => ({ ...x, elo: { ...x.elo, start: v } }))} />
+            </Field>
+            <Field label="K-factor">
+              <NumberInput value={s.elo.k} min={1} max={100} onChange={(v) => setS((x) => ({ ...x, elo: { ...x.elo, k: v } }))} />
+            </Field>
+            <Field label="K-factor nieuwe spelers">
+              <NumberInput value={s.elo.newcomerK} min={1} max={100} onChange={(v) => setS((x) => ({ ...x, elo: { ...x.elo, newcomerK: v } }))} />
+            </Field>
+            <Field label="Nieuw tot en met match">
+              <NumberInput value={s.elo.newcomerMatches} min={0} max={100} onChange={(v) => setS((x) => ({ ...x, elo: { ...x.elo, newcomerMatches: v } }))} />
+            </Field>
+          </div>
+          <p className="mt-1.5 text-2xs text-zinc-500">
+            De Elo-instellingen gelden voor de matchen van dit seizoen. Een hogere K laat de rating sneller bewegen; nieuwe spelers krijgen een hogere K zodat ze snel op hun niveau
+            komen.
+          </p>
         </div>
 
         {save.error && <ErrorBox error={save.error} />}

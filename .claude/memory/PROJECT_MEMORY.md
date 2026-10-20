@@ -70,8 +70,9 @@
   - Touch-target convention in CLAUDE.md lowered accordingly (was ±48 px).
 - **Phase 2 started 2026-10-20** (plan approved; plan file `/root/.claude/plans/zazzy-orbiting-brooks.md`). Decisions: online pre-registration = pick your name or "Ik ben nieuw" (new names `players.pending` until checked in); double elimination with ONE grand final (no reset); plate = all losers of main R1 and R2 when there are byes (else R1 only); default seeding = Elo (leader can switch per evening to ranking/random). Own choices: Elo derived (not stored), per-season Elo settings (start 1500, K 32, newcomer K 48 for 10 matches), seed snapshot stored in TournamentConfig at start, scorer suggestion derived, public sees only the pre-registration count, CSV with `;` + BOM, JSON backup admin-only incl. contacts.
   - Sub-phases, one PR each: **2a** pre-registration + TV + scorer suggestion; **2b** Elo + seeding choice + leaderboards + share image; **2c** audit-log screen + CSV/JSON export; **2d** double elim + plate (engine PR first, then DB+UI; design: `resolveBracket` with symbolic sources, stages W/L/GF and M/P, `isEventFinal`, longest-chain KO priority, `eliminationPlacements`, byte-identical seed.sql as regression check).
-  - **2a done on the branch:** migration `20261020150000_preregistration.sql` (`players.pending`, `registration_attempts`, `preregister` RPC, confirm-on-check-in trigger), `/inschrijven/:eventId`, `src/engine/scorer.ts`, `/tv` (`src/ui/pages/tv`).
-- **Next:** finish phase 2 (2b → 2c → 2d).
+  - **2a merged as PR #7** (squash `bd72bb9`): migration `20261020150000_preregistration.sql` (`players.pending`, `registration_attempts`, `preregister` RPC, confirm-on-check-in trigger), `/inschrijven/:eventId`, `src/engine/scorer.ts`, `/tv` (`src/ui/pages/tv`).
+  - **2b done on the branch:** `src/engine/elo.ts` (+ `SeasonSettings.elo`, `seeding`), `src/engine/leaderboards.ts`, `useElo()` + paginated `fetchEloMatches`, seeding Segmented in StartPanel with snapshot in TournamentConfig, ranking page tabs (Punten/Elo/180's/Uitgooi/Deelnames/Nieuwkomers), Elo on the player profile, share image `src/ui/share/*`.
+- **Next:** finish phase 2 (2c → 2d).
 
 ## 4. Phase backlog
 
@@ -106,7 +107,7 @@
 ## 6. Gotchas and environment notes
 
 - **Environment:** Node 22. The container has no Docker daemon (no real local Supabase) and cannot reach supabase.com. Use Chromium at `/opt/pw-browsers/chromium`; Playwright picks it up via `playwright.config.ts`. Never run `playwright install` here.
-- **Test runtimes:** `npm test` ≈ 50 s (505 tests: 4 matrix files + PGlite DB tests). `npm run test:e2e` ≈ 30 s on a **Pixel 7 viewport** (one full evening, including an offline scorer). E2e selectors: check-in rows via `[data-player-row]`, legs buttons via `[data-legs-row="1"] button`, pin via `[data-pin]`, sync badge via its accessible name.
+- **Test runtimes:** `npm test` ≈ 50 s (520 tests: 4 matrix files + PGlite DB tests). `npm run test:e2e` ≈ 30 s on a **Pixel 7 viewport** (one full evening, including an offline scorer). E2e selectors: check-in rows via `[data-player-row]`, legs buttons via `[data-legs-row="1"] button`, pin via `[data-pin]`, sync badge via its accessible name.
 - **Generated files are checked by tests.** After changing migrations, run `npm run db:bundle`. After changing the seed schema or engine output, run `npm run seed`.
 - **PGlite:** pass `parsers` per query (DATE/TIME as text, TIMESTAMPTZ → ISO, INT8 → number). Script imports from the scratchpad need absolute paths; use `.mjs`/`.mts` for top-level await.
 - **E2e lesson:** never `page.goto` right after a click that fires a request; wait for the resulting URL or state (CI is slower).

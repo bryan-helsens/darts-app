@@ -15,3 +15,5 @@ export * from './estimate';
 export * from './tournament';
 export * from './simulate';
 export * from './scorer';
+export * from './elo';
+export * from './leaderboards';

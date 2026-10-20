@@ -12,6 +12,7 @@ import {
   type Pool,
   type ScheduleConfig,
   type ScheduleLogEntry,
+  type SeedingSource,
   type TimingSettings,
 } from '../engine';
 import type { EventLogRow, EventRow, MatchRow, PoolMemberRow, PoolRow } from './rows';
@@ -102,6 +103,10 @@ export interface TournamentConfig {
   boards: number[];
   mainBoard: number;
   holdFinal: boolean;
+  /** Gekozen seedingbron bij de start. */
+  seeding?: SeedingSource;
+  /** Seedingrangen bij de start (momentopname, 1 = sterkste); ook gebruikt bij gelijke stand voor de KO. */
+  seedRanks?: Record<string, number>;
 }
 
 export function tournamentConfig(event: EventRow): TournamentConfig | null {
@@ -116,6 +121,8 @@ export function tournamentConfig(event: EventRow): TournamentConfig | null {
     boards: t.boards ?? Array.from({ length: event.boards }, (_, i) => i + 1),
     mainBoard: t.mainBoard ?? event.main_board,
     holdFinal: t.holdFinal ?? true,
+    seeding: t.seeding,
+    seedRanks: t.seedRanks,
   };
 }
 

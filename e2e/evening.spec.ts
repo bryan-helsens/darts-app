@@ -161,6 +161,17 @@ test('een volledige speelavond', async ({ page, browser }) => {
   await page.goto('/ranking');
   await expect(page.locator('tbody tr')).toHaveCount(9);
   await expect(page.locator('tbody tr').first()).toContainText('27');
+
+  // Elo-klassement: alle 9 spelers hebben nu een rating.
+  await page.goto('/ranking?klassement=elo');
+  await expect(page.locator('tbody tr')).toHaveCount(9);
+
+  // Deelbare uitslag: een PNG van de avond.
+  await page.goto('/');
+  await page.getByRole('link', { name: 'Volledige uitslag' }).click();
+  await page.getByRole('button', { name: 'Deel de uitslag' }).click();
+  const [download] = await Promise.all([page.waitForEvent('download'), page.getByRole('dialog').getByRole('button', { name: 'Downloaden' }).click()]);
+  expect(download.suggestedFilename()).toMatch(/^sanapolis-darts-\d{4}-\d{2}-\d{2}\.png$/);
 });
 
 async function enterScoreOffline(scorer: Page) {

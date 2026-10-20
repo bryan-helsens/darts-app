@@ -50,6 +50,8 @@ e2e/          Playwright
 - `estimate`: eindtijd vóór de start (virtuele avond) en live (gekalibreerde min/leg); `suggestAdjustments`.
 - `placements` / `points` / `ranking`: gedeelde plaatsen per ronde (A dan B), punten van de hoogste plaats in het bereik, beste X van Y (op totaal per avond, deelnamepunten inbegrepen).
 - `simulate`: speelt volledige avonden (tests + seed).
+- `elo`: Elo afgeleid uit alle gespeelde matchen (niet opgeslagen), chronologisch; per match de Elo-instellingen van haar seizoen (`SeasonSettings.elo`); walk-overs tellen niet. `eloSeedRanks` voor de loting.
+- `leaderboards`: extra klassementen (180's, hoogste uitgooi, deelnames, beste nieuwkomer).
 - `scorer`: schrijver-suggestie per bord, afgeleid (niet opgeslagen): verliezer van de vorige match op dat bord, anders wie het langst vrij is; nooit wie speelt of de volgende match op dat bord heeft.
 - Alle randomness via `createRng(seed)` / `lotValue(seed, …)`; de seed per avond is `events.rng_seed`.
 
@@ -65,7 +67,8 @@ e2e/          Playwright
 
 ### Data en offline (src/data)
 - `eventView.buildEventView(bundle, now)`: alles wat een avondscherm nodig heeft (fase, replay, forecast, stand, eindplaatsen, schrijver per bord).
-- `registration`: tot wanneer online inschrijven kan (`onlineRegistrationOpen`). "Nu" = max(klok, laatste servertijdstip).
+- `registration`: tot wanneer online inschrijven kan (`onlineRegistrationOpen`).
+- Elo: `fetchEloMatches` haalt alle gespeelde matchen op per 1000 (PostgREST-limiet); `useElo()` (src/ui/hooks.ts) rekent ze om. Bij de start bewaart `TournamentConfig` de gekozen seedingbron en een momentopname `seedRanks` (ook gebruikt voor de KO). "Nu" = max(klok, laatste servertijdstip).
 - `outbox`: scores en check-in gaan via IndexedDB en worden met retry gesynchroniseerd. `SyncBadge` toont de status. Na een sync werkt `App.tsx` de cache meteen bij.
 - Query-cache wordt bewaard in localStorage (offline tonen); `staleTime: 0`, zodat online altijd ververst wordt.
 - Realtime: `useEventRealtime` + polling elke 30 s als vangnet.
@@ -76,6 +79,7 @@ e2e/          Playwright
 - Engine-functies zijn puur en immutabel (geven nieuwe arrays terug). Schrijf tests mee, zeker voor alles in `src/engine`.
 - Compact maar duimvriendelijk: knoppen standaard 36 px (`h-9`); scoreknoppen 44 px, check-inknoppen 36 px over een volle rij. Eén-duimbediening, bevestigingsscherm voor uitslagen.
 - Huisstijl: licht, compact en modern. Basistekst 14 px (`text-sm`), meta 12 px, labels 11 px (`text-2xs`, eigen token); invoervelden 16 px op gsm (`text-base sm:text-sm`, anders zoomt iOS in). Zwarte kop (`bg-ink`, 48 px), blauw als hoofdkleur (`brand-*`), rood als accent (`accent-*`, ook voor "live"), lettertype Inter, afgeronde hoeken `rounded-md`/`rounded-lg`. Kleuren en tokens in `src/index.css` (`@theme`); bouwstenen in `src/ui/components/ui.tsx` (Button, Card, List + `rowClass`, Badge, Stats, Segmented, SearchInput, DateTile, Icon, …). Geen emerald/groen.
+- Deelbare uitslag (`src/ui/share`): `resultImageData` (puur, getest) + `drawResultImage` (canvas 1080×1080) + `ShareResultButton` (Web Share of download).
 - TV-modus (`src/ui/pages/tv`): eigen donkere componenten; `TvPage` schaalt de rem mee met de schermbreedte en houdt het scherm wakker. `?toon=<scherm>` zet één scherm vast.
 - Indeling (`src/ui/layout/Layouts.tsx`): op gsm een tabbalk onderaan (zoals een app), vanaf `md` de navigatie in de kop. Matchen tonen als scorebord (`MatchLine`: twee regels, legs rechts) en in rasters van tegeltjes (`MatchTile` + `TileGrid`, 2 kolommen op gsm).
 - Scores invoeren: per speler het aantal gewonnen legs (`ScoreEntry`, rijen met `data-legs-row`). Het tabblad **Matchen** (`MatchesPanel`) laat de leider elke match achteraf invoeren of corrigeren.

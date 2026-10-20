@@ -127,6 +127,18 @@ export function RulesPage() {
         </p>
       </Card>
       <Card className="space-y-2 text-[13px] leading-relaxed text-zinc-700">
+        <h2 className="text-sm font-semibold text-zinc-950">Elo-rating en loting</h2>
+        <p>
+          Naast de seizoensranking heeft elke speler een <b>Elo-rating</b>: een getal voor je niveau over alle avonden en seizoenen heen. Iedereen start op{' '}
+          {s.elo.start}. Win je van een sterkere tegenstander, dan stijg je veel; verlies je van een zwakkere, dan daal je veel. Walk-overs tellen niet mee. Je eerste{' '}
+          {s.elo.newcomerMatches} matchen tellen zwaarder, zodat je rating snel op niveau komt.
+        </p>
+        <p>
+          Bij de loting worden de sterkste spelers gespreid over de poules (en in het schema), standaard op basis van {s.seeding === 'ranking' ? 'de seizoensranking' : s.seeding === 'elo' ? 'de Elo-rating' : 'niets: alles wordt willekeurig geloot'}. Spelers
+          zonder rating worden willekeurig verdeeld.
+        </p>
+      </Card>
+      <Card className="space-y-2 text-[13px] leading-relaxed text-zinc-700">
         <h2 className="text-sm font-semibold text-zinc-950">Privacy</h2>
         <p>
           Van spelers bewaren we enkel de naam, een eventuele bijnaam en (optioneel) een e-mailadres of gsm-nummer. Publiek is enkel de naam zichtbaar. Wil je dat je

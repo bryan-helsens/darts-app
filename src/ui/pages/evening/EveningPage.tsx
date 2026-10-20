@@ -1,11 +1,12 @@
 import { useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
+import { eloSeedRanks } from '../../../engine';
 import { buildEventView, PHASE_LABEL } from '../../../data/eventView';
 import { useEventBundle, usePlayerDirectory, useRegistrations, useScorerPin, useSeasons } from '../../../data/queries';
 import { formatLongDate } from '../../../lib/time';
 import { PlacementsTable } from '../../components/darts';
 import { Badge, ErrorBox, Icon, Spinner, Tabs } from '../../components/ui';
-import { seasonSettings, seedRanksFrom, useNow, useSeasonRanking } from '../../hooks';
+import { seasonSettings, seedRanksFrom, useElo, useNow, useSeasonRanking } from '../../hooks';
 import { CheckInPanel } from './CheckInPanel';
 import { BoardsPanel, BracketPanel, FinishPanel, PoolsPanel } from './LivePanels';
 import { MatchesPanel } from './MatchesPanel';
@@ -25,7 +26,16 @@ export function EveningPage() {
   const season = seasons?.find((s) => s.id === bundle.data?.event.season_id);
   const settings = seasonSettings(season);
   const { rows: ranking } = useSeasonRanking(season);
-  const seedRanks = useMemo(() => seedRanksFrom(ranking), [ranking]);
+  const { elo } = useElo();
+  const rankingRanks = useMemo(() => seedRanksFrom(ranking), [ranking]);
+  const seedSources = useMemo(
+    () => ({
+      elo: elo ? eloSeedRanks(elo, directory.list.map((p) => p.id)) : new Map<string, number>(),
+      ranking: rankingRanks,
+      random: new Map<string, number>(),
+    }),
+    [elo, directory.list, rankingRanks],
+  );
   const view = useMemo(() => (bundle.data ? buildEventView(bundle.data, now) : null), [bundle.data, now]);
   const [tab, setTab] = useState<Tab | null>(null);
 
@@ -94,10 +104,10 @@ export function EveningPage() {
       <Tabs value={active} onChange={setTab} tabs={tabs} />
 
       {active === 'checkin' && (registrations.data ? <CheckInPanel event={event} registrations={registrations.data} entryFee={settings.entryFee} /> : <Spinner />)}
-      {active === 'start' && (registrations.data ? <StartPanel event={event} registrations={registrations.data} settings={settings} seedRanks={seedRanks} /> : <Spinner />)}
+      {active === 'start' && (registrations.data ? <StartPanel event={event} registrations={registrations.data} settings={settings} seedSources={seedSources} /> : <Spinner />)}
       {active === 'borden' && <BoardsPanel view={view} name={name} onGoTo={setTab} />}
       {active === 'matchen' && <MatchesPanel view={view} name={name} />}
-      {active === 'poules' && <PoolsPanel view={view} name={name} seedRanks={seedRanks} />}
+      {active === 'poules' && <PoolsPanel view={view} name={name} seedRanks={view.config?.seedRanks ? new Map(Object.entries(view.config.seedRanks)) : rankingRanks} />}
       {active === 'schema' && <BracketPanel view={view} name={name} />}
       {active === 'afsluiten' && <FinishPanel view={view} name={name} settings={settings} />}
       {active === 'uitslag' &&

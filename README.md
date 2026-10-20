@@ -18,7 +18,7 @@ Webapp voor het maandelijkse dartstoernooi in **Brasserie 't Oud Sanatorium** (S
 2. Ga naar **Beheer → Avond openen**. Rechtsboven staat de **score-pin** voor de schrijvers. (Op de gsm zit de navigatie in de balk onderaan; afmelden doe je met het pijltje rechtsboven.)
 3. **Check-in**: wie zich vooraf online inschreef, staat al in de lijst (label *vooraf*; een nieuwe speler heeft ook *nieuw · online*). Zoek elke speler en tik op **Aanwezig?** en **€5?**. Een online nieuwe speler wordt pas publiek zichtbaar als je hem aanwezig zet; was het eigenlijk iemand die al bestond, voeg ze dan samen via Spelers → speler → *Samenvoegen*. Nieuwe speler? Typ de naam en tik op **+ Nieuwe speler**. De app waarschuwt als er al iemand met een gelijkaardige naam bestaat. Bovenaan zie je het aantal aanwezigen, het aantal dat betaald heeft en de prijzenpot.
 4. Spelers die vooraf ingeschreven waren maar niet komen, laat je gewoon op "Aanwezig?" staan. Om 18u30 sluit de inschrijving; met **Toch heropenen** kan je nog spelers toevoegen.
-5. **Starten**: kies de poule-indeling. Bij elke optie staat de **geschatte eindtijd**. Is die te laat, dan stelt de app aanpassingen voor (bv. poules best of 1). Tik op **Toernooi starten**. De poules worden geloot, met de sterkste spelers (volgens de ranking) in verschillende poules.
+5. **Starten**: kies bovenaan waarop de loting de sterkste spelers spreidt (**Elo**, **Ranking** of **Willekeurig**; standaard Elo), en dan de poule-indeling. Bij elke optie staat de **geschatte eindtijd**. Is die te laat, dan stelt de app aanpassingen voor (bv. poules best of 1). Tik op **Toernooi starten**. De poules worden geloot, met de sterkste spelers (volgens de ranking) in verschillende poules.
 6. **Tip:** druk via **Afdrukken** meteen de poulebladen af (of bewaar ze als PDF). Valt het internet volledig uit, dan kan je op papier verder.
 7. **Borden**: hier zie je wat er **nu** op elk bord speelt, wat er **straks** komt en wie de score kan **schrijven** (de verliezer van de vorige match op dat bord, of anders de speler die het langst vrij is). Tik op een bord om de uitslag in te voeren, de match uit te stellen of naar een ander bord te verplaatsen. Een bord erbij of eraf? Kies **Borden wijzigen**. Geeft iemand op? Kies **Speler geeft op**.
 8. De schrijvers openen op hun eigen gsm het adres `/score`, geven de pincode in en tikken op hun bord. Per speler tikken ze het **aantal gewonnen legs** aan, dan **Verder** en **Ja, opslaan**. Werd er een match gespeeld die niet op een bord stond? Via **Andere match invoeren** kan die ook.
@@ -26,6 +26,8 @@ Webapp voor het maandelijkse dartstoernooi in **Brasserie 't Oud Sanatorium** (S
 10. Als alles gespeeld is: **Afsluiten → Avond afsluiten**. De eindplaatsen en punten gaan naar de ranking.
 
 **Een score achteraf invoeren?** Het tabblad **Matchen** toont alle matchen van de avond (te spelen, gespeeld of alle), met een zoekveld. Tik op een match om de uitslag in te voeren, bv. als een match op papier gespeeld werd of vergeten was.
+
+**Na de avond:** op de publieke uitslag (en bij *Correcties*) staat **Deel de uitslag**: een afbeelding van 1080×1080 met het podium en de opvallendste prestaties, klaar voor Facebook, Instagram of WhatsApp. Op een gsm deel je ze rechtstreeks, anders download je ze.
 
 **Een fout ingevoerde score?** Tik op de match (bij Borden, Matchen, Poules of A/B-schema) en kies **Uitslag corrigeren**. Alle correcties worden bijgehouden in een audit-log.
 
@@ -90,6 +92,8 @@ Toch gepauzeerd? Log in op supabase.com en klik op **Restore project**. Je gegev
 ## 3. Beheer en onderhoud
 
 - **Puntentabel of beste X van Y aanpassen**: Beheer → Seizoenen → seizoen → *Instellingen*. Dit geldt meteen voor de hele seizoensranking.
+- **Elo en loting**: in dezelfde instellingen kies je de standaard-seeding (Elo, seizoensranking of willekeurig) en de Elo-instellingen (startwaarde, K-factor, hogere K voor nieuwe spelers). Elo wordt telkens opnieuw berekend uit alle gespeelde matchen; je hoeft niets bij te houden.
+- **Klassementen**: de rankingpagina heeft tabbladen voor punten, Elo, 180's, hoogste uitgooi, deelnames en beste nieuwkomer.
 - **Dubbele speler**: Beheer → Spelers → speler → *Samenvoegen* (enkel admin).
 - **Iemand wil verwijderd worden (GDPR)**: Beheer → Spelers → speler → *Anonimiseren*. De naam wordt "Anonieme speler" en de contactgegevens worden gewist. De uitslagen blijven anoniem bestaan, zodat de ranking klopt.
 - **Back-up**: het gratis Supabase-plan maakt geen automatische back-ups. Exporteer na elke speelavond (of minstens maandelijks) de tabellen via Supabase → *Table Editor* → tabel → *Export → CSV*. Een volledige JSON-export in de app komt in fase 2.

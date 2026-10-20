@@ -219,6 +219,28 @@ export const correctScore = (eventId: string, code: string, legs1: number | null
 
 export const setUserRole = (userId: string, role: Role) => rpc('set_user_role', { p_user_id: userId, p_role: role });
 
+// ---------- Elo (alle gespeelde matchen, over alle seizoenen) ----------
+
+export type EloMatchRow = Pick<MatchRow, 'id' | 'event_id' | 'player1_id' | 'player2_id' | 'winner_id' | 'walkover' | 'finished_at'>;
+
+/** Haalt alle gespeelde matchen op, per 1000 (de standaardlimiet van PostgREST). */
+export async function fetchEloMatches(): Promise<EloMatchRow[]> {
+  const page = 1000;
+  const out: EloMatchRow[] = [];
+  for (let from = 0; ; from += page) {
+    const rows = await must<EloMatchRow[]>(
+      supabase
+        .from('matches')
+        .select('id,event_id,player1_id,player2_id,winner_id,walkover,finished_at')
+        .not('winner_id', 'is', null)
+        .order('id')
+        .range(from, from + page - 1),
+    );
+    out.push(...rows);
+    if (rows.length < page) return out;
+  }
+}
+
 // ---------- Online inschrijven (publiek, zonder account) ----------
 
 export interface PreregisterResult {
