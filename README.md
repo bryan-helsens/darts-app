@@ -117,6 +117,7 @@ De lokale nabootsing (`scripts/local`) draait dezelfde migraties, RLS en functie
 | Probleem | Oplossing |
 |---|---|
 | De site toont "nog niet gekoppeld" | `VITE_SUPABASE_URL` / `VITE_SUPABASE_ANON_KEY` ontbreken op Netlify. Voeg ze toe en klik op *Trigger deploy*. |
+| "Nieuwe accounts zijn uitgeschakeld" (of "Signups not allowed for this instance") | Supabase → *Authentication → Sign In / Providers* → zet **Allow new users to sign up** aan en klik op *Save*. |
 | Inloggen lukt niet na een aanvraag | Een admin moet het account goedkeuren (Beheer → Gebruikers). Staat *Confirm email* nog aan in Supabase? Zet het uit. |
 | "Foute pincode" bij de schrijvers | De pin staat bovenaan het avondscherm van de wedstrijdleider. Na 20 foute pogingen is het 10 minuten wachten. |
 | Een correctie wordt geweigerd | De volgende match in het schema is al gespeeld. Corrigeer eerst die match (of zet ze terug). |
