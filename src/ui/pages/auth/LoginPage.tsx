@@ -2,6 +2,7 @@ import { useState, type FormEvent } from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '../../../data/auth';
 import { supabase } from '../../../data/supabase';
+import { authErrorMessage } from '../../../lib/authErrors';
 import { Button, Card, ErrorBox, Field, InfoBox, Tabs, TextInput } from '../../components/ui';
 
 export function LoginPage() {
@@ -23,7 +24,7 @@ export function LoginPage() {
     try {
       if (mode === 'login') {
         const { error: err } = await supabase.auth.signInWithPassword({ email: email.trim(), password });
-        if (err) throw new Error(err.message === 'Invalid login credentials' ? 'E-mailadres of wachtwoord klopt niet.' : err.message);
+        if (err) throw new Error(authErrorMessage(err));
         await refreshProfile();
       } else {
         if (password.length < 8) throw new Error('Kies een wachtwoord van minstens 8 tekens.');
@@ -32,7 +33,7 @@ export function LoginPage() {
           password,
           options: { data: { display_name: name.trim() } },
         });
-        if (err) throw new Error(err.message);
+        if (err) throw new Error(authErrorMessage(err));
         setDone(true);
       }
     } catch (err) {
