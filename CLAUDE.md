@@ -50,6 +50,7 @@ e2e/          Playwright
 - `estimate`: eindtijd vóór de start (virtuele avond) en live (gekalibreerde min/leg); `suggestAdjustments`.
 - `placements` / `points` / `ranking`: gedeelde plaatsen per ronde (A dan B), punten van de hoogste plaats in het bereik, beste X van Y (op totaal per avond, deelnamepunten inbegrepen).
 - `simulate`: speelt volledige avonden (tests + seed).
+- `scorer`: schrijver-suggestie per bord, afgeleid (niet opgeslagen): verliezer van de vorige match op dat bord, anders wie het langst vrij is; nooit wie speelt of de volgende match op dat bord heeft.
 - Alle randomness via `createRng(seed)` / `lotValue(seed, …)`; de seed per avond is `events.rng_seed`.
 
 ### Database (supabase/migrations)
@@ -59,10 +60,12 @@ e2e/          Playwright
 - Eerste account wordt automatisch admin (`private.handle_new_user`); volgende accounts zijn `aanvraag` tot een admin ze goedkeurt.
 - Audit-log via triggers; `app.skip_audit` / `app.skip_advance` (transactie-lokaal) voor bulkbewerkingen (seed, samenvoegen, anonimiseren).
 - Matchcodes (`P1-R2-1`, `A-R1-3`, `P2-BAR-1`) zijn de engine-id's; `src/data/mappers.ts` zet rijen om.
+- Online inschrijven: `preregister(p_event_id, p_player_id | p_name, p_email, p_phone)` (anon, rem 40 pogingen per avond per 10 min via `registration_attempts`). Nieuwe namen worden spelers met `pending = true`: onzichtbaar voor anon (RLS) tot ze bij de check-in aanwezig gezet worden (trigger `registrations_confirm_player`).
 - Demo-data: `load_demo_data(jsonb)` / `remove_demo_data()` / `has_demo_data()` (admin). Alle demo-id's beginnen met `de000000-`; enkel die rijen worden geladen of verwijderd. De dataset bouwt `src/demo/demoData.ts` in de browser (zelfde bouwer als de seed).
 
 ### Data en offline (src/data)
-- `eventView.buildEventView(bundle, now)`: alles wat een avondscherm nodig heeft (fase, replay, forecast, stand, eindplaatsen). "Nu" = max(klok, laatste servertijdstip).
+- `eventView.buildEventView(bundle, now)`: alles wat een avondscherm nodig heeft (fase, replay, forecast, stand, eindplaatsen, schrijver per bord).
+- `registration`: tot wanneer online inschrijven kan (`onlineRegistrationOpen`). "Nu" = max(klok, laatste servertijdstip).
 - `outbox`: scores en check-in gaan via IndexedDB en worden met retry gesynchroniseerd. `SyncBadge` toont de status. Na een sync werkt `App.tsx` de cache meteen bij.
 - Query-cache wordt bewaard in localStorage (offline tonen); `staleTime: 0`, zodat online altijd ververst wordt.
 - Realtime: `useEventRealtime` + polling elke 30 s als vangnet.
@@ -73,6 +76,7 @@ e2e/          Playwright
 - Engine-functies zijn puur en immutabel (geven nieuwe arrays terug). Schrijf tests mee, zeker voor alles in `src/engine`.
 - Compact maar duimvriendelijk: knoppen standaard 36 px (`h-9`); scoreknoppen 44 px, check-inknoppen 36 px over een volle rij. Eén-duimbediening, bevestigingsscherm voor uitslagen.
 - Huisstijl: licht, compact en modern. Basistekst 14 px (`text-sm`), meta 12 px, labels 11 px (`text-2xs`, eigen token); invoervelden 16 px op gsm (`text-base sm:text-sm`, anders zoomt iOS in). Zwarte kop (`bg-ink`, 48 px), blauw als hoofdkleur (`brand-*`), rood als accent (`accent-*`, ook voor "live"), lettertype Inter, afgeronde hoeken `rounded-md`/`rounded-lg`. Kleuren en tokens in `src/index.css` (`@theme`); bouwstenen in `src/ui/components/ui.tsx` (Button, Card, List + `rowClass`, Badge, Stats, Segmented, SearchInput, DateTile, Icon, …). Geen emerald/groen.
+- TV-modus (`src/ui/pages/tv`): eigen donkere componenten; `TvPage` schaalt de rem mee met de schermbreedte en houdt het scherm wakker. `?toon=<scherm>` zet één scherm vast.
 - Indeling (`src/ui/layout/Layouts.tsx`): op gsm een tabbalk onderaan (zoals een app), vanaf `md` de navigatie in de kop. Matchen tonen als scorebord (`MatchLine`: twee regels, legs rechts) en in rasters van tegeltjes (`MatchTile` + `TileGrid`, 2 kolommen op gsm).
 - Scores invoeren: per speler het aantal gewonnen legs (`ScoreEntry`, rijen met `data-legs-row`). Het tabblad **Matchen** (`MatchesPanel`) laat de leider elke match achteraf invoeren of corrigeren.
 - Hardcodeer nergens een domein; Supabase-URL en -sleutel komen uit `VITE_SUPABASE_URL` / `VITE_SUPABASE_ANON_KEY`.

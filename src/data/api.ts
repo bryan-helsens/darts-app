@@ -219,6 +219,23 @@ export const correctScore = (eventId: string, code: string, legs1: number | null
 
 export const setUserRole = (userId: string, role: Role) => rpc('set_user_role', { p_user_id: userId, p_role: role });
 
+// ---------- Online inschrijven (publiek, zonder account) ----------
+
+export interface PreregisterResult {
+  status: 'ok' | 'already' | 'closed' | 'locked' | 'invalid';
+  player_id?: string;
+  message?: string;
+}
+
+export const preregister = (input: { eventId: string; playerId?: string | null; name?: string; email?: string; phone?: string }) =>
+  rpc<PreregisterResult>('preregister', {
+    p_event_id: input.eventId,
+    p_player_id: input.playerId ?? null,
+    p_name: input.name ?? null,
+    p_email: input.email ?? null,
+    p_phone: input.phone ?? null,
+  });
+
 export async function fetchPlayerData(playerId: string): Promise<{ results: EventResultRow[]; matches: MatchRow[]; stats: MatchStatRow[] }> {
   const [results, matches, stats] = await Promise.all([
     must<EventResultRow[]>(supabase.from('event_results').select('*').eq('player_id', playerId)),

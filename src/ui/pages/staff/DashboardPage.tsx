@@ -53,6 +53,19 @@ export function DashboardPage() {
         </Empty>
       )}
 
+      <a
+        href="/tv"
+        target="_blank"
+        rel="noreferrer"
+        className="mt-3 flex items-center justify-between gap-3 rounded-lg border border-zinc-200/80 bg-white px-3 py-2.5 shadow-xs hover:bg-zinc-50"
+      >
+        <span className="min-w-0">
+          <span className="block text-[13px] font-semibold text-zinc-950">TV-scherm</span>
+          <span className="block truncate text-xs text-zinc-500">Open {window.location.host}/tv in de browser van de tv in de zaal.</span>
+        </span>
+        <Icon name="external" className="text-zinc-400" />
+      </a>
+
       {isAdmin && (
         <div className="mt-3">
           <DemoDataCard />

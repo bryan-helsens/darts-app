@@ -15,8 +15,10 @@ import { EveningPage } from './pages/evening/EveningPage';
 import { PrintPage } from './pages/print/PrintPage';
 import { NewcomersPage, RulesPage } from './pages/public/InfoPages';
 import { EventPublicPage, HomePage, PlayerPage, PlayersPage, RankingPage, ResultsPage } from './pages/public/PublicPages';
+import { RegisterPage } from './pages/public/RegisterPage';
 import { ScorePage } from './pages/ScorePage';
 import { SetupPage } from './pages/SetupPage';
+import { TvPage } from './pages/tv/TvPage';
 import { DashboardPage } from './pages/staff/DashboardPage';
 import { PlayersAdminPage } from './pages/staff/PlayersAdminPage';
 import { SeasonDetailPage, SeasonsPage } from './pages/staff/SeasonsPage';
@@ -56,6 +58,7 @@ const router = createBrowserRouter([
       { path: '/spelers/:playerId', element: <PlayerPage /> },
       { path: '/reglement', element: <RulesPage /> },
       { path: '/nieuw', element: <NewcomersPage /> },
+      { path: '/inschrijven/:eventId', element: <RegisterPage /> },
       { path: '/login', element: <LoginPage /> },
       { path: '/score', element: <ScorePage /> },
       { path: '/score/:eventId', element: <ScorePage /> },
@@ -74,6 +77,7 @@ const router = createBrowserRouter([
     ],
   },
   { path: '/print/avond/:eventId', element: <PrintPage /> },
+  { path: '/tv', element: <TvPage /> },
   { path: '*', element: <Navigate to="/" replace /> },
 ]);
 

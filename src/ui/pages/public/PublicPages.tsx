@@ -4,11 +4,12 @@ import { formatPlace, isFinished } from '../../../engine';
 import { buildEventView } from '../../../data/eventView';
 import { matchFromRow } from '../../../data/mappers';
 import { useEventBundle, useEvents, usePlayerData, usePlayerDirectory, useRegistrationCounts, useSeasonData, useSeasons } from '../../../data/queries';
+import { onlineRegistrationOpen } from '../../../data/registration';
 import { matchesSearch } from '../../../lib/names';
 import { formatDate, formatLongDate, formatTime, shortTime } from '../../../lib/time';
 import { BoardsOverview, Bracket, MatchTile, PlacementsTable, PoolTable, shortTitle, TileGrid } from '../../components/darts';
 import { displayName } from '../../components/players';
-import { Badge, Card, cx, DateTile, Empty, ErrorBox, Icon, List, LiveBadge, PageTitle, rowClass, rowHover, SearchInput, SectionTitle, Select, Spinner, Tabs } from '../../components/ui';
+import { Badge, Button, Card, cx, DateTile, Empty, ErrorBox, Icon, List, LiveBadge, PageTitle, rowClass, rowHover, SearchInput, SectionTitle, Select, Spinner, Tabs } from '../../components/ui';
 import { pickCurrentSeason, seasonSettings, useCurrentSeason, useNow, useSeasonRanking, useUpcoming } from '../../hooks';
 
 const time = (t: string) => formatTime(shortTime(t));
@@ -28,6 +29,7 @@ const initials = (name: string) =>
 
 export function HomePage() {
   const { next, live, events, isLoading } = useUpcoming();
+  const now = useNow(60_000);
   const { season } = useCurrentSeason();
   const { data: counts } = useRegistrationCounts();
   const settings = seasonSettings(season);
@@ -93,10 +95,19 @@ export function HomePage() {
               </ul>
             </div>
           </div>
-          <Link to="/nieuw" className="flex items-center justify-between gap-2 border-t border-white/10 px-3 py-2 text-xs text-zinc-400 hover:bg-white/5">
-            <span>Nieuw? Iedereen is welkom.</span>
-            <span className="font-medium text-white">Zo werkt het →</span>
-          </Link>
+          <div className="flex items-center justify-between gap-2 border-t border-white/10 px-3 py-2 text-xs text-zinc-400">
+            <span>
+              Nieuw? Iedereen is welkom.{' '}
+              <Link to="/nieuw" className="font-medium text-white hover:underline">
+                Zo werkt het
+              </Link>
+            </span>
+            {onlineRegistrationOpen(next, now) && (
+              <Link to={`/inschrijven/${next.id}`} className="inline-flex h-8 items-center rounded-md bg-brand-600 px-3 text-[13px] font-medium text-white hover:bg-brand-700">
+                Schrijf je in
+              </Link>
+            )}
+          </div>
         </div>
       ) : (
         <Empty>De volgende speelavond is nog niet gepland.</Empty>
@@ -202,9 +213,16 @@ export function EventPublicPage() {
         </div>
       </div>
       {event.status === 'gepland' ? (
-        <Card className="text-[13px] text-zinc-700">
-          Deze speelavond start om {time(event.start_time)}. Inschrijven kan ter plaatse tot {time(event.registration_closes)}. Het schema verschijnt hier zodra het
-          toernooi begint.
+        <Card className="space-y-2.5 text-[13px] text-zinc-700">
+          <p>
+            Deze speelavond start om {time(event.start_time)}. Inschrijven kan online of ter plaatse tot {time(event.registration_closes)}. Het schema verschijnt hier
+            zodra het toernooi begint.
+          </p>
+          {onlineRegistrationOpen(event, now) && (
+            <Link to={`/inschrijven/${event.id}`} className="block">
+              <Button block>Schrijf je in</Button>
+            </Link>
+          )}
         </Card>
       ) : (
         <>

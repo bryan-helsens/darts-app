@@ -63,7 +63,7 @@ export function NewcomersPage() {
         <ol className="space-y-2">
           {[
             <>
-              Kom langs en schrijf je in aan de bar <b>vóór {s.registrationCloses.replace(':', 'u')}</b>. De inleg is <b>€{s.entryFee}</b>.
+              Schrijf je vooraf online in (knop “Schrijf je in” op de <Link to="/" className="text-brand-700 underline">startpagina</Link>), of kom gewoon langs en schrijf je in aan de bar. Meld je ter plaatse aan <b>vóór {s.registrationCloses.replace(':', 'u')}</b> en betaal de inleg van <b>€{s.entryFee}</b>.
             </>,
             <>Om {s.startTime.replace(':', 'u')} wordt er geloot in poules van (meestal) 4 spelers. Je speelt tegen iedereen uit je poule.</>,
             <>
