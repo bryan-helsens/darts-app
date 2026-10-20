@@ -1,5 +1,7 @@
 # CLAUDE.md: Sanapolis Darts
 
+> **Eerst lezen:** [`.claude/memory/PROJECT_MEMORY.md`](.claude/memory/PROJECT_MEMORY.md) bevat de status, de genomen beslissingen, de aannames en de volgende stappen van dit project. Werk dat bestand bij bij elke mijlpaal of beslissing.
+
 Webapp voor het maandelijkse dartstoernooi in Brasserie 't Oud Sanatorium (Sijsele). Ze leidt de speelavond (check-in → poules → A/B-schema → uitslag), houdt een seizoensranking bij en toont alles publiek. De gebruikers zijn vrijwilligers zonder technische kennis, op gsm, met mogelijk slechte wifi. De volledige UI is in het Nederlands (Vlaams).
 
 ## Commando's
