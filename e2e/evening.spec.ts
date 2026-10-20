@@ -43,7 +43,8 @@ test('een volledige speelavond', async ({ page, browser }) => {
   await page.getByLabel('E-mailadres').fill('org@sanapolis.test');
   await page.getByLabel('Wachtwoord').fill('geheim1234');
   await page.locator('form').getByRole('button', { name: 'Account aanvragen' }).click();
-  await page.goto('/beheer');
+  // Niet zelf navigeren: dat zou de aanvraag afbreken. Het eerste account komt vanzelf in het beheer terecht.
+  await expect(page).toHaveURL(/\/beheer$/, { timeout: 15_000 });
   await expect(page.getByRole('heading', { name: 'Beheer' })).toBeVisible();
 
   // Seizoen en speelavond.
