@@ -41,6 +41,8 @@ const persister = createSyncStoragePersister({
   throttleTime: 2000,
 });
 
+const PRIVATE_KEYS = new Set(['contacts', 'pin', 'profiles', 'audit']);
+
 const router = createBrowserRouter([
   {
     element: <PublicLayout />,
@@ -122,7 +124,16 @@ function OutboxRefresher() {
 export function App() {
   if (!isConfigured) return <SetupPage />;
   return (
-    <PersistQueryClientProvider client={queryClient} persistOptions={{ persister, maxAge: 7 * 24 * 60 * 60 * 1000, buster: 'v1' }}>
+    <PersistQueryClientProvider
+      client={queryClient}
+      persistOptions={{
+        persister,
+        maxAge: 7 * 24 * 60 * 60 * 1000,
+        buster: 'v1',
+        // Gevoelige gegevens (contactgegevens, pincode, gebruikers, audit) nooit op het toestel bewaren.
+        dehydrateOptions: { shouldDehydrateQuery: (q) => q.state.status === 'success' && !PRIVATE_KEYS.has(String(q.queryKey[0])) },
+      }}
+    >
       <AuthProvider>
         <OutboxRefresher />
         <RouterProvider router={router} />

@@ -4,6 +4,7 @@ import { roundName, type Match } from '../../../engine';
 import { buildEventView, type EventView } from '../../../data/eventView';
 import { useEventBundle, usePlayerDirectory } from '../../../data/queries';
 import { formatLongDate } from '../../../lib/time';
+import { bracketSlots } from '../../components/darts';
 import { Button, ErrorBox, Spinner } from '../../components/ui';
 
 type NameFn = (id: string | null | undefined) => string;
@@ -135,7 +136,12 @@ function PrintBracket({ view, stage, name }: { view: EventView; stage: 'A' | 'B'
                 {roundName(r, rounds)} (bo{inRound[0]?.bestOf})
               </div>
               <div className="flex flex-1 flex-col justify-around gap-1">
-                {inRound.map((m) => (
+                {bracketSlots(inRound, rounds, r).map((m, idx) =>
+                  m === null ? (
+                    <div key={`bye-${idx}`} className="py-2 text-center text-stone-400">
+                      bye
+                    </div>
+                  ) : (
                   <div key={m.id} className="border border-black">
                     {([m.player1, m.player2] as const).map((p, i) => (
                       <div key={i} className="flex justify-between gap-1 border-b border-stone-300 px-1 py-0.5 last:border-b-0">
@@ -144,7 +150,8 @@ function PrintBracket({ view, stage, name }: { view: EventView; stage: 'A' | 'B'
                       </div>
                     ))}
                   </div>
-                ))}
+                  ),
+                )}
               </div>
             </div>
           );

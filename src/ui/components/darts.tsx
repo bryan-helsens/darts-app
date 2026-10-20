@@ -41,6 +41,13 @@ export function MatchLine({ m, name, compact, pending }: { m: Match; name: NameF
   );
 }
 
+/** Alle plaatsen van een ronde; null waar een bye zit (zo blijft de boom uitgelijnd). */
+export function bracketSlots(inRound: Match[], rounds: number, round: number): Array<Match | null> {
+  const expected = 2 ** (rounds - round);
+  const byPosition = new Map(inRound.map((m) => [m.position, m]));
+  return Array.from({ length: expected }, (_, i) => byPosition.get(i) ?? null);
+}
+
 export function PoolTable({ standing, label, advance, name }: { standing: PoolStanding; label: string; advance: number; name: NameFn }) {
   return (
     <div className="overflow-hidden rounded-2xl border border-stone-200 bg-white">
@@ -109,7 +116,12 @@ export function Bracket({
                 {roundName(r, rounds)} <span className="font-normal text-stone-400">· bo{inRound[0]?.bestOf}</span>
               </div>
               <div className="flex flex-1 flex-col justify-around gap-2">
-                {inRound.map((m) => (
+                {bracketSlots(inRound, rounds, r).map((m, i) =>
+                  m === null ? (
+                    <div key={`bye-${i}`} className="flex h-[3.25rem] items-center justify-center rounded-xl border border-dashed border-stone-200 text-xs text-stone-400">
+                      bye
+                    </div>
+                  ) : (
                   <button
                     key={m.id}
                     type="button"
@@ -132,7 +144,8 @@ export function Bracket({
                       );
                     })}
                   </button>
-                ))}
+                  ),
+                )}
               </div>
             </div>
           );

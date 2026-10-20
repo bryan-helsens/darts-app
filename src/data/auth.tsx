@@ -1,4 +1,5 @@
 import type { Session } from '@supabase/supabase-js';
+import { useQueryClient } from '@tanstack/react-query';
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import type { ProfileRow, Role } from './rows';
 import { isConfigured, supabase } from './supabase';
@@ -20,6 +21,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<ProfileRow | null>(null);
   const [loading, setLoading] = useState(isConfigured);
+  const queryClient = useQueryClient();
 
   const loadProfile = async (s: Session | null) => {
     if (!s) {
@@ -77,9 +79,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       signOut: async () => {
         await supabase.auth.signOut();
         setProfile(null);
+        // Niets van de beheerder achterlaten op een gedeeld toestel.
+        queryClient.clear();
+        try {
+          localStorage.removeItem('sanapolis-darts-cache');
+          localStorage.removeItem('sanapolis-darts-profile');
+        } catch {
+          // geen opslag
+        }
       },
     };
-  }, [loading, session, profile]);
+  }, [loading, session, profile, queryClient]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
