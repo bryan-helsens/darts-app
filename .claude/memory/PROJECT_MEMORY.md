@@ -121,4 +121,4 @@
 - 2026-10-20: Supabase account created and linked to the repo by Bryan (GitHub integration, Deploy to production ON); `supabase/config.toml` added and README/CLAUDE.md adapted (PR #3). The production deploy succeeded and the tables exist.
 - 2026-10-20: site live on Netlify, first admin account created, Dutch auth errors (PR #4).
 - 2026-10-20: demo-data button, redesign (blue/black/red, compact) and manual score entry (legs per player + Matchen tab) merged as PR #5 (squash `5d3f606`); the demo-data migration deploys to production via the Supabase integration.
-- 2026-10-20: second, more compact and modern redesign (design system v2, bottom tab bar, scoreboard tiles) on branch `claude/new-session-bpbx7g`; not merged yet.
+- 2026-10-20: second, more compact and modern redesign (design system v2, bottom tab bar, scoreboard tiles) merged as PR #6 (squash `7bdc7f0`); no database changes.
