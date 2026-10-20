@@ -37,7 +37,13 @@ Je hebt drie gratis accounts nodig: **GitHub** (de code), **Supabase** (de datab
 ### 2.1 Supabase (database)
 
 1. Maak een account op [supabase.com](https://supabase.com) en klik op **New project**. Kies als regio *West EU (Ireland)* of *Central EU (Frankfurt)* en bewaar het databasewachtwoord goed.
-2. Open in het project **SQL Editor → New query**, plak de volledige inhoud van [`supabase/setup.sql`](supabase/setup.sql) en klik op **Run**. Je zou "Success. No rows returned" moeten zien.
+2. **Database opzetten.** Kies één van deze twee manieren, nooit beide:
+   - **A. Automatisch via GitHub (zo is het nu ingesteld).** Ga in Supabase naar **Project Settings → Integrations → GitHub**, koppel deze repository en zet:
+     - *Supabase directory* (werkmap) op `.`;
+     - **Deploy to production** aan, met `main` als productiebranch.
+
+     Bij elke merge naar `main` past Supabase dan zelf de nieuwe bestanden uit [`supabase/migrations`](supabase/migrations) toe op je database. Controleer na de eerste merge in de **Table Editor** of de tabellen (`players`, `matches`, …) er staan. Lukte het niet, dan zie je de fout bij de GitHub-integratie in Supabase. Tip: maak de Supabase-check in GitHub verplicht (*Settings → Branches → Branch protection*), zodat een kapotte migratie niet gemerged kan worden.
+   - **B. Met de hand.** Open **SQL Editor → New query**, plak de volledige inhoud van [`supabase/setup.sql`](supabase/setup.sql) en klik op **Run**. Je zou "Success. No rows returned" moeten zien. Zet in dat geval *Deploy to production* uit, anders probeert Supabase dezelfde tabellen nog eens aan te maken.
 3. Ga naar **Authentication → Sign In / Providers → Email**:
    - laat **Enable email provider** en **Allow new users to sign up** aan staan;
    - zet **Confirm email** **uit** (de gratis mailservice van Supabase stuurt enkel mails naar teamleden van het project).
@@ -81,7 +87,7 @@ Toch gepauzeerd? Log in op supabase.com en klik op **Restore project**. Je gegev
 - **Iemand wil verwijderd worden (GDPR)**: Beheer → Spelers → speler → *Anonimiseren*. De naam wordt "Anonieme speler" en de contactgegevens worden gewist. De uitslagen blijven anoniem bestaan, zodat de ranking klopt.
 - **Back-up**: het gratis Supabase-plan maakt geen automatische back-ups. Exporteer na elke speelavond (of minstens maandelijks) de tabellen via Supabase → *Table Editor* → tabel → *Export → CSV*. Een volledige JSON-export in de app komt in fase 2.
 - **Demo-data** (om te oefenen): plak [`supabase/seed.sql`](supabase/seed.sql) in de SQL Editor. Dat geeft een demoseizoen met 25 spelers, 6 gespeelde avonden en één geplande avond (pin `1234`). Verwijderen kan met [`supabase/demo-cleanup.sql`](supabase/demo-cleanup.sql). Gebruik hiervoor bij voorkeur een apart testproject.
-- **Updates van de app**: elke wijziging op de hoofdbranch in GitHub wordt automatisch door Netlify gepubliceerd. Bevat een update een nieuw bestand in `supabase/migrations/`, voer dan **enkel dat nieuwe bestand** uit in de SQL Editor.
+- **Updates van de app**: elke wijziging op `main` in GitHub wordt automatisch door Netlify gepubliceerd. Nieuwe databasewijzigingen (een nieuw bestand in `supabase/migrations/`) past Supabase zelf toe dankzij *Deploy to production*. Werk je met manier B (met de hand), voer dan **enkel dat nieuwe bestand** uit in de SQL Editor.
 
 ---
 
