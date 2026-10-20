@@ -56,7 +56,7 @@
   2. Auth → Email: turn **Confirm email OFF** (the free SMTP only mails team members);
   3. ~~link Netlify~~ → **done 2026-10-20**: live at `https://astounding-khapse-32c22d.netlify.app` (renaming the site is suggested). The first signup failed with "Signups not allowed for this instance": "Allow new users to sign up" was OFF in Supabase Auth. Bryan was told to turn it on and to check that "Confirm email" is off. The app now shows Dutch auth errors (`src/lib/authErrors.ts`);
   4. set the GitHub secrets `SUPABASE_URL` + `SUPABASE_ANON_KEY` for the keepalive workflow (free projects pause after 7 days of inactivity);
-  5. the first account created becomes admin automatically.
+  5. ~~first account~~ → **done 2026-10-20**: Bryan created his account after enabling signups; as the first account it is admin.
 - **First live test evening:** Saturday **21/11/2026** (December: 19/12/2026). The seed contains a planned demo event on 21/11/2026 with pin `1234`.
 - **Never verified against a real Supabase project or Netlify:** supabase.com is blocked from the container. Watch for differences between the local emulator and the real PostgREST/Auth/Realtime (see §6).
 - **Open question to Bryan:** guide the installation step by step, or start phase 2?
