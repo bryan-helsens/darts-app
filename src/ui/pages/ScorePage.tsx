@@ -10,7 +10,7 @@ import { formatLongDate } from '../../lib/time';
 import { MatchLine, matchTitle } from '../components/darts';
 import { ScoreEntry } from '../components/ScoreEntry';
 import { SyncBadge } from '../components/SyncBadge';
-import { Badge, Button, Empty, ErrorBox, InfoBox, Modal, Spinner } from '../components/ui';
+import { Badge, Button, Empty, ErrorBox, InfoBox, Modal, SectionTitle, Spinner } from '../components/ui';
 import { useNow, useUpcoming } from '../hooks';
 
 const pinKey = (eventId: string) => `sanapolis-darts-pin-${eventId}`;
@@ -68,15 +68,18 @@ function PinPad({ eventId, onOk }: { eventId: string; onOk: (pin: string) => voi
   };
   return (
     <div className="mx-auto max-w-sm text-center">
-      <h1 className="mb-1 text-2xl font-bold text-brand-900">Scores invoeren</h1>
-      <p className="mb-4 text-stone-600">Geef de pincode van vanavond (te krijgen bij de wedstrijdleider).</p>
-      <div className="mb-4 h-16 rounded-2xl border-2 border-stone-300 bg-white font-mono text-4xl leading-[3.6rem] tracking-[0.5em]">{value.replace(/./g, '•')}</div>
+      <h1 className="mb-1 text-xl font-bold tracking-tight text-zinc-950 sm:text-2xl">Scores invoeren</h1>
+      <p className="mb-4 text-sm text-zinc-500">Geef de pincode van vanavond (te krijgen bij de wedstrijdleider).</p>
+      <div className="mb-3 flex h-14 items-center justify-center rounded-xl bg-ink font-mono text-3xl tracking-[0.5em] text-white">
+        {value ? value.replace(/./g, '•') : <span className="text-base tracking-normal text-zinc-500">pincode</span>}
+      </div>
       <div className="grid grid-cols-3 gap-2">
         {['1', '2', '3', '4', '5', '6', '7', '8', '9', '⌫', '0', 'OK'].map((k) => (
           <Button
             key={k}
             size="xl"
             variant={k === 'OK' ? 'primary' : 'secondary'}
+            className="text-xl"
             disabled={busy || (k === 'OK' && value.length < 4)}
             onClick={() => {
               if (k === '⌫') setValue((v) => v.slice(0, -1));
@@ -128,43 +131,56 @@ function ScoreBoard({ eventId, pin, onForget }: { eventId: string; pin: string |
         type="button"
         disabled={Boolean(p)}
         onClick={() => setSelected({ match: m, board })}
-        className="block w-full rounded-2xl border-2 border-stone-200 bg-white p-4 text-left shadow-sm hover:border-brand-700 disabled:opacity-70"
+        className="flex w-full items-center gap-3 rounded-xl border border-zinc-200 bg-white p-2.5 text-left hover:border-brand-500 disabled:opacity-70"
       >
-        <div className="mb-1 flex items-center justify-between text-sm text-stone-500">
-          <span>
-            {board !== undefined && <span className="mr-2 text-lg font-bold text-brand-900">Bord {board}</span>}
-            {matchTitle(m, view)} · bo{m.bestOf}
+        {board !== undefined ? (
+          <span className="flex h-12 w-12 shrink-0 flex-col items-center justify-center rounded-lg bg-ink text-white">
+            <span className="text-[10px] leading-none font-medium text-zinc-400 uppercase">Bord</span>{' '}
+            <span className="text-xl leading-tight font-bold">{board}</span>
           </span>
-          {p && <Badge tone="amber">⏳ wordt verstuurd</Badge>}
-        </div>
-        <div className="text-xl font-semibold">
-          <MatchLine m={m} name={name} pending={p?.data} />
-        </div>
+        ) : null}
+        <span className="min-w-0 flex-1">
+          <span className="mb-0.5 flex items-center justify-between gap-2 text-xs text-zinc-500">
+            <span className="truncate">
+              {matchTitle(m, view)} · best of {m.bestOf}
+            </span>
+            {p && <Badge tone="amber">wordt verstuurd</Badge>}
+          </span>
+          <span className="block text-base font-semibold">
+            <MatchLine m={m} name={name} pending={p?.data} />
+          </span>
+        </span>
       </button>
     );
   };
 
   return (
-    <div className="mx-auto max-w-xl space-y-4">
+    <div className="mx-auto max-w-xl space-y-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
-          <h1 className="text-xl font-bold text-brand-900">Scores · {formatLongDate(view.event.event_date)}</h1>
-          <p className="text-sm text-stone-500">Tik op jouw bord om de uitslag in te voeren.</p>
+          <h1 className="text-xl font-bold tracking-tight text-zinc-950">Scores · {formatLongDate(view.event.event_date)}</h1>
+          <p className="text-sm text-zinc-500">Tik op jouw bord om de uitslag in te voeren.</p>
         </div>
-        <SyncBadge />
+        <SyncBadge onLight />
       </div>
 
-      {onBoards.length === 0 ? <Empty>Er wordt nu op geen enkel bord gespeeld.</Empty> : <div className="space-y-3">{onBoards.map((b) => card(b.match, b.board))}</div>}
+      <SectionTitle>Nu aan het spelen</SectionTitle>
+      {onBoards.length === 0 ? <Empty>Er wordt nu op geen enkel bord gespeeld.</Empty> : <div className="space-y-2">{onBoards.map((b) => card(b.match, b.board))}</div>}
 
-      <div>
-        <button type="button" className="text-brand-800 underline" onClick={() => setShowAll((s) => !s)}>
-          {showAll ? 'Andere matchen verbergen' : `Andere match (${open.length})`}
-        </button>
-        {showAll && <div className="mt-3 space-y-2">{open.map((m) => card(m))}</div>}
+      <div className="pt-2">
+        <Button variant="secondary" block onClick={() => setShowAll((s) => !s)}>
+          {showAll ? 'Andere matchen verbergen' : `Andere match invoeren (${open.length})`}
+        </Button>
+        {showAll && (
+          <div className="mt-2 space-y-2">
+            <p className="text-xs text-zinc-500">Werd een match gespeeld die niet op een bord stond? Kies ze hier en voer de uitslag in.</p>
+            {open.map((m) => card(m))}
+          </div>
+        )}
       </div>
 
       {pin && (
-        <button type="button" className="text-sm text-stone-500 underline" onClick={() => {
+        <button type="button" className="text-xs text-zinc-500 underline" onClick={() => {
           try {
             localStorage.removeItem(pinKey(eventId));
           } catch {

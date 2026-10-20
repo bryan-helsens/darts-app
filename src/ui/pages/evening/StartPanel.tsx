@@ -119,17 +119,20 @@ export function StartPanel({
   const ranked = present.filter((r) => seedRanks.has(r.player_id)).length;
 
   return (
-    <div className="space-y-4">
-      <Card>
-        <div className="text-lg font-semibold">{n} aanwezige spelers</div>
-        <p className="text-sm text-stone-600">
-          Seeding op de seizoensranking: {ranked} speler{ranked === 1 ? '' : 's'} met ranking, {n - ranked} zonder (worden willekeurig verdeeld).
-        </p>
+    <div className="space-y-3">
+      <Card className="flex items-center gap-3">
+        <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-ink text-lg font-bold text-white tabular-nums">{n}</span>
+        <div className="min-w-0">
+          <div className="font-semibold text-zinc-950">{n} aanwezige spelers</div>
+          <p className="text-xs text-zinc-500">
+            Seeding op de seizoensranking: {ranked} speler{ranked === 1 ? '' : 's'} met ranking, {n - ranked} zonder (worden willekeurig verdeeld).
+          </p>
+        </div>
       </Card>
 
       <div>
-        <h3 className="mb-2 font-semibold">Poule-indeling</h3>
-        <div className="space-y-2">
+        <h3 className="mb-1.5 text-xs font-bold tracking-wider text-zinc-500 uppercase">Poule-indeling</h3>
+        <div className="space-y-1.5">
           {options.map((o) => {
             const est = estimates.get(o.id);
             return (
@@ -141,18 +144,21 @@ export function StartPanel({
                   setAdvance(null);
                 }}
                 className={cx(
-                  'flex w-full items-center justify-between gap-3 rounded-2xl border-2 bg-white p-3 text-left',
-                  o.id === layout?.id ? 'border-brand-800' : 'border-stone-200',
+                  'flex w-full items-center justify-between gap-3 rounded-xl border bg-white px-3 py-2 text-left transition-colors',
+                  o.id === layout?.id ? 'border-brand-600 ring-1 ring-brand-600' : 'border-zinc-200 hover:border-zinc-300',
                 )}
               >
-                <div>
-                  <div className="font-semibold">
-                    {o.label} {o.standard && <span className="text-sm font-normal text-brand-800">(standaard)</span>}
+                <div className="flex min-w-0 items-center gap-2.5">
+                  <span className={cx('h-4 w-4 shrink-0 rounded-full border-2', o.id === layout?.id ? 'border-[5px] border-brand-600' : 'border-zinc-300')} />
+                  <div className="min-w-0">
+                    <div className="text-sm font-semibold text-zinc-950">
+                      {o.label} {o.standard && <span className="ml-1 text-xs font-medium text-brand-700">standaard</span>}
+                    </div>
+                    <div className="text-xs text-zinc-500">{est && `${est.poolMatches} poulematchen · A ${est.A} / B ${est.B} spelers`}</div>
                   </div>
-                  <div className="text-sm text-stone-500">{est && `${est.poolMatches} poulematchen · A ${est.A} / B ${est.B} spelers`}</div>
                 </div>
                 {est && (
-                  <div className={cx('text-right text-lg font-bold tabular-nums', est.end > limit ? 'text-red-700' : 'text-emerald-700')}>
+                  <div className={cx('text-right text-base font-bold tabular-nums', est.end > limit ? 'text-accent-600' : 'text-zinc-950')}>
                     ±{formatTime(est.end)}
                   </div>
                 )}
@@ -162,29 +168,31 @@ export function StartPanel({
         </div>
       </div>
 
-      <Card className="grid gap-4 sm:grid-cols-3">
-        <Field label={multi ? 'Doorstromers per poule naar A' : 'Aantal spelers naar A'}>
+      <Card className="grid grid-cols-2 items-end gap-3 sm:grid-cols-3">
+        <Field label={multi ? 'Naar A per poule' : 'Spelers naar A'}>
           <Stepper value={advance} onChange={setAdvance} min={1} max={multi ? Math.min(...(layout?.sizes ?? [2])) - 1 : (layout?.sizes[0] ?? 2) - 1} />
         </Field>
         <Field label="Aantal borden">
           <Stepper value={boards} onChange={setBoards} min={1} max={16} />
         </Field>
-        <Field label="Hoofdbord (A-finale)">
-          <Select value={mainBoard} onChange={(e) => setMainBoard(Number(e.target.value))}>
-            {Array.from({ length: boards }, (_, i) => i + 1).map((b) => (
-              <option key={b} value={b}>
-                Bord {b}
-              </option>
-            ))}
-          </Select>
-        </Field>
+        <div className="col-span-2 sm:col-span-1">
+          <Field label="Hoofdbord (A-finale)">
+            <Select value={mainBoard} onChange={(e) => setMainBoard(Number(e.target.value))}>
+              {Array.from({ length: boards }, (_, i) => i + 1).map((b) => (
+                <option key={b} value={b}>
+                  Bord {b}
+                </option>
+              ))}
+            </Select>
+          </Field>
+        </div>
       </Card>
 
       <Card>
         <div className="flex items-center justify-between">
           <div>
-            <h3 className="font-semibold">Legs per ronde</h3>
-            <p className="text-sm text-stone-600">
+            <h3 className="text-sm font-semibold text-zinc-950">Legs per ronde</h3>
+            <p className="text-xs text-zinc-500">
               Poules bo{legs.pool} · A: bo{legs.A.early} / halve bo{legs.A.semi} / finale bo{legs.A.final} · B: bo{legs.B.early} / halve bo{legs.B.semi} / finale bo
               {legs.B.final}
             </p>
@@ -205,29 +213,32 @@ export function StartPanel({
             <LegsSelect label="B finale" value={legs.B.final} onChange={(v) => setLegs((l) => ({ ...l, B: { ...l.B, final: v } }))} />
           </div>
         )}
-        <label className="mt-3 flex items-center gap-3">
-          <input type="checkbox" className="h-6 w-6" checked={holdFinal} onChange={(e) => setHoldFinal(e.target.checked)} />
+        <label className="mt-3 flex items-center gap-2.5 text-sm">
+          <input type="checkbox" className="h-5 w-5 accent-brand-600" checked={holdFinal} onChange={(e) => setHoldFinal(e.target.checked)} />
           A-finale als laatste op het hoofdbord (iedereen kan meekijken)
         </label>
       </Card>
 
       {current && (
-        <Card className={tooLate ? 'border-red-300 bg-red-50' : 'border-emerald-300 bg-emerald-50'}>
-          <div className="text-sm text-stone-600">Geschatte eindtijd</div>
+        <div className="rounded-xl bg-ink p-3 text-white sm:p-4">
+          <div className="flex items-baseline justify-between gap-3">
+            <div className="text-xs font-medium tracking-wide text-zinc-400 uppercase">Geschatte eindtijd</div>
+            {tooLate ? <span className="rounded-md bg-accent-600 px-1.5 py-0.5 text-xs font-bold">te laat</span> : <span className="rounded-md bg-brand-600 px-1.5 py-0.5 text-xs font-bold">op tijd</span>}
+          </div>
           <div className="text-4xl font-bold tabular-nums">{formatTime(current.end)}</div>
-          <div className="text-sm text-stone-600">
+          <div className="text-xs text-zinc-400">
             Poules klaar rond {formatTime(current.poolsEnd)} · uitgaande van {settings.timing.minutesPerLeg} min per leg en {settings.timing.changeoverMinutes} min wisseltijd ·
             liefst klaar om {formatTime(limit)}
           </div>
           {suggestions.length > 0 && (
             <div className="mt-3">
-              <div className="font-semibold text-red-800">Voorstellen om sneller klaar te zijn:</div>
-              <div className="mt-2 space-y-2">
+              <div className="text-sm font-semibold">Voorstellen om sneller klaar te zijn:</div>
+              <div className="mt-1.5 space-y-1.5">
                 {suggestions.map((s) => (
                   <button
                     key={s.id}
                     type="button"
-                    className="flex w-full items-center justify-between rounded-xl border border-stone-200 bg-white p-2 text-left hover:border-brand-700"
+                    className="flex w-full items-center justify-between gap-2 rounded-lg bg-white/10 px-2.5 py-2 text-left text-sm hover:bg-white/15"
                     onClick={() => {
                       setLegs(s.plan.legs);
                       setHoldFinal(s.plan.holdFinal);
@@ -238,13 +249,13 @@ export function StartPanel({
                     }}
                   >
                     <span>{s.label}</span>
-                    <span className={cx('font-bold tabular-nums', s.meetsLimit ? 'text-emerald-700' : 'text-stone-700')}>±{formatTime(s.estimate.end)}</span>
+                    <span className={cx('font-bold tabular-nums', s.meetsLimit ? 'text-brand-300' : 'text-zinc-400')}>±{formatTime(s.estimate.end)}</span>
                   </button>
                 ))}
               </div>
             </div>
           )}
-        </Card>
+        </div>
       )}
 
       <Button size="xl" block onClick={() => setConfirm(true)}>

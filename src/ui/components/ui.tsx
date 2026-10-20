@@ -1,24 +1,29 @@
-/** Eenvoudige, grote bouwstenen (mobile-first, met één duim te bedienen). */
+/**
+ * Bouwstenen van de interface: licht, compact, blauw als hoofdkleur, rood als
+ * accent. Grote aanraakdoelen enkel waar één-duimbediening telt (scores,
+ * check-in); invoervelden houden 16 px tekst zodat gsm's niet inzoomen.
+ */
 
 import { useEffect, type ButtonHTMLAttributes, type InputHTMLAttributes, type ReactNode, type SelectHTMLAttributes } from 'react';
 
 const cx = (...parts: Array<string | false | null | undefined>) => parts.filter(Boolean).join(' ');
 
-type Variant = 'primary' | 'secondary' | 'danger' | 'ghost' | 'success';
+type Variant = 'primary' | 'secondary' | 'danger' | 'ghost' | 'success' | 'dark';
 type Size = 'sm' | 'md' | 'lg' | 'xl';
 
 const variants: Record<Variant, string> = {
-  primary: 'bg-brand-800 text-white hover:bg-brand-900 disabled:bg-stone-300',
-  secondary: 'bg-white text-stone-900 border border-stone-300 hover:bg-stone-100 disabled:text-stone-400',
-  danger: 'bg-red-700 text-white hover:bg-red-800 disabled:bg-stone-300',
-  ghost: 'bg-transparent text-brand-800 hover:bg-brand-50 disabled:text-stone-400',
-  success: 'bg-emerald-600 text-white hover:bg-emerald-700 disabled:bg-stone-300',
+  primary: 'bg-brand-600 text-white hover:bg-brand-700 disabled:bg-zinc-300 disabled:text-zinc-500',
+  secondary: 'bg-white text-zinc-800 ring-1 ring-inset ring-zinc-300 hover:bg-zinc-50 disabled:text-zinc-400',
+  danger: 'bg-accent-600 text-white hover:bg-accent-700 disabled:bg-zinc-300 disabled:text-zinc-500',
+  ghost: 'bg-transparent text-brand-700 hover:bg-brand-50 disabled:text-zinc-400',
+  success: 'bg-brand-600 text-white hover:bg-brand-700 disabled:bg-zinc-300 disabled:text-zinc-500',
+  dark: 'bg-ink text-white hover:bg-zinc-800 disabled:bg-zinc-300 disabled:text-zinc-500',
 };
 const sizes: Record<Size, string> = {
-  sm: 'px-3 py-1.5 text-sm rounded-lg',
-  md: 'px-4 py-2.5 text-base rounded-xl',
-  lg: 'px-5 py-3.5 text-lg rounded-xl',
-  xl: 'px-6 py-5 text-2xl rounded-2xl',
+  sm: 'h-8 px-3 text-sm rounded-md',
+  md: 'h-10 px-4 text-sm rounded-lg',
+  lg: 'h-11 px-5 text-base rounded-lg',
+  xl: 'h-14 px-6 text-lg rounded-xl',
 };
 
 export function Button({
@@ -33,7 +38,7 @@ export function Button({
       type="button"
       {...props}
       className={cx(
-        'inline-flex items-center justify-center gap-2 font-semibold transition-colors active:scale-[0.98] disabled:cursor-not-allowed',
+        'inline-flex shrink-0 items-center justify-center gap-1.5 font-semibold whitespace-nowrap transition-colors active:scale-[0.98] disabled:cursor-not-allowed',
         variants[variant],
         sizes[size],
         block && 'w-full',
@@ -44,15 +49,15 @@ export function Button({
 }
 
 export function Card({ children, className }: { children: ReactNode; className?: string }) {
-  return <div className={cx('rounded-2xl border border-stone-200 bg-white p-4 shadow-sm', className)}>{children}</div>;
+  return <div className={cx('rounded-xl border border-zinc-200 bg-white p-3 sm:p-4', className)}>{children}</div>;
 }
 
 export function PageTitle({ children, sub, actions }: { children: ReactNode; sub?: ReactNode; actions?: ReactNode }) {
   return (
     <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
-      <div>
-        <h1 className="text-2xl font-bold text-brand-900">{children}</h1>
-        {sub && <p className="mt-1 text-stone-600">{sub}</p>}
+      <div className="min-w-0">
+        <h1 className="text-xl font-bold tracking-tight text-zinc-950 sm:text-2xl">{children}</h1>
+        {sub && <p className="mt-0.5 text-sm text-zinc-500">{sub}</p>}
       </div>
       {actions && <div className="flex flex-wrap gap-2">{actions}</div>}
     </div>
@@ -62,7 +67,7 @@ export function PageTitle({ children, sub, actions }: { children: ReactNode; sub
 export function SectionTitle({ children, actions }: { children: ReactNode; actions?: ReactNode }) {
   return (
     <div className="mt-6 mb-2 flex items-center justify-between gap-2">
-      <h2 className="text-lg font-semibold text-stone-800">{children}</h2>
+      <h2 className="text-xs font-bold tracking-wider text-zinc-500 uppercase">{children}</h2>
       {actions}
     </div>
   );
@@ -71,64 +76,88 @@ export function SectionTitle({ children, actions }: { children: ReactNode; actio
 export function Field({ label, hint, error, children }: { label: string; hint?: ReactNode; error?: string | null; children: ReactNode }) {
   return (
     <label className="block">
-      <span className="mb-1 block text-sm font-medium text-stone-700">{label}</span>
+      <span className="mb-1 block text-xs font-semibold text-zinc-600">{label}</span>
       {children}
-      {hint && !error && <span className="mt-1 block text-sm text-stone-500">{hint}</span>}
-      {error && <span className="mt-1 block text-sm text-red-700">{error}</span>}
+      {hint && !error && <span className="mt-1 block text-xs text-zinc-500">{hint}</span>}
+      {error && <span className="mt-1 block text-xs text-accent-700">{error}</span>}
     </label>
   );
 }
 
+const inputClass =
+  'h-10 w-full rounded-lg border border-zinc-300 bg-white px-3 text-base text-zinc-900 outline-none placeholder:text-zinc-400 focus:border-brand-600 focus:ring-2 focus:ring-brand-100';
+
 export function TextInput({ className, ...props }: InputHTMLAttributes<HTMLInputElement>) {
-  return (
-    <input
-      {...props}
-      className={cx(
-        'w-full rounded-xl border border-stone-300 bg-white px-3 py-2.5 text-base outline-none focus:border-brand-700 focus:ring-2 focus:ring-brand-100',
-        className,
-      )}
-    />
-  );
+  return <input {...props} className={cx(inputClass, className)} />;
 }
 
-export function Select({ className, ...props }: SelectHTMLAttributes<HTMLSelectElement>) {
+/** Zoekveld met vergrootglas. */
+export function SearchInput({ className, ...props }: InputHTMLAttributes<HTMLInputElement>) {
   return (
-    <select
-      {...props}
-      className={cx('w-full rounded-xl border border-stone-300 bg-white px-3 py-2.5 text-base outline-none focus:border-brand-700', className)}
-    />
-  );
-}
-
-export function Stepper({ value, onChange, min = 0, max = 99, label }: { value: number; onChange: (v: number) => void; min?: number; max?: number; label?: string }) {
-  return (
-    <div className="inline-flex items-center gap-2" aria-label={label}>
-      <Button variant="secondary" size="md" onClick={() => onChange(Math.max(min, value - 1))} disabled={value <= min} aria-label="minder">
-        −
-      </Button>
-      <span className="min-w-8 text-center text-xl font-bold tabular-nums">{value}</span>
-      <Button variant="secondary" size="md" onClick={() => onChange(Math.min(max, value + 1))} disabled={value >= max} aria-label="meer">
-        +
-      </Button>
+    <div className={cx('relative', className)}>
+      <Icon name="search" className="pointer-events-none absolute top-3 left-2.5 text-zinc-400" />
+      <input type="search" {...props} className={cx(inputClass, 'pl-8')} />
     </div>
   );
 }
 
-export function Badge({ children, tone = 'stone' }: { children: ReactNode; tone?: 'stone' | 'green' | 'red' | 'amber' | 'blue' }) {
-  const tones = {
-    stone: 'bg-stone-100 text-stone-700',
-    green: 'bg-emerald-100 text-emerald-800',
-    red: 'bg-red-100 text-red-800',
-    amber: 'bg-amber-100 text-amber-900',
-    blue: 'bg-sky-100 text-sky-800',
+export function Select({ className, ...props }: SelectHTMLAttributes<HTMLSelectElement>) {
+  return <select {...props} className={cx(inputClass, 'pr-8', className)} />;
+}
+
+export function Stepper({ value, onChange, min = 0, max = 99, label }: { value: number; onChange: (v: number) => void; min?: number; max?: number; label?: string }) {
+  return (
+    <div className="inline-flex items-center rounded-lg ring-1 ring-zinc-300" aria-label={label}>
+      <button
+        type="button"
+        className="h-10 w-10 rounded-l-lg text-lg font-semibold text-zinc-700 hover:bg-zinc-50 disabled:text-zinc-300"
+        onClick={() => onChange(Math.max(min, value - 1))}
+        disabled={value <= min}
+        aria-label="minder"
+      >
+        −
+      </button>
+      <span className="min-w-9 text-center text-base font-bold tabular-nums">{value}</span>
+      <button
+        type="button"
+        className="h-10 w-10 rounded-r-lg text-lg font-semibold text-zinc-700 hover:bg-zinc-50 disabled:text-zinc-300"
+        onClick={() => onChange(Math.min(max, value + 1))}
+        disabled={value >= max}
+        aria-label="meer"
+      >
+        +
+      </button>
+    </div>
+  );
+}
+
+export type Tone = 'stone' | 'red' | 'amber' | 'blue' | 'dark';
+
+export function Badge({ children, tone = 'stone' }: { children: ReactNode; tone?: Tone }) {
+  const tones: Record<Tone, string> = {
+    stone: 'bg-zinc-100 text-zinc-700',
+    red: 'bg-accent-50 text-accent-700 ring-1 ring-inset ring-accent-200',
+    amber: 'bg-amber-50 text-amber-800 ring-1 ring-inset ring-amber-200',
+    blue: 'bg-brand-50 text-brand-700 ring-1 ring-inset ring-brand-200',
+    dark: 'bg-ink text-white',
   };
-  return <span className={cx('inline-flex items-center rounded-full px-2.5 py-0.5 text-sm font-medium', tones[tone])}>{children}</span>;
+  return <span className={cx('inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-xs font-semibold whitespace-nowrap', tones[tone])}>{children}</span>;
+}
+
+/** Klein rood "live"-label met pulserend bolletje. */
+export function LiveBadge({ children = 'live' }: { children?: ReactNode }) {
+  return (
+    <span className="inline-flex items-center gap-1.5 rounded-md bg-accent-600 px-1.5 py-0.5 text-xs font-bold whitespace-nowrap text-white uppercase">
+      <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-white" />
+      {children}
+    </span>
+  );
 }
 
 export function Spinner({ label = 'Laden…' }: { label?: string }) {
   return (
-    <div className="flex items-center gap-3 py-8 text-stone-500" role="status">
-      <span className="h-5 w-5 animate-spin rounded-full border-2 border-stone-300 border-t-brand-700" />
+    <div className="flex items-center gap-2 py-6 text-sm text-zinc-500" role="status">
+      <span className="h-4 w-4 animate-spin rounded-full border-2 border-zinc-300 border-t-brand-600" />
       {label}
     </div>
   );
@@ -136,20 +165,39 @@ export function Spinner({ label = 'Laden…' }: { label?: string }) {
 
 export function ErrorBox({ error, children }: { error?: unknown; children?: ReactNode }) {
   const msg = children ?? (error instanceof Error ? error.message : error ? String(error) : 'Er ging iets mis.');
-  return <div className="rounded-xl border border-red-200 bg-red-50 p-3 text-red-800">{msg}</div>;
+  return <div className="rounded-lg border border-accent-200 bg-accent-50 px-3 py-2 text-sm text-accent-800">{msg}</div>;
 }
 
-export function InfoBox({ children, tone = 'blue' }: { children: ReactNode; tone?: 'blue' | 'amber' | 'green' }) {
+export function InfoBox({ children, tone = 'blue' }: { children: ReactNode; tone?: 'blue' | 'amber' | 'red' | 'dark' }) {
   const tones = {
-    blue: 'border-sky-200 bg-sky-50 text-sky-900',
+    blue: 'border-brand-200 bg-brand-50 text-zinc-950',
     amber: 'border-amber-200 bg-amber-50 text-amber-900',
-    green: 'border-emerald-200 bg-emerald-50 text-emerald-900',
+    dark: 'border-ink bg-ink text-white',
+    red: 'border-accent-200 bg-accent-50 text-accent-900',
   };
-  return <div className={cx('rounded-xl border p-3', tones[tone])}>{children}</div>;
+  return <div className={cx('rounded-lg border px-3 py-2 text-sm', tones[tone])}>{children}</div>;
+}
+
+/** Rij kerncijfers in één kaart (bv. aanwezig · betaald · prijzenpot). */
+export function Stats({ items, dark }: { items: Array<{ label: ReactNode; value: ReactNode; sub?: ReactNode }>; dark?: boolean }) {
+  return (
+    <div
+      className={cx('grid divide-x rounded-xl text-center', dark ? 'divide-white/10 bg-ink text-white' : 'divide-zinc-200 border border-zinc-200 bg-white')}
+      style={{ gridTemplateColumns: `repeat(${items.length}, minmax(0, 1fr))` }}
+    >
+      {items.map((c, i) => (
+        <div key={i} className="px-2 py-2.5">
+          <div className={cx('text-2xl leading-tight font-bold tabular-nums', !dark && 'text-zinc-950')}>{c.value}</div>
+          <div className={cx('text-xs', dark ? 'text-zinc-400' : 'text-zinc-500')}>{c.label}</div>
+          {c.sub && <div className={cx('text-[11px]', dark ? 'text-zinc-500' : 'text-zinc-400')}>{c.sub}</div>}
+        </div>
+      ))}
+    </div>
+  );
 }
 
 export function Empty({ children }: { children: ReactNode }) {
-  return <p className="rounded-xl border border-dashed border-stone-300 p-6 text-center text-stone-500">{children}</p>;
+  return <p className="rounded-xl border border-dashed border-zinc-300 px-4 py-6 text-center text-sm text-zinc-500">{children}</p>;
 }
 
 export function Modal({ open, onClose, title, children }: { open: boolean; onClose: () => void; title: string; children: ReactNode }) {
@@ -161,17 +209,22 @@ export function Modal({ open, onClose, title, children }: { open: boolean; onClo
   }, [open, onClose]);
   if (!open) return null;
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 sm:items-center" onClick={onClose}>
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-zinc-950/60 sm:items-center" onClick={onClose}>
       <div
         role="dialog"
         aria-modal="true"
         aria-label={title}
-        className="max-h-[92vh] w-full overflow-y-auto rounded-t-3xl bg-white p-5 shadow-xl sm:max-w-lg sm:rounded-3xl"
+        className="max-h-[92vh] w-full overflow-y-auto rounded-t-2xl bg-white p-4 shadow-xl sm:max-w-md sm:rounded-2xl sm:p-5"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="mb-4 flex items-start justify-between gap-4">
-          <h2 className="text-xl font-bold text-brand-900">{title}</h2>
-          <button type="button" className="text-2xl leading-none text-stone-400 hover:text-stone-700" onClick={onClose} aria-label="Sluiten">
+        <div className="mb-3 flex items-start justify-between gap-4">
+          <h2 className="text-lg font-bold text-zinc-950">{title}</h2>
+          <button
+            type="button"
+            className="-mt-1 -mr-1 flex h-8 w-8 items-center justify-center rounded-md text-xl leading-none text-zinc-400 hover:bg-zinc-100 hover:text-zinc-700"
+            onClick={onClose}
+            aria-label="Sluiten"
+          >
             ×
           </button>
         </div>
@@ -205,7 +258,7 @@ export function ConfirmModal({
   return (
     <Modal open={open} onClose={onClose} title={title}>
       <div className="space-y-4">
-        <div className="text-stone-700">{children}</div>
+        <div className="text-sm text-zinc-700">{children}</div>
         <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
           <Button variant="secondary" size="lg" onClick={onClose}>
             Annuleren
@@ -221,16 +274,16 @@ export function ConfirmModal({
 
 export function Tabs<T extends string>({ value, onChange, tabs }: { value: T; onChange: (v: T) => void; tabs: Array<{ id: T; label: ReactNode }> }) {
   return (
-    <div className="no-print -mx-4 mb-4 overflow-x-auto px-4">
-      <div className="flex min-w-max gap-1 rounded-2xl bg-stone-200/70 p-1">
+    <div className="no-print -mx-4 mb-4 overflow-x-auto border-b border-zinc-200 px-4">
+      <div className="flex min-w-max gap-1">
         {tabs.map((t) => (
           <button
             key={t.id}
             type="button"
             onClick={() => onChange(t.id)}
             className={cx(
-              'rounded-xl px-4 py-2.5 text-base font-semibold whitespace-nowrap',
-              t.id === value ? 'bg-white text-brand-900 shadow' : 'text-stone-600 hover:text-stone-900',
+              '-mb-px border-b-2 px-3 py-2 text-sm font-semibold whitespace-nowrap',
+              t.id === value ? 'border-brand-600 text-brand-700' : 'border-transparent text-zinc-500 hover:text-zinc-900',
             )}
           >
             {t.label}
@@ -238,6 +291,48 @@ export function Tabs<T extends string>({ value, onChange, tabs }: { value: T; on
         ))}
       </div>
     </div>
+  );
+}
+
+/** Gesegmenteerde keuze (bv. filters of inloggen/aanvragen). */
+export function Segmented<T extends string>({ value, onChange, options, block }: { value: T; onChange: (v: T) => void; options: Array<{ id: T; label: ReactNode }>; block?: boolean }) {
+  return (
+    <div className={cx('rounded-lg bg-zinc-200/70 p-0.5', block ? 'grid' : 'inline-flex')} style={block ? { gridTemplateColumns: `repeat(${options.length}, minmax(0, 1fr))` } : undefined}>
+      {options.map((o) => (
+        <button
+          key={o.id}
+          type="button"
+          aria-pressed={o.id === value}
+          onClick={() => onChange(o.id)}
+          className={cx('h-8 rounded-md px-3 text-sm font-semibold whitespace-nowrap', o.id === value ? 'bg-white text-zinc-950 shadow-sm' : 'text-zinc-500 hover:text-zinc-900')}
+        >
+          {o.label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+/** Kleine pictogrammen (lijnstijl), zonder externe bibliotheek. */
+const ICONS = {
+  calendar: 'M8 2v4M16 2v4M3 10h18M5 4h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z',
+  clock: 'M12 7v5l3 2M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20z',
+  euro: 'M18 7a7 7 0 1 0 0 10M4 10h10M4 14h10',
+  pin: 'M12 22s7-6.2 7-12a7 7 0 0 0-14 0c0 5.8 7 12 7 12zM12 12.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z',
+  users: 'M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM22 21v-2a4 4 0 0 0-3-3.9M16 3.1a4 4 0 0 1 0 7.8',
+  target: 'M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20zM12 18a6 6 0 1 0 0-12 6 6 0 0 0 0 12zM12 14a2 2 0 1 0 0-4 2 2 0 0 0 0 4z',
+  trophy: 'M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0V4zM17 5h3v2a3 3 0 0 1-3 3M7 5H4v2a3 3 0 0 0 3 3',
+  note: 'M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9zM14 3v6h6M8 13h8M8 17h5',
+  chevron: 'M9 18l6-6-6-6',
+  print: 'M6 9V2h12v7M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2M6 14h12v8H6z',
+  search: 'M11 19a8 8 0 1 0 0-16 8 8 0 0 0 0 16zM21 21l-4.3-4.3',
+} as const;
+
+export function Icon({ name, className }: { name: keyof typeof ICONS; className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className={cx('h-4 w-4 shrink-0', className)} aria-hidden="true">
+      <path d={ICONS[name]} />
+    </svg>
   );
 }
 

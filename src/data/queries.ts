@@ -18,6 +18,7 @@ import {
   fetchScorerPin,
   fetchSeasonData,
   fetchSeasons,
+  hasDemoData,
 } from './api';
 import type { PlayerRow } from './rows';
 import { supabase } from './supabase';
@@ -35,6 +36,7 @@ export const keys = {
   contacts: ['contacts'] as const,
   audit: ['audit'] as const,
   player: (id: string) => ['player', id] as const,
+  demo: ['demo'] as const,
 };
 
 export const useSeasons = () => useQuery({ queryKey: keys.seasons, queryFn: fetchSeasons });
@@ -44,6 +46,8 @@ export const useRegistrationCounts = () => useQuery({ queryKey: keys.counts, que
 export const useProfiles = (enabled = true) => useQuery({ queryKey: keys.profiles, queryFn: fetchProfiles, enabled });
 export const useContacts = (enabled = true) => useQuery({ queryKey: keys.contacts, queryFn: fetchContacts, enabled });
 export const useAuditLog = (enabled = true) => useQuery({ queryKey: keys.audit, queryFn: () => fetchAuditLog(), enabled });
+
+export const useHasDemoData = (enabled = true) => useQuery({ queryKey: keys.demo, queryFn: hasDemoData, enabled });
 
 export const usePlayerData = (playerId: string | undefined) =>
   useQuery({ queryKey: keys.player(playerId ?? ''), queryFn: () => fetchPlayerData(playerId as string), enabled: Boolean(playerId) });

@@ -82,12 +82,12 @@ export function MatchModal({ view, match, board, name, onClose }: { view: EventV
       )}
       {mode === 'view' && (
         <div className="space-y-4">
-          <div className="text-lg">
+          <div className="rounded-lg bg-zinc-50 px-2 py-3 text-base">
             <MatchLine m={match} name={name} pending={pending ? { legs1: pending.data.legs1, legs2: pending.data.legs2 } : undefined} />
           </div>
           {pending && <InfoBox tone="amber">Deze uitslag wacht nog op verbinding en wordt automatisch verstuurd.</InfoBox>}
           {statsLine(view.statsByMatch.get(view.rowByCode.get(match.id)?.id ?? ''), name) && (
-            <p className="text-sm text-stone-600">{statsLine(view.statsByMatch.get(view.rowByCode.get(match.id)?.id ?? ''), name)}</p>
+            <p className="text-sm text-zinc-600">{statsLine(view.statsByMatch.get(view.rowByCode.get(match.id)?.id ?? ''), name)}</p>
           )}
           {match.winner && !pending && (
             <Button variant="secondary" size="lg" block onClick={() => setMode('correct')}>
@@ -96,15 +96,15 @@ export function MatchModal({ view, match, board, name, onClose }: { view: EventV
           )}
         </div>
       )}
-      {!known && <p className="text-stone-600">De spelers van deze match zijn nog niet gekend.</p>}
+      {!known && <p className="text-sm text-zinc-600">De spelers van deze match zijn nog niet gekend.</p>}
 
       {!match.winner && !pending && known && view.event.status === 'bezig' && (
-        <div className="mt-6 space-y-3 border-t border-stone-200 pt-4">
-          <h3 className="font-semibold">Planning</h3>
-          {live && <p className="text-sm text-stone-600">Speelt nu op bord {live.board}.</p>}
+        <div className="mt-5 space-y-2.5 border-t border-zinc-200 pt-4">
+          <h3 className="text-xs font-bold tracking-wider text-zinc-500 uppercase">Planning</h3>
+          {live && <p className="text-sm text-zinc-600">Speelt nu op bord {live.board}.</p>}
           <div className="flex items-end gap-2">
             <label className="flex-1">
-              <span className="text-sm text-stone-600">Naar bord</span>
+              <span className="mb-1 block text-xs font-semibold text-zinc-600">Naar bord</span>
               <Select value={targetBoard} onChange={(e) => setTargetBoard(Number(e.target.value))}>
                 {view.activeBoards.map((b) => (
                   <option key={b} value={b}>

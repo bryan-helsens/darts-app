@@ -5,7 +5,7 @@ import { buildEventView, type EventView } from '../../../data/eventView';
 import { useEventBundle, usePlayerDirectory } from '../../../data/queries';
 import { formatLongDate } from '../../../lib/time';
 import { bracketSlots } from '../../components/darts';
-import { Button, ErrorBox, Spinner } from '../../components/ui';
+import { Button, ErrorBox, Icon, Spinner } from '../../components/ui';
 
 type NameFn = (id: string | null | undefined) => string;
 
@@ -28,16 +28,17 @@ export function PrintPage() {
   return (
     <div className="mx-auto max-w-4xl bg-white p-4 print:max-w-none print:p-0">
       <style>{`@page { size: A4; margin: 12mm; } @media print { .page-break { break-before: page; } }`}</style>
-      <div className="no-print mb-6 space-y-3 rounded-2xl bg-stone-100 p-4">
+      <div className="no-print mb-6 space-y-3 rounded-xl bg-ink p-3 text-white sm:p-4">
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <Link to={`/beheer/avond/${view.event.id}`} className="text-brand-800 underline">
+          <Link to={`/beheer/avond/${view.event.id}`} className="text-sm text-zinc-300 hover:text-white">
             ← terug
           </Link>
-          <Button size="lg" onClick={() => window.print()}>
+          <Button onClick={() => window.print()}>
+            <Icon name="print" />
             Afdrukken / PDF
           </Button>
         </div>
-        <div className="flex flex-wrap gap-4">
+        <div className="flex flex-wrap gap-x-4 gap-y-2 text-sm">
           {(
             [
               ['pools', 'Poulebladen'],
@@ -46,12 +47,12 @@ export function PrintPage() {
             ] as const
           ).map(([key, label]) => (
             <label key={key} className="flex items-center gap-2">
-              <input type="checkbox" className="h-5 w-5" checked={parts[key]} onChange={(e) => setParts((p) => ({ ...p, [key]: e.target.checked }))} />
+              <input type="checkbox" className="h-5 w-5 accent-brand-600" checked={parts[key]} onChange={(e) => setParts((p) => ({ ...p, [key]: e.target.checked }))} />
               {label}
             </label>
           ))}
         </div>
-        <p className="text-sm text-stone-600">Tip: druk de poulebladen af meteen na de start. Valt het internet uit, dan kan de avond op papier verder.</p>
+        <p className="text-xs text-zinc-400">Tip: druk de poulebladen af meteen na de start. Valt het internet uit, dan kan de avond op papier verder.</p>
       </div>
 
       <h1 className="text-xl font-bold">Sanapolis Darts · {formatLongDate(view.event.event_date)}</h1>
@@ -91,7 +92,7 @@ function PoolSheets({ view, name }: { view: EventView; name: NameFn }) {
               </thead>
               <tbody>
                 {pool.playerIds.map((id, i) => (
-                  <tr key={id} className="border-b border-stone-300">
+                  <tr key={id} className="border-b border-zinc-300">
                     <td>{i + 1}</td>
                     <td>{name(id)}</td>
                     <td />
@@ -104,7 +105,7 @@ function PoolSheets({ view, name }: { view: EventView; name: NameFn }) {
             <table className="w-full border-collapse">
               <tbody>
                 {ms.map((m) => (
-                  <tr key={m.id} className="border-b border-stone-300">
+                  <tr key={m.id} className="border-b border-zinc-300">
                     <td className="w-8 py-1 text-xs">R{m.round}</td>
                     <td className="text-right">{name(m.player1)}</td>
                     <td className="w-24 text-center">{m.winner ? `${m.legs1} – ${m.legs2}` : <><span className={box} /> – <span className={box} /></>}</td>
@@ -138,13 +139,13 @@ function PrintBracket({ view, stage, name }: { view: EventView; stage: 'A' | 'B'
               <div className="flex flex-1 flex-col justify-around gap-1">
                 {bracketSlots(inRound, rounds, r).map((m, idx) =>
                   m === null ? (
-                    <div key={`bye-${idx}`} className="py-2 text-center text-stone-400">
+                    <div key={`bye-${idx}`} className="py-2 text-center text-zinc-400">
                       bye
                     </div>
                   ) : (
                   <div key={m.id} className="border border-black">
                     {([m.player1, m.player2] as const).map((p, i) => (
-                      <div key={i} className="flex justify-between gap-1 border-b border-stone-300 px-1 py-0.5 last:border-b-0">
+                      <div key={i} className="flex justify-between gap-1 border-b border-zinc-300 px-1 py-0.5 last:border-b-0">
                         <span className="truncate">{p ? name(p) : '……………'}</span>
                         <span>{(i === 0 ? m.legs1 : m.legs2) ?? ''}</span>
                       </div>

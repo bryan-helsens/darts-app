@@ -3,7 +3,7 @@ import { Navigate } from 'react-router-dom';
 import { useAuth } from '../../../data/auth';
 import { supabase } from '../../../data/supabase';
 import { authErrorMessage } from '../../../lib/authErrors';
-import { Button, Card, ErrorBox, Field, InfoBox, Tabs, TextInput } from '../../components/ui';
+import { Button, Card, ErrorBox, Field, InfoBox, Segmented, TextInput } from '../../components/ui';
 
 export function LoginPage() {
   const { session, isStaff, refreshProfile } = useAuth();
@@ -44,27 +44,31 @@ export function LoginPage() {
   };
 
   return (
-    <div className="mx-auto max-w-md">
-      <h1 className="mb-4 text-2xl font-bold text-brand-900">Voor organisatoren</h1>
-      <Tabs
-        value={mode}
-        onChange={(m) => {
-          setMode(m);
-          setError(null);
-        }}
-        tabs={[
-          { id: 'login', label: 'Inloggen' },
-          { id: 'aanvraag', label: 'Account aanvragen' },
-        ]}
-      />
+    <div className="mx-auto max-w-sm pt-2 sm:pt-6">
+      <h1 className="text-xl font-bold tracking-tight text-zinc-950 sm:text-2xl">Voor organisatoren</h1>
+      <p className="mb-4 text-sm text-zinc-500">Wedstrijdleiders en beheerders loggen hier in.</p>
+      <div className="mb-3">
+        <Segmented
+          block
+          value={mode}
+          onChange={(m) => {
+            setMode(m);
+            setError(null);
+          }}
+          options={[
+            { id: 'login', label: 'Inloggen' },
+            { id: 'aanvraag', label: 'Account aanvragen' },
+          ]}
+        />
+      </div>
       <Card>
         {done ? (
-          <InfoBox tone="green">
+          <InfoBox>
             Je account is aangemaakt. Een beheerder moet je aanvraag nog goedkeuren; daarna kan je inloggen. Werd er een e-mail verstuurd? Bevestig dan eerst je
             e-mailadres.
           </InfoBox>
         ) : (
-          <form className="space-y-4" onSubmit={submit}>
+          <form className="space-y-3" onSubmit={submit}>
             {mode === 'aanvraag' && (
               <Field label="Je naam">
                 <TextInput value={name} onChange={(e) => setName(e.target.value)} required autoComplete="name" />
@@ -86,12 +90,12 @@ export function LoginPage() {
             <Button type="submit" size="lg" block disabled={busy}>
               {busy ? 'Even geduld…' : mode === 'login' ? 'Inloggen' : 'Account aanvragen'}
             </Button>
-            {mode === 'login' && <p className="text-sm text-stone-500">Je blijft ingelogd op dit toestel tot je afmeldt.</p>}
+            {mode === 'login' && <p className="text-center text-xs text-zinc-500">Je blijft ingelogd op dit toestel tot je afmeldt.</p>}
           </form>
         )}
       </Card>
       {session && !isStaff && (
-        <p className="mt-4 text-stone-600">Je bent ingelogd, maar je account is nog niet goedgekeurd door een beheerder.</p>
+        <p className="mt-4 text-sm text-zinc-600">Je bent ingelogd, maar je account is nog niet goedgekeurd door een beheerder.</p>
       )}
     </div>
   );

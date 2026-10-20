@@ -11,13 +11,13 @@ const PLAYERS = ['Arne Beke', 'Bram Claes', 'Cindy Dewitte', 'Dries Engels', 'Ev
 async function enterScore(page: Page, card: ReturnType<Page['locator']>) {
   await card.click();
   const dialog = page.getByRole('dialog');
-  await dialog.locator('button.min-h-24').first().click();
-  const zero = dialog.getByRole('button', { name: '0', exact: true });
-  if (await zero.isVisible().catch(() => false)) await zero.click();
+  // Speler 1 wint met het maximum, speler 2 krijgt 0 legs.
+  await dialog.locator('[data-legs-row="1"] button').last().click();
+  await dialog.locator('[data-legs-row="2"] button').first().click();
   await dialog.getByRole('button', { name: 'Verder' }).click();
   await dialog.getByRole('button', { name: 'Ja, opslaan' }).click();
   await expect(dialog).toBeHidden();
-  await expect(page.getByText('✓ Alles gesynchroniseerd')).toBeVisible({ timeout: 15_000 });
+  await expect(page.getByRole('button', { name: '✓ Alles gesynchroniseerd' })).toBeVisible({ timeout: 15_000 });
 }
 
 /** Speelt alle matchen die op de borden komen tot er niets meer klaarstaat. */
@@ -48,7 +48,7 @@ test('een volledige speelavond', async ({ page, browser }) => {
   await expect(page.getByRole('heading', { name: 'Beheer' })).toBeVisible();
 
   // Seizoen en speelavond.
-  await page.getByRole('link', { name: 'Seizoenen & avonden' }).click();
+  await page.getByRole('link', { name: 'Seizoenen', exact: true }).click();
   await page.getByRole('button', { name: /\+ Seizoen/ }).click();
   await page.getByRole('button', { name: '+ Avond' }).click();
   await page.getByRole('dialog').getByRole('button', { name: 'Opslaan' }).click();
@@ -61,7 +61,7 @@ test('een volledige speelavond', async ({ page, browser }) => {
     await page.getByRole('dialog').getByRole('button', { name: 'Toevoegen en aanwezig' }).click();
     await expect(page.getByRole('dialog')).toBeHidden();
   }
-  await expect(page.getByText('✓ Alles gesynchroniseerd')).toBeVisible({ timeout: 15_000 });
+  await expect(page.getByRole('button', { name: '✓ Alles gesynchroniseerd' })).toBeVisible({ timeout: 15_000 });
   for (const name of PLAYERS) {
     await page.locator('div.px-3', { hasText: name }).getByRole('button', { name: '€5?' }).click();
   }
@@ -80,10 +80,10 @@ test('een volledige speelavond', async ({ page, browser }) => {
   await expect(page.getByText('Geschatte eindtijd')).toBeVisible();
   await page.getByRole('button', { name: 'Toernooi starten' }).click();
   await page.getByRole('button', { name: 'Starten en poules loten' }).click();
-  await expect(page.getByText('Verwachte eindtijd')).toBeVisible();
+  await expect(page.getByText('Verwacht einde')).toBeVisible();
 
   // De schrijver voert met de pincode een score in, ook zonder verbinding.
-  const pin = (await page.locator('.tracking-widest').textContent())?.trim() ?? '';
+  const pin = (await page.locator('[data-pin]').textContent())?.trim() ?? '';
   const scorerContext = await browser.newContext();
   const scorer = await scorerContext.newPage();
   await scorer.goto('/score');
@@ -92,10 +92,10 @@ test('een volledige speelavond', async ({ page, browser }) => {
   await expect(scorer.getByText('Tik op jouw bord')).toBeVisible();
   await scorerContext.setOffline(true);
   await enterScoreOffline(scorer);
-  await expect(scorer.getByText('1 wacht op verbinding')).toBeVisible();
+  await expect(scorer.getByRole('button', { name: '1 wacht op verbinding' })).toBeVisible();
   await scorerContext.setOffline(false);
   await scorer.evaluate(() => window.dispatchEvent(new Event('online')));
-  await expect(scorer.getByText('✓ Alles gesynchroniseerd')).toBeVisible({ timeout: 15_000 });
+  await expect(scorer.getByRole('button', { name: '✓ Alles gesynchroniseerd' })).toBeVisible({ timeout: 15_000 });
   await scorerContext.close();
 
   // Poules uitspelen.
@@ -130,8 +130,8 @@ async function enterScoreOffline(scorer: Page) {
   const card = scorer.locator('button:has-text("Bord 1")').first();
   await card.click();
   const dialog = scorer.getByRole('dialog');
-  await dialog.locator('button.min-h-24').first().click();
-  await dialog.getByRole('button', { name: '1', exact: true }).click();
+  await dialog.locator('[data-legs-row="1"] button').last().click();
+  await dialog.locator('[data-legs-row="2"] button').nth(1).click();
   await dialog.getByRole('button', { name: 'Verder' }).click();
   await dialog.getByRole('button', { name: 'Ja, opslaan' }).click();
 }

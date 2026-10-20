@@ -1,62 +1,83 @@
+import type { ReactNode } from 'react';
 import { Navigate, NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../data/auth';
 import { SyncBadge } from '../components/SyncBadge';
 import { Button, cx, Spinner } from '../components/ui';
 
-function Logo() {
+function Logo({ to = '/' }: { to?: string }) {
   return (
-    <NavLink to="/" className="flex items-center gap-2 font-bold text-white">
-      <img src="/favicon.svg" alt="" className="h-8 w-8" />
-      <span className="text-lg leading-tight">Sanapolis Darts</span>
+    <NavLink to={to} className="flex items-center gap-2 font-bold text-white">
+      <img src="/favicon.svg" alt="" className="h-7 w-7" />
+      <span className="text-base leading-none tracking-tight">
+        Sanapolis <span className="text-accent-500">Darts</span>
+      </span>
     </NavLink>
   );
 }
 
 const navClass = ({ isActive }: { isActive: boolean }) =>
-  cx('rounded-lg px-3 py-2 text-sm font-semibold whitespace-nowrap', isActive ? 'bg-white/20 text-white' : 'text-white/80 hover:text-white');
+  cx(
+    'relative px-2.5 py-2.5 text-sm font-medium whitespace-nowrap transition-colors',
+    isActive ? 'text-white after:absolute after:inset-x-2.5 after:bottom-0 after:h-0.5 after:rounded-full after:bg-accent-500' : 'text-zinc-400 hover:text-white',
+  );
+
+function Header({ nav, right, home }: { nav: ReactNode; right?: ReactNode; home?: string }) {
+  return (
+    // Op gsm scrolt de kop mee weg (meer plaats); vanaf tabletbreedte blijft hij staan.
+    <header className="no-print z-40 bg-ink md:sticky md:top-0">
+      <div className="mx-auto flex h-12 max-w-5xl items-center justify-between gap-3 px-4 md:h-14">
+        <Logo to={home} />
+        <nav className="hidden h-full items-center md:flex">{nav}</nav>
+        <div className="flex items-center gap-2">{right}</div>
+      </div>
+      <nav className="mx-auto flex max-w-5xl overflow-x-auto px-2 md:hidden">{nav}</nav>
+    </header>
+  );
+}
 
 export function PublicLayout() {
   const { isStaff } = useAuth();
   return (
     <div className="flex min-h-dvh flex-col">
-      <header className="no-print bg-brand-900">
-        <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-2 px-4 py-3">
-          <Logo />
-          {isStaff && (
-            <NavLink to="/beheer" className="rounded-lg bg-white px-3 py-1.5 text-sm font-semibold text-brand-900">
+      <Header
+        right={
+          isStaff && (
+            <NavLink to="/beheer" className="rounded-md bg-white/10 px-2.5 py-1 text-xs font-semibold text-white hover:bg-white/20">
               Beheer
             </NavLink>
-          )}
-        </div>
-        <nav className="mx-auto flex max-w-5xl gap-1 overflow-x-auto px-3 pb-2">
-          <NavLink to="/" end className={navClass}>
-            Kalender
-          </NavLink>
-          <NavLink to="/ranking" className={navClass}>
-            Ranking
-          </NavLink>
-          <NavLink to="/uitslagen" className={navClass}>
-            Uitslagen
-          </NavLink>
-          <NavLink to="/spelers" className={navClass}>
-            Spelers
-          </NavLink>
-          <NavLink to="/nieuw" className={navClass}>
-            Nieuw? Zo werkt het
-          </NavLink>
-          <NavLink to="/reglement" className={navClass}>
-            Reglement
-          </NavLink>
-        </nav>
-      </header>
-      <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-6">
+          )
+        }
+        nav={
+          <>
+            <NavLink to="/" end className={navClass}>
+              Kalender
+            </NavLink>
+            <NavLink to="/ranking" className={navClass}>
+              Ranking
+            </NavLink>
+            <NavLink to="/uitslagen" className={navClass}>
+              Uitslagen
+            </NavLink>
+            <NavLink to="/spelers" className={navClass}>
+              Spelers
+            </NavLink>
+            <NavLink to="/nieuw" className={navClass}>
+              Nieuw?
+            </NavLink>
+            <NavLink to="/reglement" className={navClass}>
+              Reglement
+            </NavLink>
+          </>
+        }
+      />
+      <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-5">
         <Outlet />
       </main>
-      <footer className="no-print border-t border-stone-200 py-6 text-center text-sm text-stone-500">
+      <footer className="no-print border-t border-zinc-200 bg-white py-5 text-center text-xs text-zinc-500">
         <p>Brasserie ’t Oud Sanatorium · Sijsele · elke derde zaterdag van de maand</p>
         {!isStaff && (
-          <p className="mt-2">
-            <NavLink to="/login" className="underline">
+          <p className="mt-1.5">
+            <NavLink to="/login" className="underline hover:text-zinc-800">
               Inloggen voor organisatoren
             </NavLink>
           </p>
@@ -74,8 +95,8 @@ export function StaffLayout() {
   if (!isStaff) {
     return (
       <div className="mx-auto max-w-md p-6">
-        <h1 className="mb-2 text-xl font-bold">Nog geen toegang</h1>
-        <p className="mb-4 text-stone-600">
+        <h1 className="mb-2 text-lg font-bold">Nog geen toegang</h1>
+        <p className="mb-4 text-sm text-zinc-600">
           {profile?.role === 'geweigerd'
             ? 'Je aanvraag werd geweigerd. Neem contact op met een organisator.'
             : 'Je account is aangemaakt. Een beheerder moet je aanvraag nog goedkeuren.'}
@@ -88,37 +109,35 @@ export function StaffLayout() {
   }
   return (
     <div className="flex min-h-dvh flex-col">
-      <header className="no-print bg-brand-900">
-        <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-2 px-4 py-3">
-          <Logo />
-          <div className="flex items-center gap-2">
-            <SyncBadge />
-            <button type="button" className="text-sm text-white/80 underline" onClick={() => void signOut().then(() => navigate('/'))}>
+      <Header
+        home="/beheer"
+        right={<SyncBadge />}
+        nav={
+          <>
+            <NavLink to="/beheer" end className={navClass}>
+              Overzicht
+            </NavLink>
+            <NavLink to="/beheer/spelers" className={navClass}>
+              Spelers
+            </NavLink>
+            <NavLink to="/beheer/seizoenen" className={navClass}>
+              Seizoenen
+            </NavLink>
+            {isAdmin && (
+              <NavLink to="/beheer/gebruikers" className={navClass}>
+                Gebruikers
+              </NavLink>
+            )}
+            <NavLink to="/" className={navClass}>
+              Publieke site
+            </NavLink>
+            <button type="button" className={navClass({ isActive: false })} onClick={() => void signOut().then(() => navigate('/'))}>
               Afmelden
             </button>
-          </div>
-        </div>
-        <nav className="mx-auto flex max-w-5xl gap-1 overflow-x-auto px-3 pb-2">
-          <NavLink to="/beheer" end className={navClass}>
-            Overzicht
-          </NavLink>
-          <NavLink to="/beheer/spelers" className={navClass}>
-            Spelers
-          </NavLink>
-          <NavLink to="/beheer/seizoenen" className={navClass}>
-            Seizoenen & avonden
-          </NavLink>
-          {isAdmin && (
-            <NavLink to="/beheer/gebruikers" className={navClass}>
-              Gebruikers
-            </NavLink>
-          )}
-          <NavLink to="/" className={navClass}>
-            Publieke site
-          </NavLink>
-        </nav>
-      </header>
-      <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-6">
+          </>
+        }
+      />
+      <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-5">
         <Outlet />
       </main>
     </div>

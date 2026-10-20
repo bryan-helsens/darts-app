@@ -6,7 +6,7 @@ import { keys, useContacts, usePlayers } from '../../../data/queries';
 import type { PlayerRow } from '../../../data/rows';
 import { matchesSearch } from '../../../lib/names';
 import { AddPlayerForm, displayName } from '../../components/players';
-import { Badge, Button, ConfirmModal, Empty, ErrorBox, Field, Modal, PageTitle, Select, Spinner, TextInput } from '../../components/ui';
+import { Badge, Button, ConfirmModal, Empty, ErrorBox, Field, Modal, PageTitle, SearchInput, Select, Spinner, TextInput } from '../../components/ui';
 
 export function PlayersAdminPage() {
   const { data: players, isLoading, error } = usePlayers();
@@ -25,25 +25,25 @@ export function PlayersAdminPage() {
       <PageTitle
         sub={`${players?.length ?? 0} spelers. Publiek is enkel de naam en bijnaam zichtbaar.`}
         actions={
-          <Button size="lg" onClick={() => setAdding(true)}>
+          <Button onClick={() => setAdding(true)}>
             + Nieuwe speler
           </Button>
         }
       >
         Spelers
       </PageTitle>
-      <TextInput placeholder="Zoek een speler…" value={query} onChange={(e) => setQuery(e.target.value)} className="mb-4" />
+      <SearchInput placeholder="Zoek een speler…" value={query} onChange={(e) => setQuery(e.target.value)} className="mb-3" />
       {list.length === 0 ? (
         <Empty>Geen spelers gevonden.</Empty>
       ) : (
-        <div className="divide-y divide-stone-100 overflow-hidden rounded-2xl border border-stone-200 bg-white">
+        <div className="divide-y divide-zinc-100 overflow-hidden rounded-xl border border-zinc-200 bg-white">
           {list.map((p) => {
             const c = contactOf.get(p.id);
             return (
-              <button key={p.id} type="button" onClick={() => setEditing(p)} className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left hover:bg-stone-50">
-                <div>
-                  <div className="font-semibold">{displayName(p)}</div>
-                  <div className="text-sm text-stone-500">{[c?.email, c?.phone].filter(Boolean).join(' · ') || 'geen contactgegevens'}</div>
+              <button key={p.id} type="button" onClick={() => setEditing(p)} className="flex w-full items-center justify-between gap-3 px-3 py-2 text-left hover:bg-zinc-50">
+                <div className="min-w-0">
+                  <div className="truncate text-sm font-semibold text-zinc-950">{displayName(p)}</div>
+                  <div className="truncate text-xs text-zinc-500">{[c?.email, c?.phone].filter(Boolean).join(' · ') || 'geen contactgegevens'}</div>
                 </div>
                 <div className="flex gap-1">
                   {!p.active && <Badge>inactief</Badge>}
@@ -125,7 +125,7 @@ function EditPlayer({
           <TextInput type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} />
         </Field>
         <label className="flex items-center gap-3">
-          <input type="checkbox" className="h-6 w-6" checked={active} onChange={(e) => setActive(e.target.checked)} />
+          <input type="checkbox" className="h-5 w-5 accent-brand-600" checked={active} onChange={(e) => setActive(e.target.checked)} />
           Actieve speler (verschijnt bij het zoeken tijdens de check-in)
         </label>
         {save.error && <ErrorBox error={save.error} />}
@@ -134,8 +134,8 @@ function EditPlayer({
         </Button>
 
         {isAdmin && (
-          <div className="mt-6 space-y-3 border-t border-stone-200 pt-4">
-            <h3 className="font-semibold">Beheer (admin)</h3>
+          <div className="mt-6 space-y-3 border-t border-zinc-200 pt-4">
+            <h3 className="text-sm font-semibold text-zinc-950">Beheer (admin)</h3>
             <Field label="Dubbel aangemaakt? Voeg deze speler samen met:" hint="Alle uitslagen gaan naar de gekozen speler; deze fiche verdwijnt.">
               <Select value={mergeWith} onChange={(e) => setMergeWith(e.target.value)}>
                 <option value="">Kies een speler…</option>

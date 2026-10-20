@@ -77,7 +77,7 @@ export function AddPlayerForm({
               <li key={p.id} className="flex items-center justify-between gap-2">
                 <span>
                   {p.name}
-                  {p.nickname && <span className="text-stone-500"> “{p.nickname}”</span>}
+                  {p.nickname && <span className="text-zinc-500"> “{p.nickname}”</span>}
                 </span>
                 {onPickExisting && (
                   <Button size="sm" variant="secondary" onClick={() => onPickExisting(p)}>
@@ -103,7 +103,7 @@ export function AddPlayerForm({
           </Field>
         </div>
       ) : (
-        <button type="button" className="text-sm text-brand-800 underline" onClick={() => setMore(true)}>
+        <button type="button" className="text-sm text-brand-700 underline" onClick={() => setMore(true)}>
           + bijnaam, e-mail of gsm
         </button>
       )}

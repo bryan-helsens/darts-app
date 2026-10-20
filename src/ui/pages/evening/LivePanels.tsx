@@ -16,7 +16,7 @@ import { usePendingScores } from '../../../data/outbox';
 import { keys } from '../../../data/queries';
 import { formatTime } from '../../../lib/time';
 import { BoardsOverview, Bracket, MatchLine, matchTitle, PlacementsTable, PoolTable } from '../../components/darts';
-import { Badge, Button, Card, ConfirmModal, cx, Empty, ErrorBox, InfoBox, Modal, SectionTitle, Select, TextInput } from '../../components/ui';
+import { Badge, Button, Card, ConfirmModal, cx, Empty, ErrorBox, InfoBox, Modal, SectionTitle, Select, Stats, TextInput } from '../../components/ui';
 import { MatchModal } from './MatchModal';
 
 type NameFn = (id: string | null | undefined) => string;
@@ -67,20 +67,15 @@ export function BoardsPanel({ view, name, onGoTo }: { view: EventView; name: Nam
     .slice(0, 5);
 
   return (
-    <div className="space-y-4">
-      <div className="grid grid-cols-2 gap-2">
-        <Card className="p-3">
-          <div className="text-sm text-stone-500">Verwachte eindtijd</div>
-          <div className="text-3xl font-bold tabular-nums">{end ? formatTime(end) : '–'}</div>
-          {view.live && <div className="text-xs text-stone-500">{view.live.minutesPerLeg.toFixed(1)} min per leg</div>}
-        </Card>
-        <Card className="p-3">
-          <div className="text-sm text-stone-500">Poulematchen</div>
-          <div className="text-3xl font-bold tabular-nums">
-            {done}/{poolMatches.length}
-          </div>
-        </Card>
-      </div>
+    <div className="space-y-3">
+      <Stats
+        dark
+        items={[
+          { label: 'Verwacht einde', value: end ? formatTime(end) : '–', sub: view.live && `${view.live.minutesPerLeg.toFixed(1)} min per leg` },
+          { label: 'Poulematchen', value: `${done}/${poolMatches.length}` },
+          { label: 'Borden', value: view.activeBoards.length },
+        ]}
+      />
 
       {(view.phase === 'barrages' || view.phase === 'ko-klaar') && (
         <InfoBox tone="amber">
@@ -93,7 +88,7 @@ export function BoardsPanel({ view, name, onGoTo }: { view: EventView; name: Nam
         </InfoBox>
       )}
       {view.phase === 'klaar' && (
-        <InfoBox tone="green">
+        <InfoBox>
           <div className="flex flex-wrap items-center justify-between gap-2">
             <span>Alle matchen zijn gespeeld.</span>
             <Button size="sm" onClick={() => onGoTo('afsluiten')}>
@@ -104,11 +99,11 @@ export function BoardsPanel({ view, name, onGoTo }: { view: EventView; name: Nam
       )}
 
       <BoardsOverview view={view} name={name} onMatch={(m, b) => open(m, b)} />
-      {tired.size > 0 && <p className="text-sm text-amber-800">Let op: op {tired.size} bord(en) speelt iemand zonder pauze, omdat er geen andere match klaarstond.</p>}
+      {tired.size > 0 && <p className="text-xs text-amber-800">Let op: op {tired.size} bord(en) speelt iemand zonder pauze, omdat er geen andere match klaarstond.</p>}
 
-      <div className="flex flex-wrap gap-2">
+      <div className="grid grid-cols-2 gap-2 sm:flex">
         <Button variant="secondary" onClick={() => setBoardsModal(true)}>
-          Borden: {view.activeBoards.length} · wijzigen
+          Borden wijzigen ({view.activeBoards.length})
         </Button>
         <Button variant="secondary" onClick={() => setWithdrawModal(true)}>
           Speler geeft op
@@ -119,16 +114,15 @@ export function BoardsPanel({ view, name, onGoTo }: { view: EventView; name: Nam
       {queue.length === 0 ? (
         <Empty>Geen matchen die klaarstaan.</Empty>
       ) : (
-        <div className="space-y-2">
+        <div className="divide-y divide-zinc-100 overflow-hidden rounded-xl border border-zinc-200 bg-white">
           {queue.slice(0, 12).map((m, i) => (
-            <button key={m.id} type="button" onClick={() => open(m)} className="block w-full rounded-xl border border-stone-200 bg-white p-3 text-left hover:border-brand-700">
-              <div className="mb-1 flex justify-between text-sm text-stone-500">
-                <span>
-                  {i + 1}. {matchTitle(m, view)}
-                </span>
-                {pending.has(m.id) && <Badge tone="amber">wacht op sync</Badge>}
-              </div>
-              <MatchLine m={m} name={name} pending={pending.get(m.id)?.data} />
+            <button key={m.id} type="button" onClick={() => open(m)} className="flex w-full items-center gap-2.5 px-2.5 py-2 text-left hover:bg-zinc-50">
+              <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-zinc-100 text-xs font-bold text-zinc-600 tabular-nums">{i + 1}</span>
+              <span className="min-w-0 flex-1">
+                <span className="block truncate text-xs text-zinc-500">{matchTitle(m, view)}</span>
+                <MatchLine m={m} name={name} compact pending={pending.get(m.id)?.data} />
+              </span>
+              {pending.has(m.id) && <Badge tone="amber">sync…</Badge>}
             </button>
           ))}
         </div>
@@ -137,10 +131,10 @@ export function BoardsPanel({ view, name, onGoTo }: { view: EventView; name: Nam
       {held.length > 0 && (
         <>
           <SectionTitle>Uitgesteld</SectionTitle>
-          <div className="space-y-2">
+          <div className="divide-y divide-zinc-100 overflow-hidden rounded-xl border border-dashed border-zinc-300 bg-white">
             {held.map((m) => (
-              <button key={m.id} type="button" onClick={() => open(m)} className="block w-full rounded-xl border border-dashed border-stone-300 bg-white p-3 text-left">
-                <MatchLine m={m} name={name} />
+              <button key={m.id} type="button" onClick={() => open(m)} className="block w-full px-2.5 py-2 text-left hover:bg-zinc-50">
+                <MatchLine m={m} name={name} compact />
               </button>
             ))}
           </div>
@@ -150,9 +144,9 @@ export function BoardsPanel({ view, name, onGoTo }: { view: EventView; name: Nam
       {recent.length > 0 && (
         <>
           <SectionTitle>Laatste uitslagen</SectionTitle>
-          <div className="space-y-2">
+          <div className="divide-y divide-zinc-100 overflow-hidden rounded-xl border border-zinc-200 bg-white">
             {recent.map((m) => (
-              <button key={m.id} type="button" onClick={() => open(m)} className="block w-full rounded-xl bg-white p-2 text-left text-sm hover:bg-stone-100">
+              <button key={m.id} type="button" onClick={() => open(m)} className="block w-full px-2.5 py-2 text-left hover:bg-zinc-50">
                 <MatchLine m={m} name={name} compact />
               </button>
             ))}
@@ -183,14 +177,15 @@ function BoardsModal({ view, onClose, onDone }: { view: EventView; onClose: () =
   const all = Array.from({ length: Math.max(8, ...boards, ...view.activeBoards) }, (_, i) => i + 1);
   return (
     <Modal open onClose={onClose} title="Borden in gebruik">
-      <p className="mb-3 text-stone-600">Tik op een bord om het aan of uit te zetten. Een lopende match op een weggenomen bord mag gewoon uitgespeeld worden.</p>
+      <p className="mb-3 text-sm text-zinc-600">Tik op een bord om het aan of uit te zetten. Een lopende match op een weggenomen bord mag gewoon uitgespeeld worden.</p>
       <div className="grid grid-cols-4 gap-2">
         {all.map((b) => (
           <button
             key={b}
             type="button"
             onClick={() => setBoards((x) => (x.includes(b) ? x.filter((y) => y !== b) : [...x, b]))}
-            className={cx('h-16 rounded-2xl border-2 text-xl font-bold', boards.includes(b) ? 'border-brand-800 bg-brand-800 text-white' : 'border-stone-300 bg-white text-stone-500')}
+            aria-pressed={boards.includes(b)}
+            className={cx('h-14 rounded-lg text-xl font-bold transition-colors', boards.includes(b) ? 'bg-ink text-white' : 'bg-white text-zinc-400 ring-1 ring-inset ring-zinc-300')}
           >
             {b}
           </button>
@@ -217,7 +212,7 @@ function WithdrawModal({ view, name, onClose, onDone }: { view: EventView; name:
   });
   return (
     <Modal open onClose={onClose} title="Speler geeft op">
-      <p className="mb-3 text-stone-600">Alle resterende matchen van deze speler worden reglementair verloren (walk-over). Een opgegeven speler staat onderaan zijn poule.</p>
+      <p className="mb-3 text-sm text-zinc-600">Alle resterende matchen van deze speler worden reglementair verloren (walk-over). Een opgegeven speler staat onderaan zijn poule.</p>
       <Select value={player} onChange={(e) => setPlayer(e.target.value)}>
         <option value="">Kies een speler…</option>
         {players
@@ -290,7 +285,7 @@ export function PoolsPanel({ view, name, seedRanks }: { view: EventView; name: N
   const koPlayed = view.matches.some((m) => (m.stage === 'A' || m.stage === 'B') && m.winner && !m.walkover);
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
       {status.barrageNeeds.map((need) => (
         <InfoBox key={need.key} tone="amber">
           <p className="font-semibold">
@@ -310,25 +305,25 @@ export function PoolsPanel({ view, name, seedRanks }: { view: EventView; name: N
       {barrage.error && <ErrorBox error={barrage.error} />}
 
       {barrages.length > 0 && (
-        <Card>
-          <h3 className="mb-2 font-semibold">Barrages</h3>
-          <div className="space-y-2">
+        <div>
+          <h3 className="mb-1.5 text-xs font-bold tracking-wider text-zinc-500 uppercase">Barrages</h3>
+          <div className="divide-y divide-zinc-100 overflow-hidden rounded-xl border border-zinc-200 bg-white">
             {barrages.map((m) => (
-              <button key={m.id} type="button" onClick={() => open(m)} className="block w-full rounded-xl border border-stone-200 p-2 text-left hover:border-brand-700">
-                <MatchLine m={m} name={name} />
+              <button key={m.id} type="button" onClick={() => open(m)} className="block w-full px-2.5 py-2 text-left hover:bg-zinc-50">
+                <MatchLine m={m} name={name} compact />
               </button>
             ))}
           </div>
-        </Card>
+        </div>
       )}
 
       {preview && !view.event.knockout && (
-        <Card className="border-emerald-300 bg-emerald-50">
-          <h3 className="text-lg font-semibold">Klaar voor het A- en B-schema</h3>
-          <p className="text-sm text-stone-700">
+        <Card className="border-brand-200 bg-brand-50">
+          <h3 className="font-semibold text-zinc-950">Klaar voor het A- en B-schema</h3>
+          <p className="text-sm text-zinc-600">
             A-schema: {preview.A.length} spelers · B-schema: {preview.B.length} spelers. Byes gaan naar de beste poulewinnaars; poulegenoten komen elkaar niet in de eerste ronde tegen.
           </p>
-          <Button size="xl" block className="mt-3" onClick={() => setConfirmKo(true)}>
+          <Button size="lg" block className="mt-3" onClick={() => setConfirmKo(true)}>
             A- en B-schema maken
           </Button>
           {ko.error && <ErrorBox error={ko.error} />}
@@ -336,7 +331,7 @@ export function PoolsPanel({ view, name, seedRanks }: { view: EventView; name: N
       )}
 
       {view.event.knockout && !koPlayed && (
-        <p className="text-sm text-stone-600">
+        <p className="text-sm text-zinc-600">
           Een pouleuitslag fout ingevoerd?{' '}
           <button type="button" className="underline" onClick={() => undo.mutate()}>
             KO-schema’s weer verwijderen
@@ -346,18 +341,18 @@ export function PoolsPanel({ view, name, seedRanks }: { view: EventView; name: N
       )}
       {undo.error && <ErrorBox error={undo.error} />}
 
-      <div className="grid gap-4 md:grid-cols-2">
+      <div className="grid gap-3 md:grid-cols-2">
         {status.standings.map((s) => {
           const pool = view.pools.find((p) => p.id === s.poolId);
           const ms = view.matches.filter((m) => m.stage === 'pool' && m.poolId === s.poolId).sort((a, b) => a.round - b.round || a.position - b.position);
           return (
             <div key={s.poolId} className="space-y-2">
               <PoolTable standing={s} label={pool?.label ?? s.poolId} advance={config.advance} name={name} />
-              <details className="rounded-xl bg-white p-2">
-                <summary className="cursor-pointer text-sm text-stone-600">Matchen ({ms.filter(isFinished).length}/{ms.length})</summary>
-                <div className="mt-2 space-y-1">
+              <details className="rounded-xl border border-zinc-200 bg-white">
+                <summary className="cursor-pointer px-3 py-2 text-sm font-medium text-zinc-600">Matchen ({ms.filter(isFinished).length}/{ms.length})</summary>
+                <div className="divide-y divide-zinc-100 border-t border-zinc-100">
                   {ms.map((m) => (
-                    <button key={m.id} type="button" onClick={() => open(m)} className="block w-full rounded-lg p-1.5 text-left hover:bg-stone-100">
+                    <button key={m.id} type="button" onClick={() => open(m)} className="block w-full px-3 py-1.5 text-left hover:bg-zinc-50">
                       <MatchLine m={m} name={name} compact />
                     </button>
                   ))}
@@ -384,7 +379,7 @@ export function BracketPanel({ view, name, readOnly }: { view: EventView; name: 
   const live = new Set((view.replay?.boards ?? []).map((b) => b.matchId).filter((x): x is string => Boolean(x)));
   if (!view.event.knockout) return <Empty>De A- en B-schema’s worden gemaakt zodra de poules gespeeld zijn.</Empty>;
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <div>
         <SectionTitle>A-schema</SectionTitle>
         <Bracket stage="A" matches={view.matches} name={name} onMatch={readOnly ? undefined : (m) => open(m)} highlight={live} />
@@ -436,29 +431,29 @@ export function FinishPanel({ view, name, settings }: { view: EventView; name: N
   });
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
       {!placements?.complete ? (
         <InfoBox>De eindplaatsen zijn pas gekend als alle matchen gespeeld zijn.</InfoBox>
       ) : (
         <>
           {view.event.status === 'afgelopen' ? (
-            <InfoBox tone="green">
+            <InfoBox>
               Deze avond is afgesloten op {view.event.finalized_at ? formatTime(Date.parse(view.event.finalized_at)) : ''}. Na een correctie kan je de punten opnieuw berekenen.
             </InfoBox>
           ) : (
-            <InfoBox tone="green">Alle matchen zijn gespeeld. Controleer de eindplaatsen en sluit de avond af om de ranking bij te werken.</InfoBox>
+            <InfoBox>Alle matchen zijn gespeeld. Controleer de eindplaatsen en sluit de avond af om de ranking bij te werken.</InfoBox>
           )}
           <PlacementsTable placements={placements.placements} name={name} points={new Map(points.map((p) => [p.playerId, p.total]))} />
-          <Button size="xl" block variant="success" onClick={() => setConfirm(true)}>
+          <Button size="lg" block onClick={() => setConfirm(true)}>
             {view.event.status === 'afgelopen' ? 'Punten opnieuw berekenen' : 'Avond afsluiten'}
           </Button>
           {finalize.error && <ErrorBox error={finalize.error} />}
         </>
       )}
 
-      <details className="mt-8 rounded-xl border border-red-200 bg-white p-3">
-        <summary className="cursor-pointer font-semibold text-red-800">Gevarenzone</summary>
-        <p className="mt-2 text-sm text-stone-600">
+      <details className="mt-8 rounded-xl border border-accent-200 bg-white p-3">
+        <summary className="cursor-pointer text-sm font-semibold text-accent-700">Gevarenzone</summary>
+        <p className="mt-2 text-sm text-zinc-600">
           Toernooi volledig terugzetten: alle poules, matchen en uitslagen van deze avond worden gewist. De check-in blijft bewaard.
         </p>
         <Button variant="danger" className="mt-2" onClick={() => setReset(true)}>

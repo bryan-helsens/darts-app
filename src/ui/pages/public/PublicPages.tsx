@@ -8,10 +8,19 @@ import { matchesSearch } from '../../../lib/names';
 import { formatDate, formatLongDate, formatTime, shortTime } from '../../../lib/time';
 import { BoardsOverview, Bracket, MatchLine, PlacementsTable, PoolTable } from '../../components/darts';
 import { displayName } from '../../components/players';
-import { Badge, Card, Empty, ErrorBox, PageTitle, SectionTitle, Select, Spinner, TextInput } from '../../components/ui';
+import { Badge, Card, cx, Empty, ErrorBox, Icon, LiveBadge, PageTitle, SearchInput, SectionTitle, Select, Spinner } from '../../components/ui';
 import { pickCurrentSeason, seasonSettings, useCurrentSeason, useNow, useSeasonRanking, useUpcoming } from '../../hooks';
 
 const time = (t: string) => formatTime(shortTime(t));
+
+/** Initialen voor het rondje naast een naam ("Arne Beke" → "AB"). */
+const initials = (name: string) =>
+  name
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((w) => w[0]?.toUpperCase())
+    .join('');
 
 // ---------------------------------------------------------------------------
 // Startpagina: volgende speelavond en kalender
@@ -32,68 +41,111 @@ export function HomePage() {
   const podium = (last.data?.results ?? []).filter((r) => r.place_from <= 3).sort((a, b) => a.place_from - b.place_from);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       {live && (
-        <Link to={`/avond/${live.id}`} className="block rounded-2xl bg-red-700 p-4 text-white shadow">
-          <div className="text-sm font-semibold tracking-wide uppercase">● Nu live</div>
-          <div className="text-xl font-bold">Volg het schema en de uitslagen van vanavond</div>
+        <Link to={`/avond/${live.id}`} className="flex items-center justify-between gap-3 rounded-xl bg-accent-600 px-4 py-3 text-white hover:bg-accent-700">
+          <span>
+            <span className="flex items-center gap-1.5 text-xs font-bold tracking-wider uppercase">
+              <span className="h-2 w-2 animate-pulse rounded-full bg-white" /> Nu live
+            </span>
+            <span className="block font-semibold">Volg het schema en de uitslagen van vanavond</span>
+          </span>
+          <Icon name="chevron" className="h-5 w-5" />
         </Link>
       )}
 
       {next ? (
-        <Card className="border-brand-700 bg-gradient-to-br from-white to-brand-50">
-          <div className="text-sm font-semibold text-brand-800 uppercase">Volgende speelavond</div>
-          <div className="mt-1 text-3xl font-bold text-brand-900">{formatLongDate(next.event_date)}</div>
-          <ul className="mt-3 space-y-1 text-stone-700">
-            <li>
-              🎯 Start om <b>{time(next.start_time)}</b>, inschrijven ter plaatse tot <b>{time(next.registration_closes)}</b>
-            </li>
-            <li>
-              💶 Inleg <b>€{settings.entryFee}</b> · steeldarts · 501 double out
-            </li>
-            <li>📍 Brasserie ’t Oud Sanatorium, Sijsele</li>
-            {preregistered > 0 && <li>👥 {preregistered} spelers schreven zich al in</li>}
-            {next.notes && <li>📝 {next.notes}</li>}
-          </ul>
-          <p className="mt-3 text-sm text-stone-600">
-            Nieuw? Iedereen is welkom, ook als je nog nooit in een toernooi speelde.{' '}
-            <Link to="/nieuw" className="font-semibold text-brand-800 underline">
-              Zo werkt het
+        <div className="overflow-hidden rounded-xl bg-ink text-white">
+          <div className="p-4 sm:p-5">
+            <div className="text-xs font-semibold tracking-wider text-accent-500 uppercase">Volgende speelavond</div>
+            <div className="mt-1 text-2xl font-bold tracking-tight sm:text-3xl">{formatLongDate(next.event_date)}</div>
+            <ul className="mt-3 grid gap-1.5 text-sm text-zinc-300 sm:grid-cols-2">
+              <li className="flex items-center gap-2">
+                <Icon name="clock" className="text-zinc-500" />
+                <span>
+                  Start <b className="text-white">{time(next.start_time)}</b> · inschrijven tot <b className="text-white">{time(next.registration_closes)}</b>
+                </span>
+              </li>
+              <li className="flex items-center gap-2">
+                <Icon name="euro" className="text-zinc-500" />
+                <span>
+                  Inleg <b className="text-white">€{settings.entryFee}</b> · steeldarts · 501 double out
+                </span>
+              </li>
+              <li className="flex items-center gap-2">
+                <Icon name="pin" className="text-zinc-500" />
+                Brasserie ’t Oud Sanatorium, Sijsele
+              </li>
+              {preregistered > 0 && (
+                <li className="flex items-center gap-2">
+                  <Icon name="users" className="text-zinc-500" />
+                  {preregistered} spelers schreven zich al in
+                </li>
+              )}
+              {next.notes && (
+                <li className="flex items-center gap-2 sm:col-span-2">
+                  <Icon name="note" className="text-zinc-500" />
+                  {next.notes}
+                </li>
+              )}
+            </ul>
+          </div>
+          <div className="flex flex-wrap items-center justify-between gap-2 border-t border-white/10 bg-white/5 px-4 py-2.5 text-sm text-zinc-300 sm:px-5">
+            <span>Nieuw? Iedereen is welkom, ook zonder toernooi-ervaring.</span>
+            <Link to="/nieuw" className="font-semibold text-white hover:underline">
+              Zo werkt het →
             </Link>
-          </p>
-        </Card>
+          </div>
+        </div>
       ) : (
         <Empty>De volgende speelavond is nog niet gepland.</Empty>
       )}
 
       {lastFinished && podium.length > 0 && (
         <div>
-          <SectionTitle>Laatste winnaars ({formatDate(lastFinished.event_date)})</SectionTitle>
-          <div className="grid grid-cols-3 gap-2 text-center">
+          <SectionTitle
+            actions={
+              <Link to={`/avond/${lastFinished.id}`} className="text-xs font-semibold text-brand-700 hover:underline">
+                Volledige uitslag
+              </Link>
+            }
+          >
+            Laatste winnaars · {formatDate(lastFinished.event_date)}
+          </SectionTitle>
+          <div className="divide-y divide-zinc-100 overflow-hidden rounded-xl border border-zinc-200 bg-white">
             {podium.slice(0, 3).map((r) => (
-              <Card key={r.player_id} className="p-3">
-                <div className="text-2xl">{r.place_from === 1 ? '🥇' : r.place_from === 2 ? '🥈' : '🥉'}</div>
-                <div className="font-semibold">{directory.name(r.player_id)}</div>
-              </Card>
+              <div key={r.player_id} className="flex items-center gap-3 px-3 py-2">
+                <span
+                  className={cx(
+                    'flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-sm font-bold',
+                    r.place_from === 1 ? 'bg-amber-400 text-amber-950' : r.place_from === 2 ? 'bg-zinc-300 text-zinc-800' : 'bg-orange-300 text-orange-950',
+                  )}
+                >
+                  {r.place_from}
+                </span>
+                <span className="flex-1 truncate font-semibold text-zinc-950">{directory.name(r.player_id)}</span>
+                <span className="text-sm text-zinc-500 tabular-nums">{r.points} ptn</span>
+              </div>
             ))}
           </div>
-          <Link to={`/avond/${lastFinished.id}`} className="mt-2 inline-block text-brand-800 underline">
-            Volledige uitslag
-          </Link>
         </div>
       )}
 
       {season && (
         <div>
           <SectionTitle>Kalender {season.name}</SectionTitle>
-          <div className="divide-y divide-stone-100 overflow-hidden rounded-2xl border border-stone-200 bg-white">
-            {seasonEvents.length === 0 && <p className="p-4 text-stone-500">Nog geen speelavonden gepland.</p>}
+          <div className="divide-y divide-zinc-100 overflow-hidden rounded-xl border border-zinc-200 bg-white">
+            {seasonEvents.length === 0 && <p className="p-4 text-sm text-zinc-500">Nog geen speelavonden gepland.</p>}
             {seasonEvents.map((e) => (
-              <Link key={e.id} to={`/avond/${e.id}`} className="flex items-center justify-between gap-2 px-4 py-3 hover:bg-stone-50">
-                <span className={e.status === 'afgelopen' ? 'text-stone-500' : 'font-semibold'}>{formatLongDate(e.event_date)}</span>
-                <Badge tone={e.status === 'bezig' ? 'red' : e.status === 'afgelopen' ? 'stone' : 'green'}>
-                  {e.status === 'bezig' ? 'live' : e.status === 'afgelopen' ? 'uitslag' : time(e.start_time)}
-                </Badge>
+              <Link key={e.id} to={`/avond/${e.id}`} className="flex items-center justify-between gap-2 px-3 py-2.5 text-sm hover:bg-zinc-50">
+                <span className="flex items-center gap-2.5">
+                  <Icon name="calendar" className={e.status === 'afgelopen' ? 'text-zinc-300' : 'text-brand-600'} />
+                  <span className={e.status === 'afgelopen' ? 'text-zinc-500' : 'font-semibold text-zinc-950'}>{formatLongDate(e.event_date)}</span>
+                </span>
+                <span className="flex items-center gap-2">
+                  {e.status === 'bezig' ? <LiveBadge /> : <Badge tone={e.status === 'afgelopen' ? 'stone' : 'blue'}>{e.status === 'afgelopen' ? 'uitslag' : time(e.start_time)}</Badge>}
+                  <Icon name="chevron" className="text-zinc-300" />
+                </span>
               </Link>
             ))}
           </div>
@@ -127,16 +179,16 @@ export function EventPublicPage() {
     <div className="space-y-4">
       <PageTitle sub={event.notes ?? undefined}>{formatLongDate(event.event_date)}</PageTitle>
       {event.status === 'gepland' && (
-        <Card>
+        <Card className="text-sm text-zinc-700">
           Deze speelavond start om {time(event.start_time)}. Inschrijven kan ter plaatse tot {time(event.registration_closes)}. Het schema verschijnt hier zodra het
           toernooi begint.
         </Card>
       )}
       {event.status === 'bezig' && (
         <>
-          <div className="flex flex-wrap items-center gap-2">
-            <Badge tone="red">● live</Badge>
-            {view.live?.forecast.end && <span className="text-stone-600">verwacht einde rond {formatTime(view.live.forecast.end)}</span>}
+          <div className="flex flex-wrap items-center gap-2 text-sm">
+            <LiveBadge />
+            {view.live?.forecast.end && <span className="text-zinc-500">verwacht einde rond {formatTime(view.live.forecast.end)}</span>}
           </div>
           <SectionTitle>Nu op de borden</SectionTitle>
           <BoardsOverview view={view} name={name} />
@@ -159,7 +211,7 @@ export function EventPublicPage() {
       {view.poolStatus && (
         <>
           <SectionTitle>Poules</SectionTitle>
-          <div className="grid gap-4 md:grid-cols-2">
+          <div className="grid gap-3 md:grid-cols-2">
             {view.poolStatus.standings.map((s) => (
               <PoolTable key={s.poolId} standing={s} label={view.pools.find((p) => p.id === s.poolId)?.label ?? s.poolId} advance={view.config?.advance ?? 2} name={name} />
             ))}
@@ -169,11 +221,13 @@ export function EventPublicPage() {
       {event.status === 'bezig' && recent.length > 0 && (
         <>
           <SectionTitle>Laatste uitslagen</SectionTitle>
-          <Card className="space-y-2">
+          <div className="divide-y divide-zinc-100 overflow-hidden rounded-xl border border-zinc-200 bg-white">
             {recent.map((m) => (
-              <MatchLine key={m.id} m={m} name={name} compact />
+              <div key={m.id} className="px-3 py-2">
+                <MatchLine m={m} name={name} compact />
+              </div>
             ))}
-          </Card>
+          </div>
         </>
       )}
     </div>
@@ -211,13 +265,17 @@ export function ResultsPage() {
       {finished.length === 0 ? (
         <Empty>Nog geen gespeelde avonden in dit seizoen.</Empty>
       ) : (
-        <div className="space-y-2">
+        <div className="divide-y divide-zinc-100 overflow-hidden rounded-xl border border-zinc-200 bg-white">
           {finished.map((e) => (
-            <Link key={e.id} to={`/avond/${e.id}`} className="block">
-              <Card className="flex items-center justify-between hover:border-brand-700">
-                <span className="font-semibold">{formatLongDate(e.event_date)}</span>
-                <Badge tone={e.status === 'bezig' ? 'red' : 'stone'}>{e.status === 'bezig' ? 'live' : 'uitslag'}</Badge>
-              </Card>
+            <Link key={e.id} to={`/avond/${e.id}`} className="flex items-center justify-between gap-2 px-3 py-2.5 text-sm hover:bg-zinc-50">
+              <span className="flex items-center gap-2.5">
+                <Icon name="trophy" className="text-zinc-400" />
+                <span className="font-semibold text-zinc-950">{formatLongDate(e.event_date)}</span>
+              </span>
+              <span className="flex items-center gap-2">
+                {e.status === 'bezig' ? <LiveBadge /> : <Badge>uitslag</Badge>}
+                <Icon name="chevron" className="text-zinc-300" />
+              </span>
             </Link>
           ))}
         </div>
@@ -256,39 +314,48 @@ export function RankingPage() {
       {rows.length === 0 ? (
         <Empty>Nog geen punten in dit seizoen.</Empty>
       ) : (
-        <div className="overflow-hidden rounded-2xl border border-stone-200 bg-white">
-          <table className="w-full">
-            <thead className="bg-stone-50 text-sm text-stone-500">
+        <div className="overflow-hidden rounded-xl border border-zinc-200 bg-white">
+          <table className="w-full text-sm">
+            <thead className="bg-ink text-xs text-zinc-400">
               <tr>
-                <th className="w-12 py-2 text-center">#</th>
-                <th className="py-2 text-left">Speler</th>
-                <th className="w-16 text-center">Ptn</th>
-                <th className="hidden w-16 text-center sm:table-cell">Avonden</th>
-                <th className="hidden w-16 text-center sm:table-cell">Zeges</th>
-                <th className="w-16 text-center">Beste</th>
+                <th className="w-11 py-2 text-center font-semibold">#</th>
+                <th className="py-2 text-left font-semibold">Speler</th>
+                <th className="w-14 text-center font-semibold text-white">Ptn</th>
+                <th className="hidden w-16 text-center font-semibold sm:table-cell">Avonden</th>
+                <th className="hidden w-16 text-center font-semibold sm:table-cell">Zeges</th>
+                <th className="w-14 text-center font-semibold">Beste</th>
               </tr>
             </thead>
             <tbody>
               {rows.map((r) => (
-                <tr key={r.playerId} className="border-t border-stone-100">
-                  <td className="py-2 text-center font-bold">{r.position}</td>
+                <tr key={r.playerId} className="border-t border-zinc-100 hover:bg-zinc-50">
+                  <td className="py-2 text-center">
+                    <span
+                      className={cx(
+                        'inline-flex h-6 w-6 items-center justify-center rounded-full text-xs font-bold tabular-nums',
+                        r.position === 1 ? 'bg-amber-400 text-amber-950' : r.position === 2 ? 'bg-zinc-300 text-zinc-800' : r.position === 3 ? 'bg-orange-300 text-orange-950' : 'text-zinc-500',
+                      )}
+                    >
+                      {r.position}
+                    </span>
+                  </td>
                   <td className="py-2">
-                    <Link to={`/spelers/${r.playerId}`} className="hover:underline">
+                    <Link to={`/spelers/${r.playerId}`} className="font-medium text-zinc-950 hover:text-brand-700 hover:underline">
                       {directory.name(r.playerId)}
                     </Link>
-                    {settings.bestOf.enabled && r.total !== r.counted && <span className="ml-2 text-xs text-stone-400">({r.total} totaal)</span>}
+                    {settings.bestOf.enabled && r.total !== r.counted && <span className="ml-1.5 text-xs text-zinc-400">({r.total} totaal)</span>}
                   </td>
-                  <td className="text-center text-lg font-bold tabular-nums">{r.counted}</td>
-                  <td className="hidden text-center tabular-nums sm:table-cell">{r.events}</td>
-                  <td className="hidden text-center tabular-nums sm:table-cell">{r.wins}</td>
-                  <td className="text-center tabular-nums">{r.bestPlace}</td>
+                  <td className="text-center text-base font-bold text-zinc-950 tabular-nums">{r.counted}</td>
+                  <td className="hidden text-center text-zinc-600 tabular-nums sm:table-cell">{r.events}</td>
+                  <td className="hidden text-center text-zinc-600 tabular-nums sm:table-cell">{r.wins}</td>
+                  <td className="text-center text-zinc-600 tabular-nums">{r.bestPlace}</td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
       )}
-      <p className="mt-3 text-sm text-stone-500">
+      <p className="mt-3 text-xs text-zinc-500">
         Bij gelijke punten: aantal overwinningen → beste resultaat → onderling resultaat → gewonnen legs → loting.
       </p>
     </div>
@@ -307,11 +374,14 @@ export function PlayersPage() {
   return (
     <div>
       <PageTitle>Spelers</PageTitle>
-      <TextInput placeholder="Zoek een speler…" value={query} onChange={(e) => setQuery(e.target.value)} className="mb-4" />
-      <div className="grid gap-2 sm:grid-cols-2">
+      <SearchInput placeholder="Zoek een speler…" value={query} onChange={(e) => setQuery(e.target.value)} className="mb-3" />
+      <div className="grid overflow-hidden rounded-xl border border-zinc-200 bg-white sm:grid-cols-2">
         {list.map((p) => (
-          <Link key={p.id} to={`/spelers/${p.id}`}>
-            <Card className="hover:border-brand-700">{displayName(p)}</Card>
+          <Link key={p.id} to={`/spelers/${p.id}`} className="flex items-center gap-2.5 border-b border-zinc-100 px-3 py-2 text-sm hover:bg-zinc-50 sm:odd:border-r">
+            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-zinc-900 text-xs font-bold text-white">
+              {initials(p.name)}
+            </span>
+            <span className="truncate font-medium text-zinc-950">{displayName(p)}</span>
           </Link>
         ))}
       </div>
@@ -343,16 +413,22 @@ export function PlayerPage() {
   const rank = rows.find((r) => r.playerId === player.id);
 
   const stat = (label: string, value: string | number) => (
-    <Card className="p-3 text-center">
-      <div className="text-2xl font-bold tabular-nums">{value}</div>
-      <div className="text-sm text-stone-500">{label}</div>
-    </Card>
+    <div className="bg-white px-2 py-2.5 text-center">
+      <div className="text-xl font-bold text-zinc-950 tabular-nums">{value}</div>
+      <div className="text-xs text-zinc-500">{label}</div>
+    </div>
   );
 
   return (
     <div>
-      <PageTitle sub={player.nickname ? `“${player.nickname}”` : undefined}>{player.name}</PageTitle>
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+      <div className="mb-4 flex items-center gap-3">
+        <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-ink text-base font-bold text-white">{initials(player.name)}</span>
+        <div className="min-w-0">
+          <h1 className="truncate text-xl font-bold tracking-tight text-zinc-950 sm:text-2xl">{player.name}</h1>
+          {player.nickname && <p className="text-sm text-zinc-500">“{player.nickname}”</p>}
+        </div>
+      </div>
+      <div className="grid grid-cols-2 gap-px overflow-hidden rounded-xl border border-zinc-200 bg-zinc-200 sm:grid-cols-4">
         {stat('deelnames', results.length)}
         {stat(`ranking ${season?.name ?? ''}`, rank ? `#${rank.position}` : '–')}
         {stat('matchen gewonnen', `${won}/${won + lost}`)}
@@ -366,20 +442,20 @@ export function PlayerPage() {
       {results.length === 0 ? (
         <Empty>Nog geen resultaten.</Empty>
       ) : (
-        <div className="overflow-hidden rounded-2xl border border-stone-200 bg-white">
-          <table className="w-full">
-            <thead className="bg-stone-50 text-sm text-stone-500">
+        <div className="overflow-hidden rounded-xl border border-zinc-200 bg-white">
+          <table className="w-full text-sm">
+            <thead className="bg-ink text-xs text-zinc-400">
               <tr>
-                <th className="py-2 text-left pl-3">Datum</th>
-                <th className="text-center">Plaats</th>
-                <th className="text-center">Punten</th>
+                <th className="py-2 pl-3 text-left font-semibold">Datum</th>
+                <th className="text-center font-semibold">Plaats</th>
+                <th className="text-center font-semibold">Punten</th>
               </tr>
             </thead>
             <tbody>
               {results.map((r) => (
-                <tr key={r.event_id} className="border-t border-stone-100">
+                <tr key={r.event_id} className="border-t border-zinc-100">
                   <td className="py-2 pl-3">
-                    <Link to={`/avond/${r.event_id}`} className="hover:underline">
+                    <Link to={`/avond/${r.event_id}`} className="font-medium text-zinc-950 hover:text-brand-700 hover:underline">
                       {formatDate(r.date)}
                     </Link>
                   </td>

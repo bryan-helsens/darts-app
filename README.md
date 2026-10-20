@@ -18,13 +18,15 @@ Webapp voor het maandelijkse dartstoernooi in **Brasserie 't Oud Sanatorium** (S
 3. **Check-in**: zoek elke speler en tik op **Aanwezig?** en **€5?**. Nieuwe speler? Typ de naam en tik op **+ Nieuwe speler**. De app waarschuwt als er al iemand met een gelijkaardige naam bestaat. Bovenaan zie je het aantal aanwezigen, het aantal dat betaald heeft en de prijzenpot.
 4. Spelers die vooraf ingeschreven waren maar niet komen, laat je gewoon op "Aanwezig?" staan. Om 18u30 sluit de inschrijving; met **Toch heropenen** kan je nog spelers toevoegen.
 5. **Starten**: kies de poule-indeling. Bij elke optie staat de **geschatte eindtijd**. Is die te laat, dan stelt de app aanpassingen voor (bv. poules best of 1). Tik op **Toernooi starten**. De poules worden geloot, met de sterkste spelers (volgens de ranking) in verschillende poules.
-6. **Tip:** druk via **afdrukken (PDF)** meteen de poulebladen af. Valt het internet volledig uit, dan kan je op papier verder.
-7. **Borden**: hier zie je wat er **nu** op elk bord speelt en wat er **straks** komt. Tik op een bord om de uitslag in te voeren, de match uit te stellen of naar een ander bord te verplaatsen. Een bord erbij of eraf? Kies **Borden: wijzigen**. Geeft iemand op? Kies **Speler geeft op**.
-8. De schrijvers openen op hun eigen gsm het adres `/score`, geven de pincode in en tikken op hun bord: **wie won → legs van de verliezer → bevestigen**.
+6. **Tip:** druk via **Afdrukken** meteen de poulebladen af (of bewaar ze als PDF). Valt het internet volledig uit, dan kan je op papier verder.
+7. **Borden**: hier zie je wat er **nu** op elk bord speelt en wat er **straks** komt. Tik op een bord om de uitslag in te voeren, de match uit te stellen of naar een ander bord te verplaatsen. Een bord erbij of eraf? Kies **Borden wijzigen**. Geeft iemand op? Kies **Speler geeft op**.
+8. De schrijvers openen op hun eigen gsm het adres `/score`, geven de pincode in en tikken op hun bord. Per speler tikken ze het **aantal gewonnen legs** aan, dan **Verder** en **Ja, opslaan**. Werd er een match gespeeld die niet op een bord stond? Via **Andere match invoeren** kan die ook.
 9. Als de poules gespeeld zijn: ga naar **Poules**. Bij een volledig gelijke stand op de grens A/B kies je **Barrage spelen** of **Loting**. Tik dan op **A- en B-schema maken**.
 10. Als alles gespeeld is: **Afsluiten → Avond afsluiten**. De eindplaatsen en punten gaan naar de ranking.
 
-**Een fout ingevoerde score?** Tik op de match (bij Borden, Poules of A/B-schema) en kies **Uitslag corrigeren**. Alle correcties worden bijgehouden in een audit-log.
+**Een score achteraf invoeren?** Het tabblad **Matchen** toont alle matchen van de avond (te spelen, gespeeld of alle), met een zoekveld. Tik op een match om de uitslag in te voeren, bv. als een match op papier gespeeld werd of vergeten was.
+
+**Een fout ingevoerde score?** Tik op de match (bij Borden, Matchen, Poules of A/B-schema) en kies **Uitslag corrigeren**. Alle correcties worden bijgehouden in een audit-log.
 
 **Geen wifi?** Werk gewoon verder. Bovenaan staat dan bv. "2 wachten op verbinding". Zodra er weer netwerk is, wordt alles automatisch verstuurd. Sluit de app gerust tussendoor: er gaat niets verloren.
 
@@ -86,7 +88,7 @@ Toch gepauzeerd? Log in op supabase.com en klik op **Restore project**. Je gegev
 - **Dubbele speler**: Beheer → Spelers → speler → *Samenvoegen* (enkel admin).
 - **Iemand wil verwijderd worden (GDPR)**: Beheer → Spelers → speler → *Anonimiseren*. De naam wordt "Anonieme speler" en de contactgegevens worden gewist. De uitslagen blijven anoniem bestaan, zodat de ranking klopt.
 - **Back-up**: het gratis Supabase-plan maakt geen automatische back-ups. Exporteer na elke speelavond (of minstens maandelijks) de tabellen via Supabase → *Table Editor* → tabel → *Export → CSV*. Een volledige JSON-export in de app komt in fase 2.
-- **Demo-data** (om te oefenen): plak [`supabase/seed.sql`](supabase/seed.sql) in de SQL Editor. Dat geeft een demoseizoen met 25 spelers, 6 gespeelde avonden en één geplande avond (pin `1234`). Verwijderen kan met [`supabase/demo-cleanup.sql`](supabase/demo-cleanup.sql). Gebruik hiervoor bij voorkeur een apart testproject.
+- **Demo-data** (om te oefenen): Beheer → Overzicht → **Demo-data laden** (enkel admins). Dat geeft een apart "Demoseizoen" met 25 fictieve spelers, 6 gespeelde avonden en een oefenavond op de dag zelf (score-pin `1234`), zodat je check-in, starten en scores kan uitproberen. Met **Demo-data verwijderen** verdwijnt alles weer; echte seizoenen, avonden en spelers blijven ongemoeid. Zolang de demo-data bestaat, is ze ook op de publieke site zichtbaar. (Alternatief zonder app: plak [`supabase/seed.sql`](supabase/seed.sql) in de SQL Editor en verwijder met [`supabase/demo-cleanup.sql`](supabase/demo-cleanup.sql).)
 - **Updates van de app**: elke wijziging op `main` in GitHub wordt automatisch door Netlify gepubliceerd. Nieuwe databasewijzigingen (een nieuw bestand in `supabase/migrations/`) past Supabase zelf toe dankzij *Deploy to production*. Werk je met manier B (met de hand), voer dan **enkel dat nieuwe bestand** uit in de SQL Editor.
 
 ---
