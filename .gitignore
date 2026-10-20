@@ -1,0 +1,11 @@
+node_modules
+dist
+dev-dist
+.env
+.env.local
+*.local
+coverage
+test-results
+playwright-report
+.DS_Store
+.local-db

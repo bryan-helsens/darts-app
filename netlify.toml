@@ -1,0 +1,22 @@
+# Netlify: bouwt de app en publiceert de map dist.
+# De koppeling met Supabase gebeurt via de omgevingsvariabelen
+# VITE_SUPABASE_URL en VITE_SUPABASE_ANON_KEY (Site configuration > Environment variables).
+
+[build]
+  command = "npm run build"
+  publish = "dist"
+
+[build.environment]
+  NODE_VERSION = "22"
+
+# Alle adressen (bv. /ranking, /beheer/avond/...) tonen de app zelf.
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+
+# De service worker nooit cachen, zodat updates meteen doorkomen.
+[[headers]]
+  for = "/sw.js"
+  [headers.values]
+    Cache-Control = "no-cache"
