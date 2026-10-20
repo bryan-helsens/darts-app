@@ -1,10 +1,17 @@
 @import 'tailwindcss';
 
+/*
+ * Huisstijl: licht, compact en modern. Zwart voor de kop, blauw als
+ * hoofdkleur, rood als accent. Basistekst 14 px; invoervelden 16 px op gsm
+ * (anders zoomt iOS in).
+ */
 @theme {
   /* Hoofdkleur: blauw */
   --color-brand-50: #eff6ff;
   --color-brand-100: #dbeafe;
   --color-brand-200: #bfdbfe;
+  --color-brand-300: #93c5fd;
+  --color-brand-400: #60a5fa;
   --color-brand-500: #3b82f6;
   --color-brand-600: #2563eb;
   --color-brand-700: #1d4ed8;
@@ -12,15 +19,20 @@
   --color-brand-900: #1e3a8a;
   /* Accent: rood (live, gevaar, logo) */
   --color-accent-50: #fef2f2;
+  --color-accent-100: #fee2e2;
   --color-accent-200: #fecaca;
   --color-accent-500: #ef4444;
   --color-accent-600: #dc2626;
   --color-accent-700: #b91c1c;
   --color-accent-800: #991b1b;
   --color-accent-900: #7f1d1d;
-  /* Zwart voor de kop en donkere vlakken */
-  --color-ink: #0a0a0b;
+  /* Zwart voor de kop en donkere vlakken; achtergrond van de pagina */
+  --color-ink: #0b0b0d;
+  --color-canvas: #f4f4f6;
   --font-sans: 'Inter Variable', Inter, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  /* Extra klein: labels, badges, meta */
+  --text-2xs: 0.6875rem;
+  --text-2xs--line-height: 1rem;
 }
 
 html {
@@ -28,8 +40,16 @@ html {
 }
 
 body {
-  @apply bg-zinc-100 text-zinc-900 antialiased;
+  @apply bg-canvas text-sm text-zinc-900 antialiased;
   font-feature-settings: 'cv11', 'ss01';
+}
+
+/* Ruimte onder de inhoud voor de tabbalk onderaan (gsm), inclusief de iPhone-rand. */
+@utility pb-tabbar {
+  padding-bottom: calc(3.75rem + env(safe-area-inset-bottom));
+}
+@utility safe-bottom {
+  padding-bottom: max(1rem, env(safe-area-inset-bottom));
 }
 
 @media print {

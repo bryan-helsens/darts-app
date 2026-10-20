@@ -25,10 +25,10 @@ export function DemoDataCard() {
 
   return (
     <Card>
-      <div className="flex flex-wrap items-center justify-between gap-3">
+      <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="min-w-0">
-          <h2 className="text-sm font-semibold text-zinc-950">Demo-data</h2>
-          <p className="text-sm text-zinc-600">
+          <h2 className="text-[13px] font-semibold text-zinc-950">Demo-data</h2>
+          <p className="text-xs text-zinc-500">
             {isLoading
               ? 'Even kijken…'
               : loaded
@@ -38,11 +38,11 @@ export function DemoDataCard() {
         </div>
         {!isLoading &&
           (loaded ? (
-            <Button variant="secondary" onClick={() => setConfirm('remove')} disabled={action.isPending}>
+            <Button variant="secondary" size="sm" onClick={() => setConfirm('remove')} disabled={action.isPending}>
               Demo-data verwijderen
             </Button>
           ) : (
-            <Button onClick={() => setConfirm('load')} disabled={action.isPending}>
+            <Button size="sm" onClick={() => setConfirm('load')} disabled={action.isPending}>
               Demo-data laden
             </Button>
           ))}

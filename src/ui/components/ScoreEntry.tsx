@@ -52,12 +52,12 @@ function LegsRow({
   onChange: (v: number) => void;
 }) {
   return (
-    <div data-legs-row={slot} className="rounded-xl border border-zinc-200 p-2.5">
-      <div className="mb-2 flex items-center justify-between gap-2">
-        <span className="truncate text-base font-semibold text-zinc-950">{label}</span>
-        {value === max && <span className="rounded-md bg-brand-600 px-1.5 py-0.5 text-xs font-bold text-white">wint</span>}
+    <div data-legs-row={slot}>
+      <div className="mb-1 flex items-center justify-between gap-2">
+        <span className="truncate text-sm font-semibold text-zinc-950">{label}</span>
+        {value === max && <span className="rounded bg-brand-600 px-1.5 py-px text-2xs font-semibold text-white">wint</span>}
       </div>
-      <div className="grid gap-1.5" style={{ gridTemplateColumns: `repeat(${max + 1}, minmax(0, 1fr))` }}>
+      <div className="grid gap-1" style={{ gridTemplateColumns: `repeat(${max + 1}, minmax(0, 1fr))` }}>
         {Array.from({ length: max + 1 }, (_, n) => (
           <button
             key={n}
@@ -66,8 +66,8 @@ function LegsRow({
             aria-pressed={value === n}
             onClick={() => onChange(n)}
             className={cx(
-              'h-12 rounded-lg text-xl font-bold tabular-nums transition-colors',
-              value === n ? 'bg-brand-600 text-white' : 'bg-zinc-100 text-zinc-800 hover:bg-zinc-200',
+              'h-11 rounded-md text-lg font-semibold tabular-nums transition-colors',
+              value === n ? 'bg-brand-600 text-white shadow-xs' : 'bg-zinc-100 text-zinc-700 hover:bg-zinc-200',
             )}
           >
             {n}
@@ -135,26 +135,25 @@ export function ScoreEntry({
 
   if (confirming && winner) {
     return (
-      <div className="space-y-4">
-        <p className="text-center text-sm text-zinc-500">Klopt deze uitslag?</p>
-        <div className="rounded-xl bg-ink px-4 py-5 text-center text-white">
-          <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-3">
-            <span className={cx('truncate text-right text-base', winner === p1 ? 'font-bold' : 'text-zinc-400')}>{name(p1)}</span>
-            <span className="font-mono text-4xl font-bold tabular-nums">
-              {legs1}–{legs2}
-            </span>
-            <span className={cx('truncate text-left text-base', winner === p2 ? 'font-bold' : 'text-zinc-400')}>{name(p2)}</span>
-          </div>
-          <div className="mt-2 text-sm text-zinc-300">
-            <span className="font-semibold text-white">{name(winner)}</span> wint
+      <div className="space-y-3">
+        <p className="text-center text-xs text-zinc-500">Klopt deze uitslag?</p>
+        <div className="rounded-lg bg-ink px-3 py-3 text-white">
+          {[p1, p2].map((p, i) => (
+            <div key={p} className="flex items-center justify-between gap-3 py-0.5">
+              <span className={cx('truncate text-[15px]', winner === p ? 'font-semibold' : 'text-zinc-400')}>{name(p)}</span>
+              <span className={cx('text-2xl font-semibold tabular-nums', winner === p ? 'text-white' : 'text-zinc-500')}>{i === 0 ? legs1 : legs2}</span>
+            </div>
+          ))}
+          <div className="mt-1.5 border-t border-white/10 pt-1.5 text-xs text-zinc-400">
+            <span className="font-medium text-white">{name(winner)}</span> wint
           </div>
         </div>
-        <div className="grid gap-2">
+        <div className="grid grid-cols-[1fr_2fr] gap-2">
+          <Button size="xl" variant="secondary" onClick={() => setConfirming(false)}>
+            Nee, terug
+          </Button>
           <Button size="xl" onClick={submit} disabled={busy}>
             {busy ? 'Opslaan…' : 'Ja, opslaan'}
-          </Button>
-          <Button size="lg" variant="secondary" onClick={() => setConfirming(false)}>
-            Nee, terug
           </Button>
         </div>
       </div>
@@ -164,30 +163,30 @@ export function ScoreEntry({
   return (
     <div className="space-y-3">
       {title && (
-        <p className="text-sm text-zinc-500">
+        <p className="text-xs text-zinc-500">
           {title} · best of {match.bestOf} · eerst aan {need} {need === 1 ? 'leg' : 'legs'}
         </p>
       )}
       <LegsRow slot={1} label={name(p1)} value={legs1} max={need} onChange={set1} />
       <LegsRow slot={2} label={name(p2)} value={legs2} max={need} onChange={set2} />
-      {complete && scoreProblem && <p className="text-sm text-accent-700">{scoreProblem}</p>}
+      {complete && scoreProblem && <p className="text-xs text-accent-700">{scoreProblem}</p>}
 
       <div>
-        <button type="button" className="text-sm font-medium text-brand-700 hover:underline" onClick={() => setShowExtra((s) => !s)}>
+        <button type="button" className="text-xs font-medium text-brand-700 hover:underline" onClick={() => setShowExtra((s) => !s)}>
           {showExtra ? 'Extra verbergen' : '+ 180’s en hoge finishes (optioneel)'}
         </button>
         {showExtra && (
           <div className="mt-2 space-y-2">
             {[p1, p2].map((p) => (
-              <div key={p} className="rounded-xl border border-zinc-200 p-2.5">
-                <p className="mb-2 text-sm font-semibold">{name(p)}</p>
+              <div key={p} className="rounded-lg border border-zinc-200 p-2">
+                <p className="mb-1.5 text-xs font-semibold">{name(p)}</p>
                 <div className="grid grid-cols-[auto_1fr_1fr] items-end gap-2">
                   <label>
-                    <span className="mb-1 block text-xs text-zinc-500">180’s</span>
+                    <span className="mb-1 block text-2xs text-zinc-500">180’s</span>
                     <Stepper value={stats[p].count180} onChange={(v) => setStats((s) => ({ ...s, [p]: { ...s[p], count180: v } }))} max={20} />
                   </label>
                   <label>
-                    <span className="mb-1 block text-xs text-zinc-500">Hoogste uitgooi</span>
+                    <span className="mb-1 block text-2xs text-zinc-500">Hoogste uitgooi</span>
                     <TextInput
                       inputMode="numeric"
                       placeholder="≥ 100"
@@ -196,7 +195,7 @@ export function ScoreEntry({
                     />
                   </label>
                   <label>
-                    <span className="mb-1 block text-xs text-zinc-500">Hoogste score</span>
+                    <span className="mb-1 block text-2xs text-zinc-500">Hoogste score</span>
                     <TextInput
                       inputMode="numeric"
                       value={stats[p].score}
@@ -206,17 +205,17 @@ export function ScoreEntry({
                 </div>
               </div>
             ))}
-            {statErrors.length > 0 && <p className="text-sm text-accent-700">{statErrors.join(' · ')}</p>}
+            {statErrors.length > 0 && <p className="text-xs text-accent-700">{statErrors.join(' · ')}</p>}
           </div>
         )}
       </div>
 
-      <div className="grid gap-2 pt-1">
+      <div className="grid grid-cols-[1fr_2fr] gap-2 pt-1">
+        <Button size="xl" variant="secondary" onClick={onCancel}>
+          Annuleren
+        </Button>
         <Button size="xl" disabled={!winner || statErrors.length > 0} onClick={() => setConfirming(true)}>
           Verder
-        </Button>
-        <Button size="lg" variant="secondary" onClick={onCancel}>
-          Annuleren
         </Button>
       </div>
     </div>

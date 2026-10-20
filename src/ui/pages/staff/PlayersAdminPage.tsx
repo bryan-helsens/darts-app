@@ -36,13 +36,13 @@ export function PlayersAdminPage() {
       {list.length === 0 ? (
         <Empty>Geen spelers gevonden.</Empty>
       ) : (
-        <div className="divide-y divide-zinc-100 overflow-hidden rounded-xl border border-zinc-200 bg-white">
+        <div className="divide-y divide-zinc-100 overflow-hidden rounded-lg border border-zinc-200/80 bg-white shadow-xs">
           {list.map((p) => {
             const c = contactOf.get(p.id);
             return (
               <button key={p.id} type="button" onClick={() => setEditing(p)} className="flex w-full items-center justify-between gap-3 px-3 py-2 text-left hover:bg-zinc-50">
                 <div className="min-w-0">
-                  <div className="truncate text-sm font-semibold text-zinc-950">{displayName(p)}</div>
+                  <div className="truncate text-[13px] font-medium text-zinc-950">{displayName(p)}</div>
                   <div className="truncate text-xs text-zinc-500">{[c?.email, c?.phone].filter(Boolean).join(' · ') || 'geen contactgegevens'}</div>
                 </div>
                 <div className="flex gap-1">
@@ -125,17 +125,17 @@ function EditPlayer({
           <TextInput type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} />
         </Field>
         <label className="flex items-center gap-3">
-          <input type="checkbox" className="h-5 w-5 accent-brand-600" checked={active} onChange={(e) => setActive(e.target.checked)} />
+          <input type="checkbox" className="h-4 w-4 accent-brand-600" checked={active} onChange={(e) => setActive(e.target.checked)} />
           Actieve speler (verschijnt bij het zoeken tijdens de check-in)
         </label>
         {save.error && <ErrorBox error={save.error} />}
-        <Button size="lg" block onClick={() => save.mutate()} disabled={save.isPending || !name.trim()}>
+        <Button block onClick={() => save.mutate()} disabled={save.isPending || !name.trim()}>
           Opslaan
         </Button>
 
         {isAdmin && (
           <div className="mt-6 space-y-3 border-t border-zinc-200 pt-4">
-            <h3 className="text-sm font-semibold text-zinc-950">Beheer (admin)</h3>
+            <h3 className="text-[13px] font-semibold text-zinc-950">Beheer (admin)</h3>
             <Field label="Dubbel aangemaakt? Voeg deze speler samen met:" hint="Alle uitslagen gaan naar de gekozen speler; deze fiche verdwijnt.">
               <Select value={mergeWith} onChange={(e) => setMergeWith(e.target.value)}>
                 <option value="">Kies een speler…</option>

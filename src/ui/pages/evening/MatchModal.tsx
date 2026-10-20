@@ -67,7 +67,7 @@ export function MatchModal({ view, match, board, name, onClose }: { view: EventV
           <InfoBox tone="amber">
             Je corrigeert een uitslag. Dit wordt in de audit-log bijgehouden. Als de winnaar verandert, mag de volgende match nog niet gespeeld zijn.
           </InfoBox>
-          <div className="mt-4">
+          <div className="mt-3">
             <ScoreEntry
               match={match}
               name={name}
@@ -81,27 +81,27 @@ export function MatchModal({ view, match, board, name, onClose }: { view: EventV
         </>
       )}
       {mode === 'view' && (
-        <div className="space-y-4">
-          <div className="rounded-lg bg-zinc-50 px-2 py-3 text-base">
+        <div className="space-y-3">
+          <div className="rounded-lg bg-zinc-50 px-3 py-2.5">
             <MatchLine m={match} name={name} pending={pending ? { legs1: pending.data.legs1, legs2: pending.data.legs2 } : undefined} />
           </div>
           {pending && <InfoBox tone="amber">Deze uitslag wacht nog op verbinding en wordt automatisch verstuurd.</InfoBox>}
           {statsLine(view.statsByMatch.get(view.rowByCode.get(match.id)?.id ?? ''), name) && (
-            <p className="text-sm text-zinc-600">{statsLine(view.statsByMatch.get(view.rowByCode.get(match.id)?.id ?? ''), name)}</p>
+            <p className="text-xs text-zinc-600">{statsLine(view.statsByMatch.get(view.rowByCode.get(match.id)?.id ?? ''), name)}</p>
           )}
           {match.winner && !pending && (
-            <Button variant="secondary" size="lg" block onClick={() => setMode('correct')}>
+            <Button variant="secondary" block onClick={() => setMode('correct')}>
               Uitslag corrigeren
             </Button>
           )}
         </div>
       )}
-      {!known && <p className="text-sm text-zinc-600">De spelers van deze match zijn nog niet gekend.</p>}
+      {!known && <p className="text-[13px] text-zinc-600">De spelers van deze match zijn nog niet gekend.</p>}
 
       {!match.winner && !pending && known && view.event.status === 'bezig' && (
-        <div className="mt-5 space-y-2.5 border-t border-zinc-200 pt-4">
+        <div className="mt-4 space-y-2 border-t border-zinc-100 pt-3">
           <h3 className="text-xs font-bold tracking-wider text-zinc-500 uppercase">Planning</h3>
-          {live && <p className="text-sm text-zinc-600">Speelt nu op bord {live.board}.</p>}
+          {live && <p className="text-xs text-zinc-600">Speelt nu op bord {live.board}.</p>}
           <div className="flex items-end gap-2">
             <label className="flex-1">
               <span className="mb-1 block text-xs font-semibold text-zinc-600">Naar bord</span>
@@ -118,11 +118,11 @@ export function MatchModal({ view, match, board, name, onClose }: { view: EventV
             </Button>
           </div>
           {held ? (
-            <Button variant="secondary" block onClick={() => log.mutate({ type: 'release', payload: { match: match.id } })}>
+            <Button variant="secondary" size="sm" block onClick={() => log.mutate({ type: 'release', payload: { match: match.id } })}>
               Uitstel opheffen
             </Button>
           ) : (
-            <Button variant="ghost" block onClick={() => log.mutate({ type: 'hold', payload: { match: match.id } })}>
+            <Button variant="ghost" size="sm" block onClick={() => log.mutate({ type: 'hold', payload: { match: match.id } })}>
               Uitstellen (bv. speler niet aanwezig)
             </Button>
           )}

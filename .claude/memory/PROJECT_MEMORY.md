@@ -63,6 +63,11 @@
   - Demo-data button: `DemoDataCard` on the dashboard (admins). Migration `20261020130000_demo_data.sql` adds `has_demo_data()`, `load_demo_data(jsonb)`, `remove_demo_data()`. Dataset built in the browser by `src/demo/demoData.ts` (same builder as `scripts/seed`): "Demoseizoen", 25 players, 6 played evenings on the previous 3rd Saturdays, practice evening today (pin 1234). Only ids starting with `de000000-` are touched.
   - Redesign: light, compact; black header (`ink` #0a0a0b), blue primary (`brand`, #2563eb), red accent (`accent`, #dc2626; live badges); Inter Variable font (only Latin subsets precached). Status tones: gepland = blue, bezig = red, afgelopen = dark. Header scrolls away on phones, sticky from `md`. Sign-out sits in the staff nav. The sync badge shows "Online" on phones (full label as aria-label).
   - Score entry: per player tap the legs won (0…need), "Verder" → confirm. Leader tab **Matchen**: all matches with filters (te spelen / gespeeld / alle) and search; tap to enter or correct. `/score` has "Andere match invoeren".
+- **2026-10-20, second redesign (Bryan: "still bulky and large … smaller and compacter … modern"):** design system v2.
+  - 14 px body text, `text-2xs` (11 px) token, buttons 36 px default (`h-9`), score buttons 44 px, check-in toggles 36 px; `rounded-md`/`rounded-lg`, `shadow-xs`, page background `canvas` (#f4f4f6).
+  - Layout: 48 px black top bar; **bottom tab bar on phones** (public: Kalender, Ranking, Uitslagen, Spelers, Info; staff: Overzicht, Spelers, Seizoenen, Gebruikers, Site); desktop nav in the top bar. Sign-out = icon button top right.
+  - Matches render as a two-line **scoreboard** (`MatchLine`) inside **tiles** (`MatchTile` + `TileGrid`, 2 columns on phones); boards are a 2-column grid. Public event page uses tabs. Date tiles (`DateTile`, `dateParts` in `src/lib/time.ts`).
+  - Touch-target convention in CLAUDE.md lowered accordingly (was ±48 px).
 - **Next:** phase 2 after Bryan has tried the redesign.
 
 ## 4. Phase backlog
@@ -98,7 +103,7 @@
 ## 6. Gotchas and environment notes
 
 - **Environment:** Node 22. The container has no Docker daemon (no real local Supabase) and cannot reach supabase.com. Use Chromium at `/opt/pw-browsers/chromium`; Playwright picks it up via `playwright.config.ts`. Never run `playwright install` here.
-- **Test runtimes:** `npm test` ≈ 50 s (491 tests: 4 matrix files + PGlite DB tests). `npm run test:e2e` ≈ 30 s on a **Pixel 7 viewport** (one full evening, including an offline scorer). E2e selectors: legs buttons via `[data-legs-row="1"] button`, pin via `[data-pin]`, sync badge via its accessible name.
+- **Test runtimes:** `npm test` ≈ 50 s (491 tests: 4 matrix files + PGlite DB tests). `npm run test:e2e` ≈ 30 s on a **Pixel 7 viewport** (one full evening, including an offline scorer). E2e selectors: check-in rows via `[data-player-row]`, legs buttons via `[data-legs-row="1"] button`, pin via `[data-pin]`, sync badge via its accessible name.
 - **Generated files are checked by tests.** After changing migrations, run `npm run db:bundle`. After changing the seed schema or engine output, run `npm run seed`.
 - **PGlite:** pass `parsers` per query (DATE/TIME as text, TIMESTAMPTZ → ISO, INT8 → number). Script imports from the scratchpad need absolute paths; use `.mjs`/`.mts` for top-level await.
 - **E2e lesson:** never `page.goto` right after a click that fires a request; wait for the resulting URL or state (CI is slower).
@@ -116,3 +121,4 @@
 - 2026-10-20: Supabase account created and linked to the repo by Bryan (GitHub integration, Deploy to production ON); `supabase/config.toml` added and README/CLAUDE.md adapted (PR #3). The production deploy succeeded and the tables exist.
 - 2026-10-20: site live on Netlify, first admin account created, Dutch auth errors (PR #4).
 - 2026-10-20: demo-data button, redesign (blue/black/red, compact) and manual score entry (legs per player + Matchen tab) merged as PR #5 (squash `5d3f606`); the demo-data migration deploys to production via the Supabase integration.
+- 2026-10-20: second, more compact and modern redesign (design system v2, bottom tab bar, scoreboard tiles) on branch `claude/new-session-bpbx7g`; not merged yet.

@@ -3,7 +3,7 @@ import { roundName, type Match } from '../../../engine';
 import type { EventView } from '../../../data/eventView';
 import { usePendingScores } from '../../../data/outbox';
 import { normalizeName } from '../../../lib/names';
-import { MatchLine } from '../../components/darts';
+import { MatchTile, TileGrid } from '../../components/darts';
 import { Badge, Empty, LiveBadge, SearchInput, Segmented } from '../../components/ui';
 import { MatchModal } from './MatchModal';
 
@@ -73,29 +73,31 @@ export function MatchesPanel({ view, name }: { view: EventView; name: NameFn }) 
         />
         <SearchInput className="min-w-40 flex-1" placeholder="Zoek op speler…" value={query} onChange={(e) => setQuery(e.target.value)} />
       </div>
-      <p className="text-xs text-zinc-500">Tik op een match om de score in te voeren of te corrigeren, ook als de match niet op een bord stond.</p>
+      <p className="text-2xs text-zinc-500">Tik op een match om de score in te voeren of te corrigeren, ook als ze niet op een bord stond.</p>
 
       {groups.length === 0 ? (
         <Empty>Geen matchen gevonden.</Empty>
       ) : (
         groups.map((g) => (
           <section key={g.key}>
-            <h3 className="mb-1 text-xs font-bold tracking-wider text-zinc-500 uppercase">{g.title}</h3>
-            <div className="divide-y divide-zinc-100 overflow-hidden rounded-xl border border-zinc-200 bg-white">
+            <h3 className="mb-1.5 text-2xs font-semibold tracking-wider text-zinc-500 uppercase">{g.title}</h3>
+            <TileGrid>
               {g.matches.map(({ m, label }) => {
                 const p = pending.get(m.id);
                 const board = liveBoard.get(m.id);
                 return (
-                  <button key={m.id} type="button" onClick={() => setSelected(m.id)} className="block w-full px-2.5 py-2 text-left hover:bg-zinc-50">
-                    <span className="mb-0.5 flex min-h-5 items-center justify-between gap-2 text-xs text-zinc-400">
-                      <span className="truncate">{label}</span>
-                      {p ? <Badge tone="amber">sync…</Badge> : board !== undefined ? <LiveBadge>bord {board}</LiveBadge> : !m.player1 || !m.player2 ? <Badge>wacht</Badge> : null}
-                    </span>
-                    <MatchLine m={m} name={name} compact pending={p?.data} />
-                  </button>
+                  <MatchTile
+                    key={m.id}
+                    m={m}
+                    name={name}
+                    title={label}
+                    pending={p?.data}
+                    extra={p ? <Badge tone="amber">sync…</Badge> : board !== undefined ? <LiveBadge>bord {board}</LiveBadge> : !m.player1 || !m.player2 ? <Badge>wacht</Badge> : null}
+                    onClick={() => setSelected(m.id)}
+                  />
                 );
               })}
-            </div>
+            </TileGrid>
           </section>
         ))
       )}

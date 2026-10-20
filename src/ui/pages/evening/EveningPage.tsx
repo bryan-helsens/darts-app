@@ -4,7 +4,7 @@ import { buildEventView, PHASE_LABEL } from '../../../data/eventView';
 import { useEventBundle, usePlayerDirectory, useRegistrations, useScorerPin, useSeasons } from '../../../data/queries';
 import { formatLongDate } from '../../../lib/time';
 import { PlacementsTable } from '../../components/darts';
-import { Badge, ErrorBox, Spinner, Tabs } from '../../components/ui';
+import { Badge, ErrorBox, Icon, Spinner, Tabs } from '../../components/ui';
 import { seasonSettings, seedRanksFrom, useNow, useSeasonRanking } from '../../hooks';
 import { CheckInPanel } from './CheckInPanel';
 import { BoardsPanel, BracketPanel, FinishPanel, PoolsPanel } from './LivePanels';
@@ -60,28 +60,33 @@ export function EveningPage() {
 
   return (
     <div>
-      <div className="mb-3 flex flex-wrap items-start justify-between gap-3">
+      <div className="mb-2 flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <h1 className="text-xl font-bold tracking-tight text-zinc-950 sm:text-2xl">{formatLongDate(event.event_date)}</h1>
-          <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
+          <h1 className="truncate text-lg leading-tight font-semibold tracking-tight text-zinc-950">{formatLongDate(event.event_date)}</h1>
+          <div className="mt-1 flex flex-wrap items-center gap-x-2.5 gap-y-1 text-xs">
             <Badge tone={event.status === 'bezig' ? 'red' : event.status === 'afgelopen' ? 'dark' : 'blue'}>{PHASE_LABEL[view.phase]}</Badge>
-            <Link to={`/avond/${event.id}`} className="font-medium text-brand-700 hover:underline">
-              Publieke pagina
+            <Link to={`/avond/${event.id}`} className="inline-flex items-center gap-1 font-medium text-zinc-500 hover:text-zinc-900">
+              <Icon name="globe" className="h-3.5 w-3.5" />
+              Publiek
             </Link>
             {event.status !== 'gepland' && (
-              <Link to={`/print/avond/${event.id}`} className="font-medium text-brand-700 hover:underline">
+              <Link to={`/print/avond/${event.id}`} className="inline-flex items-center gap-1 font-medium text-zinc-500 hover:text-zinc-900">
+                <Icon name="print" className="h-3.5 w-3.5" />
                 Afdrukken
               </Link>
             )}
           </div>
         </div>
         {event.status !== 'afgelopen' && (
-          <Link to={`/score/${event.id}`} className="flex items-center gap-3 rounded-xl bg-ink px-3 py-2 text-white hover:bg-zinc-800" title="Scorepagina voor de schrijvers">
-            <div>
-              <div className="text-[11px] font-medium tracking-wide text-zinc-400 uppercase">Score-pin</div>
-              <div data-pin className="font-mono text-xl leading-tight font-bold tracking-[0.2em]">{pin.data ?? '····'}</div>
-            </div>
-            <span className="text-xs text-zinc-400">/score →</span>
+          <Link
+            to={`/score/${event.id}`}
+            className="flex shrink-0 flex-col items-end rounded-md bg-ink px-2.5 py-1 text-white hover:bg-zinc-800"
+            title="Score-pin voor de schrijvers (scorepagina openen)"
+          >
+            <span className="text-[10px] leading-3 font-medium tracking-wide text-zinc-400 uppercase">Score-pin</span>
+            <span data-pin className="font-mono text-base leading-5 font-semibold tracking-[0.15em]">
+              {pin.data ?? '····'}
+            </span>
           </Link>
         )}
       </div>

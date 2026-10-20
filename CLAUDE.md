@@ -71,8 +71,9 @@ e2e/          Playwright
 - Alle tekst voor gebruikers in het Nederlands (Vlaams): datums `dd/mm/jjjj`, uren `19u00`, tijdzone Europe/Brussels (`src/lib/time.ts`). Gebruik nooit `toLocaleString` zonder tijdzone.
 - Codecommentaar in het Nederlands; namen van variabelen en functies in het Engels.
 - Engine-functies zijn puur en immutabel (geven nieuwe arrays terug). Schrijf tests mee, zeker voor alles in `src/engine`.
-- Grote aanraakdoelen (min. ±48 px) waar het telt (scores, check-in), één-duimbediening, bevestigingsscherm voor uitslagen.
-- Huisstijl: licht en compact, zwarte kop (`bg-ink`), blauw als hoofdkleur (`brand-*`), rood als accent (`accent-*`, ook voor "live"), lettertype Inter. Kleuren staan als tokens in `src/index.css` (`@theme`); bouwstenen in `src/ui/components/ui.tsx` (Button, Card, Badge, Stats, Segmented, SearchInput, Icon, …). Geen emerald/groen meer.
+- Compact maar duimvriendelijk: knoppen standaard 36 px (`h-9`); scoreknoppen 44 px, check-inknoppen 36 px over een volle rij. Eén-duimbediening, bevestigingsscherm voor uitslagen.
+- Huisstijl: licht, compact en modern. Basistekst 14 px (`text-sm`), meta 12 px, labels 11 px (`text-2xs`, eigen token); invoervelden 16 px op gsm (`text-base sm:text-sm`, anders zoomt iOS in). Zwarte kop (`bg-ink`, 48 px), blauw als hoofdkleur (`brand-*`), rood als accent (`accent-*`, ook voor "live"), lettertype Inter, afgeronde hoeken `rounded-md`/`rounded-lg`. Kleuren en tokens in `src/index.css` (`@theme`); bouwstenen in `src/ui/components/ui.tsx` (Button, Card, List + `rowClass`, Badge, Stats, Segmented, SearchInput, DateTile, Icon, …). Geen emerald/groen.
+- Indeling (`src/ui/layout/Layouts.tsx`): op gsm een tabbalk onderaan (zoals een app), vanaf `md` de navigatie in de kop. Matchen tonen als scorebord (`MatchLine`: twee regels, legs rechts) en in rasters van tegeltjes (`MatchTile` + `TileGrid`, 2 kolommen op gsm).
 - Scores invoeren: per speler het aantal gewonnen legs (`ScoreEntry`, rijen met `data-legs-row`). Het tabblad **Matchen** (`MatchesPanel`) laat de leider elke match achteraf invoeren of corrigeren.
 - Hardcodeer nergens een domein; Supabase-URL en -sleutel komen uit `VITE_SUPABASE_URL` / `VITE_SUPABASE_ANON_KEY`.
 - Privacy: publiek enkel naam en bijnaam. Contactgegevens nooit in publieke queries of logs.

@@ -46,13 +46,13 @@ export function SeasonsPage() {
       {create.error && <ErrorBox error={create.error} />}
       {(seasons ?? []).length === 0 && <Empty>Nog geen seizoenen. Maak er een aan om te beginnen.</Empty>}
       {(seasons ?? []).length > 0 && (
-        <div className="divide-y divide-zinc-100 overflow-hidden rounded-xl border border-zinc-200 bg-white">
+        <div className="divide-y divide-zinc-100 overflow-hidden rounded-lg border border-zinc-200/80 bg-white shadow-xs">
           {(seasons ?? []).map((s) => {
             const own = (events ?? []).filter((e) => e.season_id === s.id);
             return (
-              <Link key={s.id} to={`/beheer/seizoenen/${s.id}`} className="flex items-center justify-between gap-3 px-3 py-2.5 hover:bg-zinc-50">
+              <Link key={s.id} to={`/beheer/seizoenen/${s.id}`} className="flex items-center justify-between gap-3 px-3 py-2 transition-colors hover:bg-zinc-50">
                 <div className="min-w-0">
-                  <div className="font-semibold text-zinc-950">{s.name}</div>
+                  <div className="text-[13px] font-medium text-zinc-950">{s.name}</div>
                   <div className="text-xs text-zinc-500">
                     {formatDate(s.starts_on)} – {formatDate(s.ends_on)} · {own.length} speelavonden ({own.filter((e) => e.status === 'afgelopen').length} gespeeld)
                   </div>
@@ -118,11 +118,11 @@ export function SeasonDetailPage() {
       {own.length === 0 ? (
         <Empty>Nog geen speelavonden in dit seizoen.</Empty>
       ) : (
-        <div className="divide-y divide-zinc-100 overflow-hidden rounded-xl border border-zinc-200 bg-white">
+        <div className="divide-y divide-zinc-100 overflow-hidden rounded-lg border border-zinc-200/80 bg-white shadow-xs">
           {own.map((e) => (
             <div key={e.id} className="flex flex-wrap items-center justify-between gap-2 px-3 py-2">
               <div className="min-w-0">
-                <div className="text-sm font-semibold text-zinc-950">{formatLongDate(e.event_date)}</div>
+                <div className="text-[13px] font-medium text-zinc-950">{formatLongDate(e.event_date)}</div>
                 <div className="text-xs text-zinc-500">
                   {shortTime(e.start_time).replace(':', 'u')} · {e.boards} borden {e.notes && `· ${e.notes}`}
                 </div>
@@ -202,7 +202,7 @@ function EventForm({ season, event, onClose }: { season: SeasonRow; event: Event
           <TextInput value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="bv. Kerstspecial" />
         </Field>
         {save.error && <ErrorBox error={save.error} />}
-        <Button size="lg" block onClick={() => save.mutate()} disabled={save.isPending || !date}>
+        <Button block onClick={() => save.mutate()} disabled={save.isPending || !date}>
           Opslaan
         </Button>
         {event && event.status === 'gepland' && (
@@ -267,14 +267,14 @@ function SeasonSettingsForm({ season }: { season: SeasonRow }) {
   return (
     <div>
       <SectionTitle>Instellingen van het seizoen</SectionTitle>
-      <Card className="space-y-5">
+      <Card className="space-y-4">
         <Field label="Naam van het seizoen">
           <TextInput value={name} onChange={(e) => setName(e.target.value)} />
         </Field>
 
         <div>
-          <h3 className="mb-2 text-sm font-semibold text-zinc-950">Puntentabel</h3>
-          <table className="w-full text-sm">
+          <h3 className="mb-1.5 text-[13px] font-semibold text-zinc-950">Puntentabel</h3>
+          <table className="w-full text-[13px]">
             <thead className="text-zinc-500">
               <tr>
                 <th className="text-left">Van plaats</th>
@@ -329,7 +329,7 @@ function SeasonSettingsForm({ season }: { season: SeasonRow }) {
           >
             + Regel
           </Button>
-          {tableError && <p className="mt-2 text-sm text-accent-700">{tableError}</p>}
+          {tableError && <p className="mt-2 text-xs text-accent-700">{tableError}</p>}
           <div className="mt-3 max-w-xs">
             <Field label="Deelnamepunten per avond">
               <NumberInput value={s.points.participation} onChange={(v) => setS((x) => ({ ...x, points: { ...x.points, participation: v } }))} />
@@ -338,9 +338,9 @@ function SeasonSettingsForm({ season }: { season: SeasonRow }) {
         </div>
 
         <div>
-          <h3 className="mb-2 text-sm font-semibold text-zinc-950">Beste X van Y</h3>
-          <label className="mb-2 flex items-center gap-2.5 text-sm">
-            <input type="checkbox" className="h-5 w-5 accent-brand-600" checked={s.bestOf.enabled} onChange={(e) => setS((x) => ({ ...x, bestOf: { ...x.bestOf, enabled: e.target.checked } }))} />
+          <h3 className="mb-1.5 text-[13px] font-semibold text-zinc-950">Beste X van Y</h3>
+          <label className="mb-2 flex items-center gap-2 text-[13px]">
+            <input type="checkbox" className="h-4 w-4 accent-brand-600" checked={s.bestOf.enabled} onChange={(e) => setS((x) => ({ ...x, bestOf: { ...x.bestOf, enabled: e.target.checked } }))} />
             Enkel de beste avonden tellen mee (deelnamepunten inbegrepen)
           </label>
           {s.bestOf.enabled && (
@@ -356,7 +356,7 @@ function SeasonSettingsForm({ season }: { season: SeasonRow }) {
         </div>
 
         <div>
-          <h3 className="mb-2 text-sm font-semibold text-zinc-950">Legs per ronde</h3>
+          <h3 className="mb-1.5 text-[13px] font-semibold text-zinc-950">Legs per ronde</h3>
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
             <LegsInput label="Poules" value={s.legs.pool} onChange={(v) => setS((x) => ({ ...x, legs: { ...x.legs, pool: v } }))} />
             <LegsInput label="Barrage" value={s.legs.barrage} onChange={(v) => setS((x) => ({ ...x, legs: { ...x.legs, barrage: v } }))} />
@@ -371,7 +371,7 @@ function SeasonSettingsForm({ season }: { season: SeasonRow }) {
         </div>
 
         <div>
-          <h3 className="mb-2 text-sm font-semibold text-zinc-950">Avond en tijdsinschatting</h3>
+          <h3 className="mb-1.5 text-[13px] font-semibold text-zinc-950">Avond en tijdsinschatting</h3>
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
             <Field label="Start">
               <TextInput type="time" value={s.startTime} onChange={(e) => setS((x) => ({ ...x, startTime: e.target.value }))} />
@@ -398,18 +398,18 @@ function SeasonSettingsForm({ season }: { season: SeasonRow }) {
               <NumberInput value={s.advancePerPool} min={1} max={4} onChange={(v) => setS((x) => ({ ...x, advancePerPool: v }))} />
             </Field>
           </div>
-          <label className="mt-3 flex items-center gap-2.5 text-sm">
-            <input type="checkbox" className="h-5 w-5 accent-brand-600" checked={s.holdFinal} onChange={(e) => setS((x) => ({ ...x, holdFinal: e.target.checked }))} />
+          <label className="mt-2.5 flex items-center gap-2 text-[13px]">
+            <input type="checkbox" className="h-4 w-4 accent-brand-600" checked={s.holdFinal} onChange={(e) => setS((x) => ({ ...x, holdFinal: e.target.checked }))} />
             De A-finale wordt als laatste op het hoofdbord gespeeld
           </label>
         </div>
 
         {save.error && <ErrorBox error={save.error} />}
         {saved && <InfoBox>Opgeslagen.</InfoBox>}
-        <Button size="lg" onClick={() => save.mutate()} disabled={save.isPending || Boolean(tableError)}>
+        <Button onClick={() => save.mutate()} disabled={save.isPending || Boolean(tableError)}>
           Instellingen opslaan
         </Button>
-        <p className="text-sm text-zinc-500">
+        <p className="text-xs text-zinc-500">
           De puntentabel en “beste X van Y” gelden meteen voor de hele seizoensranking. Legs, tijden en doorstromers gelden voor avonden die nog moeten starten.
         </p>
       </Card>

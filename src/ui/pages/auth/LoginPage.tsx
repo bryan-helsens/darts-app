@@ -45,8 +45,8 @@ export function LoginPage() {
 
   return (
     <div className="mx-auto max-w-sm pt-2 sm:pt-6">
-      <h1 className="text-xl font-bold tracking-tight text-zinc-950 sm:text-2xl">Voor organisatoren</h1>
-      <p className="mb-4 text-sm text-zinc-500">Wedstrijdleiders en beheerders loggen hier in.</p>
+      <h1 className="text-lg font-semibold tracking-tight text-zinc-950">Voor organisatoren</h1>
+      <p className="mb-3 text-xs text-zinc-500">Wedstrijdleiders en beheerders loggen hier in.</p>
       <div className="mb-3">
         <Segmented
           block
@@ -87,7 +87,7 @@ export function LoginPage() {
               />
             </Field>
             {error && <ErrorBox>{error}</ErrorBox>}
-            <Button type="submit" size="lg" block disabled={busy}>
+            <Button type="submit" block disabled={busy}>
               {busy ? 'Even geduld…' : mode === 'login' ? 'Inloggen' : 'Account aanvragen'}
             </Button>
             {mode === 'login' && <p className="text-center text-xs text-zinc-500">Je blijft ingelogd op dit toestel tot je afmeldt.</p>}
@@ -95,7 +95,7 @@ export function LoginPage() {
         )}
       </Card>
       {session && !isStaff && (
-        <p className="mt-4 text-sm text-zinc-600">Je bent ingelogd, maar je account is nog niet goedgekeurd door een beheerder.</p>
+        <p className="mt-3 text-xs text-zinc-600">Je bent ingelogd, maar je account is nog niet goedgekeurd door een beheerder.</p>
       )}
     </div>
   );

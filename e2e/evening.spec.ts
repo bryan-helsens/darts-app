@@ -63,7 +63,7 @@ test('een volledige speelavond', async ({ page, browser }) => {
   }
   await expect(page.getByRole('button', { name: '✓ Alles gesynchroniseerd' })).toBeVisible({ timeout: 15_000 });
   for (const name of PLAYERS) {
-    await page.locator('div.px-3', { hasText: name }).getByRole('button', { name: '€5?' }).click();
+    await page.locator('[data-player-row]', { hasText: name }).getByRole('button', { name: '€5?' }).click();
   }
   await expect(page.getByText('€45')).toBeVisible();
 

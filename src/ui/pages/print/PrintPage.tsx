@@ -28,17 +28,17 @@ export function PrintPage() {
   return (
     <div className="mx-auto max-w-4xl bg-white p-4 print:max-w-none print:p-0">
       <style>{`@page { size: A4; margin: 12mm; } @media print { .page-break { break-before: page; } }`}</style>
-      <div className="no-print mb-6 space-y-3 rounded-xl bg-ink p-3 text-white sm:p-4">
+      <div className="no-print mb-4 space-y-2 rounded-lg bg-ink p-3 text-white">
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <Link to={`/beheer/avond/${view.event.id}`} className="text-sm text-zinc-300 hover:text-white">
+          <Link to={`/beheer/avond/${view.event.id}`} className="text-xs text-zinc-300 hover:text-white">
             ← terug
           </Link>
-          <Button onClick={() => window.print()}>
+          <Button size="sm" onClick={() => window.print()}>
             <Icon name="print" />
             Afdrukken / PDF
           </Button>
         </div>
-        <div className="flex flex-wrap gap-x-4 gap-y-2 text-sm">
+        <div className="flex flex-wrap gap-x-4 gap-y-1.5 text-[13px]">
           {(
             [
               ['pools', 'Poulebladen'],
@@ -47,12 +47,12 @@ export function PrintPage() {
             ] as const
           ).map(([key, label]) => (
             <label key={key} className="flex items-center gap-2">
-              <input type="checkbox" className="h-5 w-5 accent-brand-600" checked={parts[key]} onChange={(e) => setParts((p) => ({ ...p, [key]: e.target.checked }))} />
+              <input type="checkbox" className="h-4 w-4 accent-brand-600" checked={parts[key]} onChange={(e) => setParts((p) => ({ ...p, [key]: e.target.checked }))} />
               {label}
             </label>
           ))}
         </div>
-        <p className="text-xs text-zinc-400">Tip: druk de poulebladen af meteen na de start. Valt het internet uit, dan kan de avond op papier verder.</p>
+        <p className="text-2xs text-zinc-400">Tip: druk de poulebladen af meteen na de start. Valt het internet uit, dan kan de avond op papier verder.</p>
       </div>
 
       <h1 className="text-xl font-bold">Sanapolis Darts · {formatLongDate(view.event.event_date)}</h1>

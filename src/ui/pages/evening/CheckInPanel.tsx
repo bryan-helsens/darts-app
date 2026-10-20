@@ -7,7 +7,7 @@ import type { EventRow, PlayerRow, RegistrationRow } from '../../../data/rows';
 import { matchesSearch } from '../../../lib/names';
 import { brusselsToUtc, formatTime, shortTime } from '../../../lib/time';
 import { AddPlayerForm, displayName } from '../../components/players';
-import { Badge, Button, Card, cx, ErrorBox, InfoBox, Modal, SearchInput, Stats } from '../../components/ui';
+import { Badge, Button, Card, cx, ErrorBox, InfoBox, List, Modal, SearchInput, Stats } from '../../components/ui';
 import { useNow } from '../../hooks';
 
 interface Row {
@@ -101,51 +101,49 @@ export function CheckInPanel({ event, registrations, entryFee }: { event: EventR
           </div>
         </InfoBox>
       ) : (
-        <p className="text-sm text-zinc-500">
+        <p className="text-xs text-zinc-500">
           Inschrijving open tot {formatTime(closesAt)}
           {event.registration_reopened && ' (heropend door de wedstrijdleider)'}.
         </p>
       )}
 
-      <div className="sticky top-0 z-10 -mx-4 bg-zinc-100/95 px-4 py-2 backdrop-blur md:top-14">
+      <div className="sticky top-12 z-10 -mx-3 bg-canvas/95 px-3 py-1.5 backdrop-blur sm:-mx-4 sm:px-4">
         <SearchInput placeholder="Zoek of voeg een speler toe…" value={query} onChange={(e) => setQuery(e.target.value)} />
       </div>
 
       {!started && (others.length > 0 || query.trim().length >= 2) && (
-        <Card className="space-y-2">
-          <div className="text-xs font-bold tracking-wider text-zinc-500 uppercase">Nog niet ingeschreven</div>
+        <Card className="space-y-1.5 p-2.5">
+          <div className="text-2xs font-semibold tracking-wider text-zinc-500 uppercase">Nog niet ingeschreven</div>
           {others.map((p) => (
             <div key={p.id} className="flex items-center justify-between gap-2">
-              <span className="text-sm font-medium">{displayName(p)}</span>
-              <Button size="sm" disabled={closed} onClick={() => toggle(p, { present: true })}>
+              <span className="truncate text-sm font-medium">{displayName(p)}</span>
+              <Button size="xs" disabled={closed} onClick={() => toggle(p, { present: true })}>
                 + Aanwezig
               </Button>
             </div>
           ))}
-          <Button variant="secondary" block disabled={closed} onClick={() => setAdding(true)}>
+          <Button variant="secondary" size="sm" block disabled={closed} onClick={() => setAdding(true)}>
             + Nieuwe speler “{query.trim()}”
           </Button>
         </Card>
       )}
 
-      <div className="divide-y divide-zinc-100 overflow-hidden rounded-xl border border-zinc-200 bg-white">
-        {visible.length === 0 && <p className="p-4 text-sm text-zinc-500">Nog niemand ingeschreven. Zoek hierboven een speler.</p>}
+      <List>
+        {visible.length === 0 && <p className="p-3 text-[13px] text-zinc-500">Nog niemand ingeschreven. Zoek hierboven een speler.</p>}
         {visible.map((r) => (
-          <div key={r.player.id} className={cx('flex items-center gap-2 px-3 py-2', r.pending && 'bg-amber-50')}>
+          <div key={r.player.id} data-player-row className={cx('flex items-center gap-1.5 py-1.5 pr-1.5 pl-3', r.pending && 'bg-amber-50')}>
             <div className="min-w-0 flex-1">
-              <div className="text-[15px] leading-snug font-semibold break-words text-zinc-950">{displayName(r.player)}</div>
-              {(r.reg?.preregistered || r.reg?.withdrawn_at || r.pending || (!started && !r.present && r.reg)) && (
-                <div className="mt-0.5 flex flex-wrap items-center gap-1.5">
-                  {r.reg?.preregistered && <Badge tone="blue">vooraf</Badge>}
-                  {r.reg?.withdrawn_at && <Badge tone="red">opgegeven</Badge>}
-                  {r.pending && <Badge tone="amber">wacht op sync</Badge>}
-                  {!started && !r.present && r.reg && (
-                    <button type="button" className="text-xs text-zinc-500 underline" onClick={() => unregister.mutate(r.player.id)}>
-                      uitschrijven
-                    </button>
-                  )}
-                </div>
-              )}
+              <div className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5">
+                <span className="text-sm leading-5 font-medium break-words text-zinc-950">{displayName(r.player)}</span>
+                {r.reg?.preregistered && <Badge tone="blue">vooraf</Badge>}
+                {r.reg?.withdrawn_at && <Badge tone="red">opgegeven</Badge>}
+                {r.pending && <Badge tone="amber">wacht op sync</Badge>}
+                {!started && !r.present && r.reg && (
+                  <button type="button" className="text-2xs text-zinc-500 underline" onClick={() => unregister.mutate(r.player.id)}>
+                    uitschrijven
+                  </button>
+                )}
+              </div>
             </div>
             <button
               type="button"
@@ -153,8 +151,8 @@ export function CheckInPanel({ event, registrations, entryFee }: { event: EventR
               aria-pressed={r.present}
               onClick={() => toggle(r.player, { present: !r.present })}
               className={cx(
-                'h-11 w-[6.5rem] shrink-0 rounded-lg text-sm font-bold transition-colors',
-                r.present ? 'bg-brand-600 text-white' : 'bg-white text-zinc-600 ring-1 ring-inset ring-zinc-300 hover:bg-zinc-50',
+                'h-9 w-[5.75rem] shrink-0 rounded-md text-[13px] font-semibold transition-colors',
+                r.present ? 'bg-brand-600 text-white shadow-xs' : 'bg-white text-zinc-500 ring-1 ring-inset ring-zinc-200 hover:bg-zinc-50',
                 started && 'opacity-60',
               )}
             >
@@ -165,15 +163,15 @@ export function CheckInPanel({ event, registrations, entryFee }: { event: EventR
               aria-pressed={r.paid}
               onClick={() => toggle(r.player, { paid: !r.paid })}
               className={cx(
-                'h-11 w-[5.5rem] shrink-0 rounded-lg text-sm font-bold transition-colors',
-                r.paid ? 'bg-ink text-white' : 'bg-white text-zinc-600 ring-1 ring-inset ring-zinc-300 hover:bg-zinc-50',
+                'h-9 w-[4.75rem] shrink-0 rounded-md text-[13px] font-semibold transition-colors',
+                r.paid ? 'bg-ink text-white shadow-xs' : 'bg-white text-zinc-500 ring-1 ring-inset ring-zinc-200 hover:bg-zinc-50',
               )}
             >
               {r.paid ? '✓ Betaald' : `€${entryFee}?`}
             </button>
           </div>
         ))}
-      </div>
+      </List>
       {unregister.error && <ErrorBox error={unregister.error} />}
 
       <Modal open={adding} onClose={() => setAdding(false)} title="Nieuwe speler">
