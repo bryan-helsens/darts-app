@@ -141,12 +141,15 @@ create index matches_player2_idx on public.matches (player2_id);
 
 create table public.match_stats (
   match_id uuid not null references public.matches (id) on delete cascade,
+  -- Dubbel opgeslagen zodat statistieken per avond of seizoen makkelijk op te vragen zijn.
+  event_id uuid not null references public.events (id) on delete cascade,
   player_id uuid not null references public.players (id) on delete cascade,
   count_180 int not null default 0 check (count_180 between 0 and 50),
   highest_finish int check (highest_finish between 2 and 170),
   highest_score int check (highest_score between 0 and 180),
   primary key (match_id, player_id)
 );
+create index match_stats_event_idx on public.match_stats (event_id);
 
 -- Logboek van de avond: bordwijzigingen, manuele toewijzingen, opgaves, lotingen
 create table public.event_log (
@@ -667,8 +670,9 @@ begin
         result_client_id = coalesce(p_client_id, result_client_id)
     where id = v_match.id;
 
-    insert into public.match_stats (match_id, player_id, count_180, highest_finish, highest_score)
+    insert into public.match_stats (match_id, event_id, player_id, count_180, highest_finish, highest_score)
     select v_match.id,
+           p_event_id,
            (s ->> 'player_id')::uuid,
            coalesce((s ->> 'count_180')::int, 0),
            nullif(s ->> 'highest_finish', '')::int,

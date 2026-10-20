@@ -198,10 +198,10 @@ select set_config('app.skip_advance', 'on', true);
           finish = 100 + rng.int(71);
           while (BOGEY.has(finish)) finish--;
         }
-        if (n180 > 0 || finish !== null) stats.push([q(codeToUuid.get(m.id)), q(p), String(n180), q(finish), q(n180 > 0 ? 180 : 100 + rng.int(80))]);
+        if (n180 > 0 || finish !== null) stats.push([q(codeToUuid.get(m.id)), q(eventId), q(p), String(n180), q(finish), q(n180 > 0 ? 180 : 100 + rng.int(80))]);
       }
     }
-    out.push(insert('match_stats', ['match_id', 'player_id', 'count_180', 'highest_finish', 'highest_score'], stats));
+    out.push(insert('match_stats', ['match_id', 'event_id', 'player_id', 'count_180', 'highest_finish', 'highest_score'], stats));
     const log: unknown[][] = [];
     for (const d of disruptions) {
       const at = ts(start + d.atMinutes * 60_000);

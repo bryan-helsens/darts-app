@@ -7,29 +7,9 @@
 import { PGlite } from '@electric-sql/pglite';
 import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { SUPABASE_DEFAULT_GRANTS, SUPABASE_STUB } from '../../scripts/local/stub';
 
 const MIGRATIONS = join(import.meta.dirname, '../../supabase/migrations');
-
-const SUPABASE_STUB = `
-create role anon nologin;
-create role authenticated nologin;
-create schema auth;
-create table auth.users (
-  id uuid primary key default gen_random_uuid(),
-  email text,
-  raw_user_meta_data jsonb not null default '{}'::jsonb
-);
-create function auth.uid() returns uuid language sql stable
-as $$ select nullif(current_setting('request.jwt.claim.sub', true), '')::uuid $$;
-grant usage on schema auth to anon, authenticated;
-`;
-
-const SUPABASE_DEFAULT_GRANTS = `
-grant usage on schema public to anon, authenticated;
-grant select, insert, update, delete on all tables in schema public to anon, authenticated;
-grant usage, select on all sequences in schema public to anon, authenticated;
-grant execute on all functions in schema public to anon, authenticated;
-`;
 
 export function migrationFiles(): string[] {
   return readdirSync(MIGRATIONS)

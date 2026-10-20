@@ -12,11 +12,16 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "seed": "tsx scripts/generate-seed.ts",
-    "db:bundle": "tsx scripts/bundle-migrations.ts"
+    "db:bundle": "tsx scripts/bundle-migrations.ts",
+    "local:supabase": "tsx scripts/local-supabase.ts",
+    "dev:local": "VITE_SUPABASE_URL=http://localhost:54321 VITE_SUPABASE_ANON_KEY=lokaal vite",
+    "test:e2e": "playwright test"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.118.0",
+    "@tanstack/query-sync-storage-persister": "^5.104.5",
     "@tanstack/react-query": "^5.104.5",
+    "@tanstack/react-query-persist-client": "^5.104.5",
     "idb-keyval": "^6.3.0",
     "react": "^19.3.1",
     "react-dom": "^19.3.1",
@@ -25,6 +30,7 @@
   "devDependencies": {
     "@electric-sql/pglite": "^0.5.10",
     "@eslint/js": "^10.0.1",
+    "@playwright/test": "^1.64.1",
     "@tailwindcss/vite": "^4.3.3",
     "@types/node": "^26.6.5",
     "@types/react": "^19.3.0",

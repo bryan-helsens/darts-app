@@ -348,8 +348,9 @@ begin
         result_client_id = coalesce(p_client_id, result_client_id)
     where id = v_match.id;
 
-    insert into public.match_stats (match_id, player_id, count_180, highest_finish, highest_score)
+    insert into public.match_stats (match_id, event_id, player_id, count_180, highest_finish, highest_score)
     select v_match.id,
+           p_event_id,
            (s ->> 'player_id')::uuid,
            coalesce((s ->> 'count_180')::int, 0),
            nullif(s ->> 'highest_finish', '')::int,

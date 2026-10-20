@@ -113,6 +113,7 @@ export interface MatchRow {
 
 export interface MatchStatRow {
   match_id: string;
+  event_id: string;
   player_id: string;
   count_180: number;
   highest_finish: number | null;
