@@ -15,7 +15,7 @@ import { matchToInsert, poolsToInsert, type TournamentConfig } from '../../../da
 import { keys } from '../../../data/queries';
 import type { EventRow, RegistrationRow } from '../../../data/rows';
 import { brusselsToUtc, formatTime, shortTime } from '../../../lib/time';
-import { Button, Card, ConfirmModal, cx, ErrorBox, Field, InfoBox, Select, Stepper } from '../../components/ui';
+import { Button, Card, ConfirmModal, cx, ErrorBox, Field, InfoBox, List, rowClass, rowHover, Select, Stepper } from '../../components/ui';
 import { useNow } from '../../hooks';
 
 function LegsSelect({ label, value, onChange }: { label: string; value: number; onChange: (v: number) => void }) {
@@ -120,19 +120,16 @@ export function StartPanel({
 
   return (
     <div className="space-y-3">
-      <Card className="flex items-center gap-3">
-        <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-ink text-lg font-bold text-white tabular-nums">{n}</span>
-        <div className="min-w-0">
-          <div className="font-semibold text-zinc-950">{n} aanwezige spelers</div>
-          <p className="text-xs text-zinc-500">
-            Seeding op de seizoensranking: {ranked} speler{ranked === 1 ? '' : 's'} met ranking, {n - ranked} zonder (worden willekeurig verdeeld).
-          </p>
-        </div>
-      </Card>
+      <div>
+        <div className="text-sm font-semibold text-zinc-950">{n} aanwezige spelers</div>
+        <p className="text-xs text-zinc-500">
+          Seeding op de seizoensranking: {ranked} met ranking, {n - ranked} zonder (willekeurig verdeeld).
+        </p>
+      </div>
 
       <div>
-        <h3 className="mb-1.5 text-xs font-bold tracking-wider text-zinc-500 uppercase">Poule-indeling</h3>
-        <div className="space-y-1.5">
+        <h3 className="mb-1.5 text-2xs font-semibold tracking-wider text-zinc-500 uppercase">Poule-indeling</h3>
+        <List>
           {options.map((o) => {
             const est = estimates.get(o.id);
             return (
@@ -143,40 +140,38 @@ export function StartPanel({
                   setLayoutId(o.id);
                   setAdvance(null);
                 }}
-                className={cx(
-                  'flex w-full items-center justify-between gap-3 rounded-xl border bg-white px-3 py-2 text-left transition-colors',
-                  o.id === layout?.id ? 'border-brand-600 ring-1 ring-brand-600' : 'border-zinc-200 hover:border-zinc-300',
-                )}
+                aria-pressed={o.id === layout?.id}
+                className={cx(rowClass, rowHover, 'justify-between', o.id === layout?.id && 'bg-brand-50/60')}
               >
                 <div className="flex min-w-0 items-center gap-2.5">
                   <span className={cx('h-4 w-4 shrink-0 rounded-full border-2', o.id === layout?.id ? 'border-[5px] border-brand-600' : 'border-zinc-300')} />
                   <div className="min-w-0">
-                    <div className="text-sm font-semibold text-zinc-950">
-                      {o.label} {o.standard && <span className="ml-1 text-xs font-medium text-brand-700">standaard</span>}
+                    <div className="text-sm font-medium text-zinc-950">
+                      {o.label} {o.standard && <span className="ml-1 text-2xs font-medium text-brand-700">standaard</span>}
                     </div>
-                    <div className="text-xs text-zinc-500">{est && `${est.poolMatches} poulematchen · A ${est.A} / B ${est.B} spelers`}</div>
+                    <div className="text-2xs text-zinc-500">{est && `${est.poolMatches} poulematchen · A ${est.A} / B ${est.B} spelers`}</div>
                   </div>
                 </div>
                 {est && (
-                  <div className={cx('text-right text-base font-bold tabular-nums', est.end > limit ? 'text-accent-600' : 'text-zinc-950')}>
+                  <div className={cx('text-right text-sm font-semibold tabular-nums', est.end > limit ? 'text-accent-600' : 'text-zinc-950')}>
                     ±{formatTime(est.end)}
                   </div>
                 )}
               </button>
             );
           })}
-        </div>
+        </List>
       </div>
 
-      <Card className="grid grid-cols-2 items-end gap-3 sm:grid-cols-3">
-        <Field label={multi ? 'Naar A per poule' : 'Spelers naar A'}>
+      <Card className="grid grid-cols-3 items-end gap-2">
+        <Field label={multi ? 'Naar A/poule' : 'Naar A'}>
           <Stepper value={advance} onChange={setAdvance} min={1} max={multi ? Math.min(...(layout?.sizes ?? [2])) - 1 : (layout?.sizes[0] ?? 2) - 1} />
         </Field>
-        <Field label="Aantal borden">
+        <Field label="Borden">
           <Stepper value={boards} onChange={setBoards} min={1} max={16} />
         </Field>
-        <div className="col-span-2 sm:col-span-1">
-          <Field label="Hoofdbord (A-finale)">
+        <div>
+          <Field label="Hoofdbord">
             <Select value={mainBoard} onChange={(e) => setMainBoard(Number(e.target.value))}>
               {Array.from({ length: boards }, (_, i) => i + 1).map((b) => (
                 <option key={b} value={b}>
@@ -191,8 +186,8 @@ export function StartPanel({
       <Card>
         <div className="flex items-center justify-between">
           <div>
-            <h3 className="text-sm font-semibold text-zinc-950">Legs per ronde</h3>
-            <p className="text-xs text-zinc-500">
+            <h3 className="text-[13px] font-semibold text-zinc-950">Legs per ronde</h3>
+            <p className="text-2xs text-zinc-500">
               Poules bo{legs.pool} · A: bo{legs.A.early} / halve bo{legs.A.semi} / finale bo{legs.A.final} · B: bo{legs.B.early} / halve bo{legs.B.semi} / finale bo
               {legs.B.final}
             </p>
@@ -213,32 +208,32 @@ export function StartPanel({
             <LegsSelect label="B finale" value={legs.B.final} onChange={(v) => setLegs((l) => ({ ...l, B: { ...l.B, final: v } }))} />
           </div>
         )}
-        <label className="mt-3 flex items-center gap-2.5 text-sm">
-          <input type="checkbox" className="h-5 w-5 accent-brand-600" checked={holdFinal} onChange={(e) => setHoldFinal(e.target.checked)} />
+        <label className="mt-2.5 flex items-center gap-2 text-[13px]">
+          <input type="checkbox" className="h-4 w-4 accent-brand-600" checked={holdFinal} onChange={(e) => setHoldFinal(e.target.checked)} />
           A-finale als laatste op het hoofdbord (iedereen kan meekijken)
         </label>
       </Card>
 
       {current && (
-        <div className="rounded-xl bg-ink p-3 text-white sm:p-4">
-          <div className="flex items-baseline justify-between gap-3">
-            <div className="text-xs font-medium tracking-wide text-zinc-400 uppercase">Geschatte eindtijd</div>
-            {tooLate ? <span className="rounded-md bg-accent-600 px-1.5 py-0.5 text-xs font-bold">te laat</span> : <span className="rounded-md bg-brand-600 px-1.5 py-0.5 text-xs font-bold">op tijd</span>}
+        <div className="rounded-lg bg-ink p-3 text-white">
+          <div className="flex items-center justify-between gap-3">
+            <div className="text-2xs font-medium tracking-wider text-zinc-400 uppercase">Geschatte eindtijd</div>
+            {tooLate ? <span className="rounded bg-accent-600 px-1.5 py-px text-2xs font-semibold">te laat</span> : <span className="rounded bg-brand-600 px-1.5 py-px text-2xs font-semibold">op tijd</span>}
           </div>
-          <div className="text-4xl font-bold tabular-nums">{formatTime(current.end)}</div>
-          <div className="text-xs text-zinc-400">
+          <div className="text-2xl leading-8 font-semibold tabular-nums">{formatTime(current.end)}</div>
+          <div className="text-2xs text-zinc-400">
             Poules klaar rond {formatTime(current.poolsEnd)} · uitgaande van {settings.timing.minutesPerLeg} min per leg en {settings.timing.changeoverMinutes} min wisseltijd ·
             liefst klaar om {formatTime(limit)}
           </div>
           {suggestions.length > 0 && (
             <div className="mt-3">
-              <div className="text-sm font-semibold">Voorstellen om sneller klaar te zijn:</div>
+              <div className="text-xs font-semibold">Voorstellen om sneller klaar te zijn:</div>
               <div className="mt-1.5 space-y-1.5">
                 {suggestions.map((s) => (
                   <button
                     key={s.id}
                     type="button"
-                    className="flex w-full items-center justify-between gap-2 rounded-lg bg-white/10 px-2.5 py-2 text-left text-sm hover:bg-white/15"
+                    className="flex w-full items-center justify-between gap-2 rounded-md bg-white/10 px-2.5 py-1.5 text-left text-xs hover:bg-white/15"
                     onClick={() => {
                       setLegs(s.plan.legs);
                       setHoldFinal(s.plan.holdFinal);
@@ -258,7 +253,7 @@ export function StartPanel({
         </div>
       )}
 
-      <Button size="xl" block onClick={() => setConfirm(true)}>
+      <Button size="lg" block onClick={() => setConfirm(true)}>
         Toernooi starten
       </Button>
       {start.error && <ErrorBox error={start.error} />}

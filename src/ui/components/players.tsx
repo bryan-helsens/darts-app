@@ -87,7 +87,7 @@ export function AddPlayerForm({
               </li>
             ))}
           </ul>
-          {confirmDuplicate && <p className="mt-2 text-sm">Druk nog eens op “{submitLabel}” als het toch om een nieuwe speler gaat.</p>}
+          {confirmDuplicate && <p className="mt-2 text-xs">Druk nog eens op “{submitLabel}” als het toch om een nieuwe speler gaat.</p>}
         </InfoBox>
       )}
       {more ? (
@@ -103,12 +103,12 @@ export function AddPlayerForm({
           </Field>
         </div>
       ) : (
-        <button type="button" className="text-sm text-brand-700 underline" onClick={() => setMore(true)}>
+        <button type="button" className="text-xs font-medium text-brand-700 hover:underline" onClick={() => setMore(true)}>
           + bijnaam, e-mail of gsm
         </button>
       )}
       {create.error && <ErrorBox error={create.error} />}
-      <Button type="submit" size="lg" block disabled={create.isPending || !name.trim()}>
+      <Button type="submit" block disabled={create.isPending || !name.trim()}>
         {create.isPending ? 'Bezig…' : submitLabel}
       </Button>
     </form>

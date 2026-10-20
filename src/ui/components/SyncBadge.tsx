@@ -19,12 +19,12 @@ export function SyncBadge({ className, onLight }: { className?: string; onLight?
           : 'Offline';
   return (
     <>
-      <button type="button" aria-label={label} onClick={() => setOpen(true)} className={cx('inline-flex h-7 items-center gap-1.5 rounded-full px-2.5 text-xs font-semibold whitespace-nowrap', tone, className)}>
+      <button type="button" aria-label={label} onClick={() => setOpen(true)} className={cx('inline-flex h-6 items-center gap-1.5 rounded-full px-2 text-2xs font-medium whitespace-nowrap', tone, className)}>
         <span className={cx('h-1.5 w-1.5 rounded-full', dot)} />
         {label === '✓ Alles gesynchroniseerd' ? (
           <>
             <span className="sm:hidden">Online</span>
-            <span className="hidden sm:inline">{label}</span>
+            <span className="hidden sm:inline">Alles gesynchroniseerd</span>
           </>
         ) : (
           label

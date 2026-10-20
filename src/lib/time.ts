@@ -82,6 +82,15 @@ export function formatLongDate(date: string): string {
   return `${weekday.format(dt)} ${d} ${monthName.format(dt)} ${y}`;
 }
 
+const MONTHS_SHORT = ['jan', 'feb', 'mrt', 'apr', 'mei', 'jun', 'jul', 'aug', 'sep', 'okt', 'nov', 'dec'];
+const WEEKDAYS_SHORT = ['zo', 'ma', 'di', 'wo', 'do', 'vr', 'za'];
+
+/** Onderdelen voor een datumtegeltje: { day: 21, month: "nov", weekday: "za" } */
+export function dateParts(date: string): { day: number; month: string; weekday: string } {
+  const [y, m, d] = date.split('-').map(Number);
+  return { day: d, month: MONTHS_SHORT[m - 1], weekday: WEEKDAYS_SHORT[new Date(Date.UTC(y, m - 1, d)).getUTCDay()] };
+}
+
 /** Derde zaterdag van een maand (maand 1–12) als "jjjj-mm-dd". */
 export function thirdSaturday(year: number, month: number): string {
   const first = new Date(Date.UTC(year, month - 1, 1)).getUTCDay();

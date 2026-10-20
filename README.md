@@ -14,7 +14,7 @@ Webapp voor het maandelijkse dartstoernooi in **Brasserie 't Oud Sanatorium** (S
 ## 1. Een speelavond in 10 stappen (handleiding wedstrijdleider)
 
 1. **Inloggen** op `/login` met je account. Je blijft ingelogd op je gsm.
-2. Ga naar **Beheer → Avond openen**. Bovenaan staat de **score-pin** voor de schrijvers.
+2. Ga naar **Beheer → Avond openen**. Rechtsboven staat de **score-pin** voor de schrijvers. (Op de gsm zit de navigatie in de balk onderaan; afmelden doe je met het pijltje rechtsboven.)
 3. **Check-in**: zoek elke speler en tik op **Aanwezig?** en **€5?**. Nieuwe speler? Typ de naam en tik op **+ Nieuwe speler**. De app waarschuwt als er al iemand met een gelijkaardige naam bestaat. Bovenaan zie je het aantal aanwezigen, het aantal dat betaald heeft en de prijzenpot.
 4. Spelers die vooraf ingeschreven waren maar niet komen, laat je gewoon op "Aanwezig?" staan. Om 18u30 sluit de inschrijving; met **Toch heropenen** kan je nog spelers toevoegen.
 5. **Starten**: kies de poule-indeling. Bij elke optie staat de **geschatte eindtijd**. Is die te laat, dan stelt de app aanpassingen voor (bv. poules best of 1). Tik op **Toernooi starten**. De poules worden geloot, met de sterkste spelers (volgens de ranking) in verschillende poules.
@@ -121,7 +121,7 @@ De lokale nabootsing (`scripts/local`) draait dezelfde migraties, RLS en functie
 | De site toont "nog niet gekoppeld" | `VITE_SUPABASE_URL` / `VITE_SUPABASE_ANON_KEY` ontbreken op Netlify. Voeg ze toe en klik op *Trigger deploy*. |
 | "Nieuwe accounts zijn uitgeschakeld" (of "Signups not allowed for this instance") | Supabase → *Authentication → Sign In / Providers* → zet **Allow new users to sign up** aan en klik op *Save*. |
 | Inloggen lukt niet na een aanvraag | Een admin moet het account goedkeuren (Beheer → Gebruikers). Staat *Confirm email* nog aan in Supabase? Zet het uit. |
-| "Foute pincode" bij de schrijvers | De pin staat bovenaan het avondscherm van de wedstrijdleider. Na 20 foute pogingen is het 10 minuten wachten. |
+| "Foute pincode" bij de schrijvers | De pin staat rechtsboven op het avondscherm van de wedstrijdleider. Na 20 foute pogingen is het 10 minuten wachten. |
 | Een correctie wordt geweigerd | De volgende match in het schema is al gespeeld. Corrigeer eerst die match (of zet ze terug). |
 | Een pouleuitslag was fout, maar de KO-schema's zijn al gemaakt | Zolang er nog geen KO-match gespeeld is: Poules → *KO-schema's weer verwijderen*, corrigeer en maak ze opnieuw. |
 | Alles is mislopen bij de start | Afsluiten → *Gevarenzone* → *Toernooi terugzetten* (de check-in blijft bewaard). |

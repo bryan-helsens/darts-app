@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { brusselsToUtc, formatDate, formatLongDate, formatTime, isoDateInBrussels, thirdSaturday } from './time';
+import { brusselsToUtc, dateParts, formatDate, formatLongDate, formatTime, isoDateInBrussels, thirdSaturday } from './time';
 
 describe('tijd in Brussel', () => {
   it('rekent winter- en zomertijd om', () => {
@@ -14,6 +14,8 @@ describe('tijd in Brussel', () => {
     expect(formatTime('18:30:00')).toBe('18u30');
     expect(isoDateInBrussels(Date.UTC(2026, 11, 31, 23, 30))).toBe('2027-01-01');
     expect(formatLongDate('2026-11-21')).toBe('zaterdag 21 november 2026');
+    expect(dateParts('2026-11-21')).toEqual({ day: 21, month: 'nov', weekday: 'za' });
+    expect(dateParts('2027-03-20')).toEqual({ day: 20, month: 'mrt', weekday: 'za' });
   });
 
   it('vindt de derde zaterdag van de maand', () => {

@@ -15,7 +15,7 @@ import { matchToInsert } from '../../../data/mappers';
 import { usePendingScores } from '../../../data/outbox';
 import { keys } from '../../../data/queries';
 import { formatTime } from '../../../lib/time';
-import { BoardsOverview, Bracket, MatchLine, matchTitle, PlacementsTable, PoolTable } from '../../components/darts';
+import { BoardsOverview, Bracket, MatchTile, PlacementsTable, PoolTable, shortTitle, TileGrid } from '../../components/darts';
 import { Badge, Button, Card, ConfirmModal, cx, Empty, ErrorBox, InfoBox, Modal, SectionTitle, Select, Stats, TextInput } from '../../components/ui';
 import { MatchModal } from './MatchModal';
 
@@ -102,10 +102,10 @@ export function BoardsPanel({ view, name, onGoTo }: { view: EventView; name: Nam
       {tired.size > 0 && <p className="text-xs text-amber-800">Let op: op {tired.size} bord(en) speelt iemand zonder pauze, omdat er geen andere match klaarstond.</p>}
 
       <div className="grid grid-cols-2 gap-2 sm:flex">
-        <Button variant="secondary" onClick={() => setBoardsModal(true)}>
+        <Button variant="secondary" size="sm" onClick={() => setBoardsModal(true)}>
           Borden wijzigen ({view.activeBoards.length})
         </Button>
-        <Button variant="secondary" onClick={() => setWithdrawModal(true)}>
+        <Button variant="secondary" size="sm" onClick={() => setWithdrawModal(true)}>
           Speler geeft op
         </Button>
       </div>
@@ -114,43 +114,44 @@ export function BoardsPanel({ view, name, onGoTo }: { view: EventView; name: Nam
       {queue.length === 0 ? (
         <Empty>Geen matchen die klaarstaan.</Empty>
       ) : (
-        <div className="divide-y divide-zinc-100 overflow-hidden rounded-xl border border-zinc-200 bg-white">
+        <TileGrid>
           {queue.slice(0, 12).map((m, i) => (
-            <button key={m.id} type="button" onClick={() => open(m)} className="flex w-full items-center gap-2.5 px-2.5 py-2 text-left hover:bg-zinc-50">
-              <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-zinc-100 text-xs font-bold text-zinc-600 tabular-nums">{i + 1}</span>
-              <span className="min-w-0 flex-1">
-                <span className="block truncate text-xs text-zinc-500">{matchTitle(m, view)}</span>
-                <MatchLine m={m} name={name} compact pending={pending.get(m.id)?.data} />
-              </span>
-              {pending.has(m.id) && <Badge tone="amber">sync…</Badge>}
-            </button>
+            <MatchTile
+              key={m.id}
+              m={m}
+              name={name}
+              title={
+                <>
+                  <span className="font-semibold text-zinc-700 tabular-nums">{i + 1}.</span> {shortTitle(m, view)}
+                </>
+              }
+              extra={pending.has(m.id) && <Badge tone="amber">sync…</Badge>}
+              pending={pending.get(m.id)?.data}
+              onClick={() => open(m)}
+            />
           ))}
-        </div>
+        </TileGrid>
       )}
 
       {held.length > 0 && (
         <>
           <SectionTitle>Uitgesteld</SectionTitle>
-          <div className="divide-y divide-zinc-100 overflow-hidden rounded-xl border border-dashed border-zinc-300 bg-white">
+          <TileGrid>
             {held.map((m) => (
-              <button key={m.id} type="button" onClick={() => open(m)} className="block w-full px-2.5 py-2 text-left hover:bg-zinc-50">
-                <MatchLine m={m} name={name} compact />
-              </button>
+              <MatchTile key={m.id} m={m} name={name} title={shortTitle(m, view)} dashed onClick={() => open(m)} />
             ))}
-          </div>
+          </TileGrid>
         </>
       )}
 
       {recent.length > 0 && (
         <>
           <SectionTitle>Laatste uitslagen</SectionTitle>
-          <div className="divide-y divide-zinc-100 overflow-hidden rounded-xl border border-zinc-200 bg-white">
+          <TileGrid>
             {recent.map((m) => (
-              <button key={m.id} type="button" onClick={() => open(m)} className="block w-full px-2.5 py-2 text-left hover:bg-zinc-50">
-                <MatchLine m={m} name={name} compact />
-              </button>
+              <MatchTile key={m.id} m={m} name={name} title={shortTitle(m, view)} onClick={() => open(m)} />
             ))}
-          </div>
+          </TileGrid>
         </>
       )}
 
@@ -177,7 +178,7 @@ function BoardsModal({ view, onClose, onDone }: { view: EventView; onClose: () =
   const all = Array.from({ length: Math.max(8, ...boards, ...view.activeBoards) }, (_, i) => i + 1);
   return (
     <Modal open onClose={onClose} title="Borden in gebruik">
-      <p className="mb-3 text-sm text-zinc-600">Tik op een bord om het aan of uit te zetten. Een lopende match op een weggenomen bord mag gewoon uitgespeeld worden.</p>
+      <p className="mb-3 text-[13px] text-zinc-600">Tik op een bord om het aan of uit te zetten. Een lopende match op een weggenomen bord mag gewoon uitgespeeld worden.</p>
       <div className="grid grid-cols-4 gap-2">
         {all.map((b) => (
           <button
@@ -185,7 +186,7 @@ function BoardsModal({ view, onClose, onDone }: { view: EventView; onClose: () =
             type="button"
             onClick={() => setBoards((x) => (x.includes(b) ? x.filter((y) => y !== b) : [...x, b]))}
             aria-pressed={boards.includes(b)}
-            className={cx('h-14 rounded-lg text-xl font-bold transition-colors', boards.includes(b) ? 'bg-ink text-white' : 'bg-white text-zinc-400 ring-1 ring-inset ring-zinc-300')}
+            className={cx('h-11 rounded-md text-base font-semibold transition-colors', boards.includes(b) ? 'bg-ink text-white' : 'bg-white text-zinc-400 ring-1 ring-inset ring-zinc-200')}
           >
             {b}
           </button>
@@ -212,7 +213,7 @@ function WithdrawModal({ view, name, onClose, onDone }: { view: EventView; name:
   });
   return (
     <Modal open onClose={onClose} title="Speler geeft op">
-      <p className="mb-3 text-sm text-zinc-600">Alle resterende matchen van deze speler worden reglementair verloren (walk-over). Een opgegeven speler staat onderaan zijn poule.</p>
+      <p className="mb-3 text-[13px] text-zinc-600">Alle resterende matchen van deze speler worden reglementair verloren (walk-over). Een opgegeven speler staat onderaan zijn poule.</p>
       <Select value={player} onChange={(e) => setPlayer(e.target.value)}>
         <option value="">Kies een speler…</option>
         {players
@@ -306,21 +307,19 @@ export function PoolsPanel({ view, name, seedRanks }: { view: EventView; name: N
 
       {barrages.length > 0 && (
         <div>
-          <h3 className="mb-1.5 text-xs font-bold tracking-wider text-zinc-500 uppercase">Barrages</h3>
-          <div className="divide-y divide-zinc-100 overflow-hidden rounded-xl border border-zinc-200 bg-white">
+          <h3 className="mb-1.5 text-2xs font-semibold tracking-wider text-zinc-500 uppercase">Barrages</h3>
+          <TileGrid>
             {barrages.map((m) => (
-              <button key={m.id} type="button" onClick={() => open(m)} className="block w-full px-2.5 py-2 text-left hover:bg-zinc-50">
-                <MatchLine m={m} name={name} compact />
-              </button>
+              <MatchTile key={m.id} m={m} name={name} title={shortTitle(m, view)} onClick={() => open(m)} />
             ))}
-          </div>
+          </TileGrid>
         </div>
       )}
 
       {preview && !view.event.knockout && (
-        <Card className="border-brand-200 bg-brand-50">
-          <h3 className="font-semibold text-zinc-950">Klaar voor het A- en B-schema</h3>
-          <p className="text-sm text-zinc-600">
+        <Card className="border-brand-100 bg-brand-50/60">
+          <h3 className="text-sm font-semibold text-zinc-950">Klaar voor het A- en B-schema</h3>
+          <p className="text-xs text-zinc-600">
             A-schema: {preview.A.length} spelers · B-schema: {preview.B.length} spelers. Byes gaan naar de beste poulewinnaars; poulegenoten komen elkaar niet in de eerste ronde tegen.
           </p>
           <Button size="lg" block className="mt-3" onClick={() => setConfirmKo(true)}>
@@ -331,7 +330,7 @@ export function PoolsPanel({ view, name, seedRanks }: { view: EventView; name: N
       )}
 
       {view.event.knockout && !koPlayed && (
-        <p className="text-sm text-zinc-600">
+        <p className="text-xs text-zinc-600">
           Een pouleuitslag fout ingevoerd?{' '}
           <button type="button" className="underline" onClick={() => undo.mutate()}>
             KO-schema’s weer verwijderen
@@ -348,13 +347,14 @@ export function PoolsPanel({ view, name, seedRanks }: { view: EventView; name: N
           return (
             <div key={s.poolId} className="space-y-2">
               <PoolTable standing={s} label={pool?.label ?? s.poolId} advance={config.advance} name={name} />
-              <details className="rounded-xl border border-zinc-200 bg-white">
-                <summary className="cursor-pointer px-3 py-2 text-sm font-medium text-zinc-600">Matchen ({ms.filter(isFinished).length}/{ms.length})</summary>
-                <div className="divide-y divide-zinc-100 border-t border-zinc-100">
+              <details className="group">
+                <summary className="cursor-pointer list-none px-1 text-xs font-medium text-zinc-500 hover:text-zinc-900">
+                  <span className="group-open:hidden">▸</span>
+                  <span className="hidden group-open:inline">▾</span> Matchen ({ms.filter(isFinished).length}/{ms.length})
+                </summary>
+                <div className="mt-1.5 grid grid-cols-2 gap-1.5">
                   {ms.map((m) => (
-                    <button key={m.id} type="button" onClick={() => open(m)} className="block w-full px-3 py-1.5 text-left hover:bg-zinc-50">
-                      <MatchLine m={m} name={name} compact />
-                    </button>
+                    <MatchTile key={m.id} m={m} name={name} title={`Ronde ${m.round}`} onClick={() => open(m)} />
                   ))}
                 </div>
               </details>
@@ -451,12 +451,12 @@ export function FinishPanel({ view, name, settings }: { view: EventView; name: N
         </>
       )}
 
-      <details className="mt-8 rounded-xl border border-accent-200 bg-white p-3">
-        <summary className="cursor-pointer text-sm font-semibold text-accent-700">Gevarenzone</summary>
-        <p className="mt-2 text-sm text-zinc-600">
+      <details className="mt-6 rounded-lg border border-accent-200 bg-white p-2.5">
+        <summary className="cursor-pointer text-xs font-semibold text-accent-700">Gevarenzone</summary>
+        <p className="mt-2 text-xs text-zinc-600">
           Toernooi volledig terugzetten: alle poules, matchen en uitslagen van deze avond worden gewist. De check-in blijft bewaard.
         </p>
-        <Button variant="danger" className="mt-2" onClick={() => setReset(true)}>
+        <Button variant="danger" size="sm" className="mt-2" onClick={() => setReset(true)}>
           Toernooi terugzetten
         </Button>
       </details>
