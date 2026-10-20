@@ -140,6 +140,11 @@ function ScoreBoard({ eventId, pin, onForget }: { eventId: string; pin: string |
           </span>
         </span>
         <MatchLine m={m} name={name} compact pending={p?.data} />
+        {board !== undefined && view.scorers.get(board) && (
+          <span className="mt-1 truncate border-t border-zinc-100 pt-1 text-2xs text-zinc-500">
+            <span className="font-medium text-zinc-700">Schrijver</span> {name(view.scorers.get(board))}
+          </span>
+        )}
         {p && (
           <span className="mt-1">
             <Badge tone="amber">wordt verstuurd</Badge>

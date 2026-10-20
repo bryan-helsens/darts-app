@@ -21,6 +21,8 @@ export interface PlayerRow {
   active: boolean;
   created_at: string;
   anonymized_at: string | null;
+  /** Online ingeschreven als nieuwe speler en nog niet bevestigd bij een check-in (enkel zichtbaar voor staff). */
+  pending?: boolean;
 }
 
 export interface PlayerContactRow {

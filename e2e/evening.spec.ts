@@ -7,6 +7,14 @@ import { expect, test, type Page } from '@playwright/test';
  */
 
 const PLAYERS = ['Arne Beke', 'Bram Claes', 'Cindy Dewitte', 'Dries Engels', 'Eva Fierens', 'Frank Goethals', 'Greet Hoste', 'Hans Ide', 'Inge Joos'];
+/** Deze speler schrijft zich vooraf online in; de rest wordt ter plaatse toegevoegd. */
+const ONLINE = 'Inge Joos';
+
+/** Datum binnen een week, zodat de online inschrijving zeker nog open is. */
+function nextWeek(): string {
+  const d = new Date(Date.now() + 7 * 24 * 3600_000);
+  return d.toISOString().slice(0, 10);
+}
 
 async function enterScore(page: Page, card: ReturnType<Page['locator']>) {
   await card.click();
@@ -51,11 +59,32 @@ test('een volledige speelavond', async ({ page, browser }) => {
   await page.getByRole('link', { name: 'Seizoenen', exact: true }).click();
   await page.getByRole('button', { name: /\+ Seizoen/ }).click();
   await page.getByRole('button', { name: '+ Avond' }).click();
+  await page.getByRole('dialog').getByLabel('Datum').fill(nextWeek());
   await page.getByRole('dialog').getByRole('button', { name: 'Opslaan' }).click();
+
+  // Online inschrijven door een bezoeker zonder account (nieuwe speler).
+  const visitorContext = await browser.newContext();
+  const visitor = await visitorContext.newPage();
+  await visitor.goto('/');
+  await visitor.getByRole('link', { name: 'Schrijf je in' }).click();
+  await visitor.getByRole('button', { name: 'Ik ben nieuw' }).click();
+  await visitor.getByLabel('Je naam').fill(ONLINE);
+  await visitor.getByRole('button', { name: 'Inschrijven' }).click();
+  await expect(visitor.getByText('Je bent ingeschreven')).toBeVisible();
+  // Nog niet bevestigd: publiek nog niet zichtbaar.
+  await visitor.goto('/spelers');
+  await expect(visitor.getByText(ONLINE)).toHaveCount(0);
+  await visitorContext.close();
+
   await page.getByRole('button', { name: 'Openen' }).first().click();
 
+  // De online inschrijving staat in de check-in; aanwezig zetten bevestigt de speler.
+  const onlineRow = page.locator('[data-player-row]', { hasText: ONLINE });
+  await expect(onlineRow.getByText('nieuw · online')).toBeVisible();
+  await onlineRow.getByRole('button', { name: 'Aanwezig?' }).click();
+
   // Check-in: nieuwe spelers toevoegen (meteen aanwezig) en laten betalen.
-  for (const name of PLAYERS) {
+  for (const name of PLAYERS.filter((n) => n !== ONLINE)) {
     await page.getByPlaceholder('Zoek of voeg een speler toe…').fill(name);
     await page.getByRole('button', { name: /Nieuwe speler/ }).click();
     await page.getByRole('dialog').getByRole('button', { name: 'Toevoegen en aanwezig' }).click();
@@ -81,6 +110,14 @@ test('een volledige speelavond', async ({ page, browser }) => {
   await page.getByRole('button', { name: 'Toernooi starten' }).click();
   await page.getByRole('button', { name: 'Starten en poules loten' }).click();
   await expect(page.getByText('Verwacht einde')).toBeVisible();
+  await expect(page.locator('[data-scorer]').first()).toBeVisible();
+
+  // TV-modus toont de borden.
+  const tvContext = await browser.newContext({ viewport: { width: 1920, height: 1080 } });
+  const tv = await tvContext.newPage();
+  await tv.goto('/tv?toon=borden');
+  await expect(tv.getByRole('heading', { name: 'Nu op de borden' })).toBeVisible();
+  await tvContext.close();
 
   // De schrijver voert met de pincode een score in, ook zonder verbinding.
   const pin = (await page.locator('[data-pin]').textContent())?.trim() ?? '';

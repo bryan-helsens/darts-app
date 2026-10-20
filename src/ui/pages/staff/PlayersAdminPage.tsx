@@ -46,6 +46,7 @@ export function PlayersAdminPage() {
                   <div className="truncate text-xs text-zinc-500">{[c?.email, c?.phone].filter(Boolean).join(' · ') || 'geen contactgegevens'}</div>
                 </div>
                 <div className="flex gap-1">
+                  {p.pending && <Badge tone="amber">online, onbevestigd</Badge>}
                   {!p.active && <Badge>inactief</Badge>}
                   {p.anonymized_at && <Badge tone="amber">geanonimiseerd</Badge>}
                 </div>

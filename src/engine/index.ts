@@ -14,3 +14,4 @@ export * from './scheduler';
 export * from './estimate';
 export * from './tournament';
 export * from './simulate';
+export * from './scorer';

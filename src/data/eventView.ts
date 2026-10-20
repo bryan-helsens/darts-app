@@ -9,9 +9,12 @@ import {
   forecastLive,
   poolPhaseStatus,
   replaySchedule,
+  suggestScorers,
+  upcomingByBoard,
   type BracketPlacements,
   type LiveForecast,
   type Match,
+  type PlayerId,
   type PoolPhaseStatus,
   type Pool,
   type ScheduleConfig,
@@ -62,6 +65,8 @@ export interface EventView {
   placements: BracketPlacements | null;
   activeBoards: number[];
   statsByMatch: Map<string, MatchStatRow[]>;
+  /** Voorgestelde schrijver per bezet bord (enkel tijdens de avond). */
+  scorers: Map<number, PlayerId | null>;
   now: number;
 }
 
@@ -93,6 +98,7 @@ export function buildEventView(bundle: EventBundle, clientNow = Date.now()): Eve
   let live: LiveForecast | null = null;
   let poolStatus: PoolPhaseStatus | null = null;
   let placements: BracketPlacements | null = null;
+  let scorers = new Map<number, PlayerId | null>();
   let phase: Phase = event.status === 'gepland' ? 'gepland' : event.status === 'afgelopen' ? 'afgelopen' : 'poules';
 
   if (config && event.started_at) {
@@ -122,6 +128,7 @@ export function buildEventView(bundle: EventBundle, clientNow = Date.now()): Eve
         legs: config.legs,
         plannedKnockout: event.knockout ? null : { sizes: config.sizes, advance: config.advance },
       });
+      scorers = suggestScorers({ matches, replay, upcoming: upcomingByBoard(live.forecast, now), withdrawn, seed: event.rng_seed });
     }
   }
 
@@ -147,6 +154,7 @@ export function buildEventView(bundle: EventBundle, clientNow = Date.now()): Eve
     placements,
     activeBoards,
     statsByMatch,
+    scorers,
     now,
   };
 }

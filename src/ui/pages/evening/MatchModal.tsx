@@ -101,7 +101,17 @@ export function MatchModal({ view, match, board, name, onClose }: { view: EventV
       {!match.winner && !pending && known && view.event.status === 'bezig' && (
         <div className="mt-4 space-y-2 border-t border-zinc-100 pt-3">
           <h3 className="text-xs font-bold tracking-wider text-zinc-500 uppercase">Planning</h3>
-          {live && <p className="text-xs text-zinc-600">Speelt nu op bord {live.board}.</p>}
+          {live && (
+            <p className="text-xs text-zinc-600">
+              Speelt nu op bord {live.board}.
+              {view.scorers.get(live.board) && (
+                <>
+                  {' '}
+                  Voorgestelde schrijver: <b className="font-medium text-zinc-900">{name(view.scorers.get(live.board))}</b>.
+                </>
+              )}
+            </p>
+          )}
           <div className="flex items-end gap-2">
             <label className="flex-1">
               <span className="mb-1 block text-xs font-semibold text-zinc-600">Naar bord</span>

@@ -136,6 +136,7 @@ export function CheckInPanel({ event, registrations, entryFee }: { event: EventR
               <div className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5">
                 <span className="text-sm leading-5 font-medium break-words text-zinc-950">{displayName(r.player)}</span>
                 {r.reg?.preregistered && <Badge tone="blue">vooraf</Badge>}
+                {r.player.pending && <Badge tone="amber">nieuw · online</Badge>}
                 {r.reg?.withdrawn_at && <Badge tone="red">opgegeven</Badge>}
                 {r.pending && <Badge tone="amber">wacht op sync</Badge>}
                 {!started && !r.present && r.reg && (

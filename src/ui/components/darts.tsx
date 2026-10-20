@@ -299,6 +299,7 @@ export function BoardsOverview({
           const m = b.matchId ? view.byCode.get(b.matchId) : undefined;
           const next = upcoming.get(b.board);
           const nextMatch = next ? view.byCode.get(next) : undefined;
+          const scorer = m ? view.scorers.get(b.board) : null;
           return (
             <div
               key={b.board}
@@ -326,9 +327,18 @@ export function BoardsOverview({
                 {b.since && m && <span className="shrink-0 text-2xs text-zinc-400 tabular-nums">{formatTime(b.since)}</span>}
               </div>
               {m && <MatchLine m={m} name={name} compact={!big} />}
-              {nextMatch && (
-                <div className="mt-1.5 truncate border-t border-zinc-100 pt-1 text-2xs text-zinc-500">
-                  <span className="font-medium text-zinc-700">Straks</span> {name(nextMatch.player1)} – {name(nextMatch.player2)}
+              {(scorer || nextMatch) && (
+                <div className="mt-1.5 space-y-px border-t border-zinc-100 pt-1 text-2xs text-zinc-500">
+                  {scorer && (
+                    <div className="truncate" data-scorer>
+                      <span className="font-medium text-zinc-700">Schrijver</span> {name(scorer)}
+                    </div>
+                  )}
+                  {nextMatch && (
+                    <div className="truncate">
+                      <span className="font-medium text-zinc-700">Straks</span> {name(nextMatch.player1)} – {name(nextMatch.player2)}
+                    </div>
+                  )}
                 </div>
               )}
             </div>
