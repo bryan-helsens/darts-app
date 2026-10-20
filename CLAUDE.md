@@ -21,6 +21,11 @@ Webapp voor het maandelijkse dartstoernooi in Brasserie 't Oud Sanatorium (Sijse
 
 Na een wijziging aan migraties: `npm run db:bundle` (en `npm run seed` als het schema van de seed-tabellen wijzigt). Tests controleren dat beide up-to-date zijn.
 
+**Migraties gaan automatisch naar productie.** De Supabase GitHub-integratie staat aan met *Deploy to production*: bij elke merge naar `main` past Supabase de nog niet toegepaste bestanden uit `supabase/migrations` toe. Daaruit volgt:
+- Wijzig **nooit** een migratiebestand dat al op `main` staat. Voeg altijd een nieuw bestand toe met een latere tijdstempel (`jjjjmmdduummss_naam.sql`).
+- Een migratie moet slagen op een database met echte gegevens: geen destructieve wijzigingen zonder datamigratie.
+- `supabase/config.toml` is nodig voor de integratie. De `[auth]`/`[api]`-instellingen daarin gelden enkel lokaal en voor previewbranches, niet voor productie. De seed wordt nooit op productie geladen.
+
 ## Architectuur
 
 ```
@@ -28,7 +33,7 @@ src/engine/   Pure toernooilogica (geen React/Supabase; afgedwongen via ESLint)
 src/data/     Supabase-client, API, queries (TanStack Query), realtime, offline-outbox, eventView
 src/ui/       React-schermen (components/, layout/, pages/{public,staff,evening,print})
 src/lib/      Tijd (Europe/Brussels, dd/mm/jjjj, "19u00"), namen (dubbels zoeken)
-supabase/     migrations/ (bron van waarheid), setup.sql (gebundeld), seed.sql, demo-cleanup.sql
+supabase/     migrations/ (bron van waarheid), config.toml, setup.sql (gebundeld), seed.sql, demo-cleanup.sql
 scripts/      seed-generator, migratiebundel, lokale Supabase-nabootsing (scripts/local)
 tests/        engine-invarianten + matrix, PGlite-databasetests
 e2e/          Playwright

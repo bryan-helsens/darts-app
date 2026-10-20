@@ -44,9 +44,15 @@
 
 - **Phase 1 (MVP) is DONE and merged** into `main`: PR bryan-helsens/darts-app#1, merge commit `0e0ff03`, 2026-10-20. CI (GitHub Actions "Tests") was green.
 - **Branch:** `claude/new-session-bpbx7g`, restarted from `main` after the merge. After a merge, always restart the branch from `origin/main` for follow-up work; never stack new commits on merged history.
-- **2026-10-20:** Bryan created a Supabase account and connected it to this GitHub repo; which integration features are on (migration deploys to production, branching) is still to be confirmed. With the GitHub integration, migrations in `supabase/migrations` may be applied automatically. Then do **not** also run `supabase/setup.sql` by hand: pick one way. Note that `supabase/seed.sql` is what Supabase preview branches load.
+- **2026-10-20: Supabase linked through the GitHub integration, with "Deploy to production" ON** (confirmed by Bryan).
+  - On every merge to `main`, Supabase applies the pending files from `supabase/migrations`, compared against `supabase_migrations.schema_migrations`.
+  - Consequence: **never edit a migration that is already on `main`**; always add a new, later-timestamped file.
+  - Do **not** also paste `supabase/setup.sql` by hand; that is only for the manual route (README §2.1 B).
+  - `supabase/config.toml` (generated with `supabase init`, CLI 2.121.0) was added for the integration. Its `[auth]`/`[api]` settings are skipped on production; the seed is never loaded on production (only on preview branches, which are a Pro feature).
+  - Whether the first deploy has already run (and succeeded) still has to be checked by Bryan in the Table Editor.
+  - The merges of PR #1 and #2 may have happened before the link; `config.toml` was missing until the follow-up change.
 - **Not yet done, by Bryan** (README §2):
-  1. create a Supabase project and run `supabase/setup.sql` in the SQL editor;
+  1. ~~create a Supabase project and run `supabase/setup.sql`~~ → the project exists; the database is set up via the GitHub integration (check that the tables exist);
   2. Auth → Email: turn **Confirm email OFF** (the free SMTP only mails team members);
   3. link Netlify to the repo and set `VITE_SUPABASE_URL` + `VITE_SUPABASE_ANON_KEY`;
   4. set the GitHub secrets `SUPABASE_URL` + `SUPABASE_ANON_KEY` for the keepalive workflow (free projects pause after 7 days of inactivity);
@@ -103,4 +109,4 @@
 ## 7. Change log of this memory
 
 - 2026-10-20: created after phase 1 was merged (PR #1).
-- 2026-10-20: Supabase account created and linked to the repo by Bryan.
+- 2026-10-20: Supabase account created and linked to the repo by Bryan (GitHub integration, Deploy to production ON); `supabase/config.toml` added and README/CLAUDE.md adapted.
