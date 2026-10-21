@@ -5,10 +5,14 @@
 
 import {
   bracketSize,
+  eliminationPlacements,
+  isEventFinal,
   isFinished,
   knockoutSizes,
   replaySchedule,
   type Assignment,
+  type BracketSimulationOptions,
+  type BracketSimulationResult,
   type BuiltBracket,
   type Match,
   type PlayerId,
@@ -22,6 +26,16 @@ export interface CheckContext {
   advance: number;
   result: SimulationResult;
 }
+
+/** Wat de planning- en opgavecontroles nodig hebben (gemeenschappelijk voor alle formats). */
+interface Simulated {
+  matches: Match[];
+  log: SimulationResult['log'];
+  config: SimulationResult['config'];
+  history: Assignment[];
+  withdrawn: Set<PlayerId>;
+}
+type ScheduleContext = { opts: Pick<SimulationOptions, 'holdFinal' | 'disruptions' | 'start'>; result: Simulated };
 
 export function checkPools({ opts, sizes, result }: CheckContext): string[] {
   const errors: string[] = [];
@@ -117,7 +131,7 @@ export function checkKnockout({ sizes, advance, result }: CheckContext): string[
   return errors;
 }
 
-export function checkPlacements({ opts, result }: CheckContext): string[] {
+export function checkPlacements({ opts, result }: { opts: Pick<SimulationOptions, 'players'>; result: Pick<SimulationResult, 'placements' | 'matches'> }): string[] {
   const errors: string[] = [];
   const ps = result.placements;
   const ids = ps.map((p) => p.playerId);
@@ -136,9 +150,9 @@ export function checkPlacements({ opts, result }: CheckContext): string[] {
     expected = to + 1;
   }
   if (expected !== opts.players.length + 1) errors.push(`plaatsen eindigen op ${expected - 1}`);
-  // Winnaar A-schema is eerste.
-  const aFinal = result.matches.find((m) => m.stage === 'A' && m.next === null);
-  if (aFinal && ps.find((p) => p.from === 1)?.playerId !== aFinal.winner) errors.push('winnaar A-finale is niet eerste');
+  // Winnaar van de finale van de avond is eerste.
+  const final = result.matches.find(isEventFinal);
+  if (final && ps.find((p) => p.from === 1)?.playerId !== final.winner) errors.push('winnaar van de finale is niet eerste');
   return errors;
 }
 
@@ -150,7 +164,7 @@ function overlaps(list: Assignment[]): boolean {
   return false;
 }
 
-export function checkSchedule({ opts, result }: CheckContext): string[] {
+export function checkSchedule({ opts, result }: ScheduleContext): string[] {
   const errors: string[] = [];
   const byId = new Map(result.matches.map((m) => [m.id, m]));
   const history = result.history;
@@ -176,8 +190,8 @@ export function checkSchedule({ opts, result }: CheckContext): string[] {
   const missing = result.matches.filter((m) => !m.walkover && !played.has(m.id));
   if (missing.length > 0) errors.push(`${missing.length} matchen nooit op een bord`);
 
-  // A-finale als laatste, op het hoofdbord.
-  const aFinal = result.matches.find((m) => m.stage === 'A' && m.next === null && !m.walkover);
+  // De finale van de avond als laatste, op het hoofdbord.
+  const aFinal = result.matches.find((m) => isEventFinal(m) && !m.walkover);
   if (aFinal && (opts.holdFinal ?? true)) {
     const fa = history.find((a) => a.matchId === aFinal.id && !a.interrupted) as Assignment;
     const lastOther = Math.max(...history.filter((a) => a.matchId !== aFinal.id).map((a) => a.end as number));
@@ -207,7 +221,7 @@ export function checkSchedule({ opts, result }: CheckContext): string[] {
     const playable = snap.queue
       .map((id) => byId.get(id) as Match)
       .filter((m) => !busyPlayers.has(m.player1) && !busyPlayers.has(m.player2));
-    const blocking = playable.filter((m) => !(m.stage === 'A' && m.next === null) || freeBoards.includes(result.config.mainBoard));
+    const blocking = playable.filter((m) => !isEventFinal(m) || freeBoards.includes(result.config.mainBoard));
     if (freeBoards.length > 0 && blocking.length > 0) {
       errors.push(`bord vrij om ${new Date(t).toISOString()} terwijl ${blocking[0].id} klaarstaat`);
       break;
@@ -216,13 +230,13 @@ export function checkSchedule({ opts, result }: CheckContext): string[] {
   return errors;
 }
 
-export function activeBoardsAt(result: SimulationResult, t: number): number[] {
+export function activeBoardsAt(result: Pick<Simulated, 'config' | 'log'>, t: number): number[] {
   let active = result.config.boards;
   for (const e of result.log) if (e.type === 'boards' && e.at <= t) active = e.boards;
   return active;
 }
 
-export function checkWithdrawals({ opts, result }: CheckContext): string[] {
+export function checkWithdrawals({ opts, result }: ScheduleContext): string[] {
   const errors: string[] = [];
   for (const d of opts.disruptions ?? []) {
     if (d.type !== 'withdraw') continue;
@@ -265,4 +279,43 @@ export function checkAll(ctx: CheckContext): string[] {
     ...checkSchedule(ctx),
     ...checkWithdrawals(ctx),
   ];
+}
+
+// ---------------------------------------------------------------------------
+// Schema-formats (double elimination, enkelvoudig met plate)
+// ---------------------------------------------------------------------------
+
+export interface BracketCheckContext {
+  opts: BracketSimulationOptions;
+  result: BracketSimulationResult;
+}
+
+export function checkBracket({ opts, result }: BracketCheckContext): string[] {
+  const errors: string[] = [];
+  const { bracket, matches } = result;
+  if (new Set(bracket.seeds).size !== opts.players.length) errors.push('niet elke speler zit in het schema');
+  const expected = opts.format === 'double_elim' ? 2 * opts.players.length - 2 : null;
+  if (expected !== null && matches.length !== expected) errors.push(`${matches.length} matchen, verwacht ${expected}`);
+  // Byes voor de topseeds.
+  const firstStage = opts.format === 'double_elim' ? 'W' : 'M';
+  const inR1 = new Set(matches.filter((m) => m.stage === firstStage && m.round === 1).flatMap((m) => [m.player1, m.player2]));
+  const withBye = bracket.seeds.filter((p) => !inR1.has(p));
+  if (withBye.join() !== bracket.seeds.slice(0, bracket.byes).join()) errors.push('byes niet voor de topseeds');
+  // Topseeds volgens de ranking (gerankte spelers eerst).
+  const ranked = opts.players.filter((p) => p.seedRank != null).sort((a, b) => (a.seedRank as number) - (b.seedRank as number));
+  const top = bracket.seeds.slice(0, ranked.length);
+  if (ranked.some((p, i) => i > 0 && p.seedRank === ranked[i - 1].seedRank) === false && top.join() !== ranked.map((p) => p.id).join()) {
+    errors.push('seedvolgorde volgt de ranking niet');
+  }
+  // Iedereen speelt minstens twee matchen (walk-overs tellen mee).
+  const count = new Map<PlayerId, number>();
+  for (const m of matches) for (const p of [m.player1, m.player2]) if (p) count.set(p, (count.get(p) ?? 0) + 1);
+  const fewer = bracket.seeds.filter((p) => (count.get(p) ?? 0) < 2);
+  if (fewer.length > 0) errors.push(`${fewer.length} spelers met minder dan 2 matchen`);
+  if (!eliminationPlacements(matches).complete) errors.push('eindstand niet volledig');
+  return errors;
+}
+
+export function checkBracketAll(ctx: BracketCheckContext): string[] {
+  return [...checkBracket(ctx), ...checkPlacements(ctx), ...checkSchedule(ctx), ...checkWithdrawals(ctx)];
 }

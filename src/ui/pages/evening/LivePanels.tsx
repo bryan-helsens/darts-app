@@ -6,11 +6,12 @@ import {
   generateKnockouts,
   isFinished,
   splitQualifiers,
+  STAGE_NAMES,
   type Match,
   type SeasonSettings,
 } from '../../../engine';
 import { addBarrages, addLogEntry, finalizeEvent, generateKnockout, resetTournament, undoKnockout, updateEvent, withdrawPlayer } from '../../../data/api';
-import type { EventView } from '../../../data/eventView';
+import { SCHEMA_STAGES, type EventView } from '../../../data/eventView';
 import { matchToInsert } from '../../../data/mappers';
 import { usePendingScores } from '../../../data/outbox';
 import { keys } from '../../../data/queries';
@@ -56,7 +57,8 @@ export function BoardsPanel({ view, name, onGoTo }: { view: EventView; name: Nam
   const [withdrawModal, setWithdrawModal] = useState(false);
   const replay = view.replay;
   const end = view.live?.forecast.end;
-  const poolMatches = view.matches.filter((m) => m.stage === 'pool');
+  // Poules + A/B: de voortgang van de poules; schema-formats: alle matchen.
+  const poolMatches = view.format === 'poules_ab' ? view.matches.filter((m) => m.stage === 'pool') : view.matches;
   const done = poolMatches.filter(isFinished).length;
   const queue = (replay?.queue ?? []).map((c) => view.byCode.get(c)).filter((m): m is Match => Boolean(m));
   const held = (replay?.held ?? []).map((c) => view.byCode.get(c)).filter((m): m is Match => Boolean(m));
@@ -74,7 +76,7 @@ export function BoardsPanel({ view, name, onGoTo }: { view: EventView; name: Nam
         dark
         items={[
           { label: 'Verwacht einde', value: end ? formatTime(end) : '–', sub: view.live && `${view.live.minutesPerLeg.toFixed(1)} min per leg` },
-          { label: 'Poulematchen', value: `${done}/${poolMatches.length}` },
+          { label: view.format === 'poules_ab' ? 'Poulematchen' : 'Matchen', value: `${done}/${poolMatches.length}` },
           { label: 'Borden', value: view.activeBoards.length },
         ]}
       />
@@ -379,17 +381,15 @@ export function PoolsPanel({ view, name, seedRanks }: { view: EventView; name: N
 export function BracketPanel({ view, name, readOnly }: { view: EventView; name: NameFn; readOnly?: boolean }) {
   const { open, modal } = useMatchModal(view, name);
   const live = new Set((view.replay?.boards ?? []).map((b) => b.matchId).filter((x): x is string => Boolean(x)));
-  if (!view.event.knockout) return <Empty>De A- en B-schema’s worden gemaakt zodra de poules gespeeld zijn.</Empty>;
+  if (view.format === 'poules_ab' && !view.event.knockout) return <Empty>De A- en B-schema’s worden gemaakt zodra de poules gespeeld zijn.</Empty>;
   return (
     <div className="space-y-4">
-      <div>
-        <SectionTitle>A-schema</SectionTitle>
-        <Bracket stage="A" matches={view.matches} name={name} onMatch={readOnly ? undefined : (m) => open(m)} highlight={live} />
-      </div>
-      <div>
-        <SectionTitle>B-schema</SectionTitle>
-        <Bracket stage="B" matches={view.matches} name={name} onMatch={readOnly ? undefined : (m) => open(m)} highlight={live} />
-      </div>
+      {SCHEMA_STAGES[view.format].map((stage) => (
+        <div key={stage}>
+          <SectionTitle>{STAGE_NAMES[stage]}</SectionTitle>
+          <Bracket stage={stage} matches={view.matches} name={name} onMatch={readOnly ? undefined : (m) => open(m)} highlight={live} />
+        </div>
+      ))}
       {modal}
     </div>
   );

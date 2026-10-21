@@ -3,10 +3,11 @@
  * zijn in rem; TvPage schaalt de rem mee met de breedte van het scherm.
  */
 
-import { formatPlace, roundName, upcomingByBoard, type Match, type PoolStanding, type RankingRow } from '../../../engine';
+import { formatPlace, upcomingByBoard, type BracketStage, type Match, type PoolStanding, type RankingRow } from '../../../engine';
 import type { EventView } from '../../../data/eventView';
 import type { EventResultRow, MatchStatRow } from '../../../data/rows';
-import { bracketSlots, shortTitle } from '../../components/darts';
+import { bracketLayout } from '../../components/bracketLayout';
+import { shortTitle } from '../../components/darts';
 import { cx } from '../../components/ui';
 
 type NameFn = (id: string | null | undefined) => string;
@@ -112,19 +113,17 @@ export function TvPools({ standings, view, name }: { standings: PoolStanding[]; 
   );
 }
 
-export function TvBracket({ stage, matches, name, live }: { stage: 'A' | 'B'; matches: Match[]; name: NameFn; live: Set<string> }) {
-  const own = matches.filter((m) => m.stage === stage);
-  if (own.length === 0) return null;
-  const rounds = Math.max(...own.map((m) => m.round));
+export function TvBracket({ stage, matches, name, live }: { stage: BracketStage; matches: Match[]; name: NameFn; live: Set<string> }) {
+  const columns = bracketLayout(stage, matches);
+  if (columns.length === 0) return null;
   return (
     <div className="flex h-full gap-4">
-      {Array.from({ length: rounds }, (_, i) => i + 1).map((r) => {
-        const inRound = own.filter((m) => m.round === r).sort((a, b) => a.position - b.position);
+      {columns.map((col) => {
         return (
-          <div key={r} className="flex min-w-0 flex-1 flex-col">
-            <div className="mb-2 text-center text-base font-semibold text-zinc-400">{roundName(r, rounds)}</div>
+          <div key={col.round} className="flex min-w-0 flex-1 flex-col">
+            <div className="mb-2 text-center text-base font-semibold text-zinc-400">{col.name}</div>
             <div className="flex flex-1 flex-col justify-around gap-2">
-              {bracketSlots(inRound, rounds, r).map((m, i) =>
+              {col.slots.map((m, i) =>
                 m === null ? (
                   <div key={`bye-${i}`} className="h-[4.5rem] rounded-xl border border-dashed border-white/5" />
                 ) : (

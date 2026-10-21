@@ -8,9 +8,26 @@
 export type PlayerId = string;
 export type MatchId = string;
 
-/** pool = poulematch, barrage = beslissingsmatch bij gelijke stand, A/B = KO-schema's. */
-export type Stage = 'pool' | 'barrage' | 'A' | 'B';
+/**
+ * pool = poulematch, barrage = beslissingsmatch bij gelijke stand, A/B = KO-schema's
+ * na de poules. Schema-formats zonder poules: W/L/GF = winnaars-, verliezersschema
+ * en grote finale (double elimination); M/P = hoofdschema en plate (troostschema).
+ */
+export type Stage = 'pool' | 'barrage' | 'A' | 'B' | 'W' | 'L' | 'GF' | 'M' | 'P';
 export type KnockoutStage = 'A' | 'B';
+export type EliminationStage = 'W' | 'L' | 'GF' | 'M' | 'P';
+/** Elk schema dat eindplaatsen oplevert. */
+export type BracketStage = KnockoutStage | EliminationStage;
+
+/** poules_ab = poules + A/B-schema (standaard); double_elim; single_elim_plate = enkelvoudig met troostschema. */
+export type TournamentFormat = 'poules_ab' | 'double_elim' | 'single_elim_plate';
+export type EliminationFormat = Exclude<TournamentFormat, 'poules_ab'>;
+
+export const FORMAT_STAGES: Record<TournamentFormat, readonly Stage[]> = {
+  poules_ab: ['pool', 'barrage', 'A', 'B'],
+  double_elim: ['W', 'L', 'GF'],
+  single_elim_plate: ['M', 'P'],
+};
 
 export interface SlotRef {
   matchId: MatchId;
@@ -56,6 +73,19 @@ export interface Pool {
   label: string;
   /** Spelers in volgorde van seeding. */
   playerIds: PlayerId[];
+}
+
+/** Matchen in een schema (geen poule of barrage). */
+export function isBracketMatch(m: Pick<Match, 'stage'>): boolean {
+  return m.stage !== 'pool' && m.stage !== 'barrage';
+}
+
+/**
+ * De finale van de avond: wacht (instelbaar) op alle andere matchen en gaat
+ * naar het hoofdbord. A-finale, grote finale of finale van het hoofdschema.
+ */
+export function isEventFinal(m: Pick<Match, 'stage' | 'next' | 'loserNext'>): boolean {
+  return (m.stage === 'A' || m.stage === 'GF' || m.stage === 'M') && m.next === null && m.loserNext === null;
 }
 
 export function isFinished(m: Match): boolean {

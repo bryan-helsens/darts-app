@@ -1,35 +1,35 @@
 /** Darts-specifieke weergaves: poulestanden, schema's, borden, uitslagen. */
 
-import { formatPlace, roundName, type Match, type Placement, type PoolStanding } from '../../engine';
+import { formatPlace, roundName, STAGE_NAMES, stageRoundName, type BracketStage, type Match, type Placement, type PoolStanding } from '../../engine';
 import type { ReactNode } from 'react';
 import type { EventView } from '../../data/eventView';
 import type { MatchStatRow } from '../../data/rows';
 import { formatTime } from '../../lib/time';
-import { Badge, cx, Empty } from './ui';
+import { bracketLayout } from './bracketLayout';
+import { Badge, cx, Empty, type Tone } from './ui';
 
 type NameFn = (id: string | null | undefined) => string;
 
 export function stageLabel(m: Match, view?: Pick<EventView, 'pools'>): string {
   if (m.stage === 'pool') return view?.pools.find((p) => p.id === m.poolId)?.label ?? 'Poule';
   if (m.stage === 'barrage') return 'Barrage';
-  return `${m.stage}-schema`;
+  return STAGE_NAMES[m.stage];
 }
+
+const roundsOf = (m: Match, matches: readonly Match[]) => Math.max(...matches.filter((x) => x.stage === m.stage).map((x) => x.round));
 
 export function matchTitle(m: Match, view: Pick<EventView, 'pools' | 'matches'>): string {
-  if (m.stage === 'A' || m.stage === 'B') {
-    const rounds = Math.max(...view.matches.filter((x) => x.stage === m.stage).map((x) => x.round));
-    return `${m.stage}-schema · ${roundName(m.round, rounds)}`;
-  }
-  return stageLabel(m, view);
+  if (m.stage === 'A' || m.stage === 'B' || m.stage === 'M') return `${STAGE_NAMES[m.stage]} · ${roundName(m.round, roundsOf(m, view.matches))}`;
+  if (m.stage === 'pool' || m.stage === 'barrage') return stageLabel(m, view);
+  // "Winnaars ronde 2", "Verliezersfinale", "Plate halve finale", "Grote finale"
+  return stageRoundName(m.stage, m.round, roundsOf(m, view.matches));
 }
 
-/** Korte titel voor kleine kaarten: "Poule 2", "A · Halve finale". */
+/** Korte titel voor kleine kaarten: "Poule 2", "A · Halve finale", "Verliezers ronde 3". */
 export function shortTitle(m: Match, view: Pick<EventView, 'pools' | 'matches'>): string {
-  if (m.stage === 'A' || m.stage === 'B') {
-    const rounds = Math.max(...view.matches.filter((x) => x.stage === m.stage).map((x) => x.round));
-    return `${m.stage} · ${roundName(m.round, rounds)}`;
-  }
-  return stageLabel(m, view);
+  if (m.stage === 'A' || m.stage === 'B') return `${m.stage} · ${roundName(m.round, roundsOf(m, view.matches))}`;
+  if (m.stage === 'pool' || m.stage === 'barrage') return stageLabel(m, view);
+  return stageRoundName(m.stage, m.round, roundsOf(m, view.matches));
 }
 
 /**
@@ -112,12 +112,6 @@ export function TileGrid({ children }: { children: ReactNode }) {
 }
 
 /** Alle plaatsen van een ronde; null waar een bye zit (zo blijft de boom uitgelijnd). */
-export function bracketSlots(inRound: Match[], rounds: number, round: number): Array<Match | null> {
-  const expected = 2 ** (rounds - round);
-  const byPosition = new Map(inRound.map((m) => [m.position, m]));
-  return Array.from({ length: expected }, (_, i) => byPosition.get(i) ?? null);
-}
-
 export function PoolTable({ standing, label, advance, name }: { standing: PoolStanding; label: string; advance: number; name: NameFn }) {
   return (
     <div className="overflow-hidden rounded-lg border border-zinc-200/80 bg-white shadow-xs">
@@ -173,64 +167,71 @@ export function Bracket({
   onMatch,
   highlight,
 }: {
-  stage: 'A' | 'B';
+  stage: BracketStage;
   matches: Match[];
   name: NameFn;
   onMatch?: (m: Match) => void;
   highlight?: Set<string>;
 }) {
-  const own = matches.filter((m) => m.stage === stage);
-  if (own.length === 0) return <Empty>Nog geen {stage}-schema.</Empty>;
-  const rounds = Math.max(...own.map((m) => m.round));
+  const columns = bracketLayout(stage, matches);
+  if (columns.length === 0) return <Empty>Nog geen {STAGE_NAMES[stage].toLowerCase()}.</Empty>;
   return (
     <div className="-mx-3 overflow-x-auto px-3 pb-1 sm:mx-0 sm:px-0">
       <div className="flex min-w-max gap-2">
-        {Array.from({ length: rounds }, (_, i) => i + 1).map((r) => {
-          const inRound = own.filter((m) => m.round === r).sort((a, b) => a.position - b.position);
-          return (
-            <div key={r} className="flex w-40 flex-col">
-              <div className="mb-1 text-center text-2xs font-semibold text-zinc-500">
-                {roundName(r, rounds)} <span className="font-normal text-zinc-400">· bo{inRound[0]?.bestOf}</span>
-              </div>
-              <div className="flex flex-1 flex-col justify-around gap-1">
-                {bracketSlots(inRound, rounds, r).map((m, i) =>
-                  m === null ? (
-                    <div key={`bye-${i}`} className="flex h-[46px] items-center justify-center rounded-md border border-dashed border-zinc-200 text-2xs text-zinc-400">
-                      bye
-                    </div>
-                  ) : (
-                    <button
-                      key={m.id}
-                      type="button"
-                      disabled={!onMatch}
-                      onClick={() => onMatch?.(m)}
-                      className={cx(
-                        'rounded-md border bg-white px-2 py-1 text-left text-xs leading-[18px] shadow-xs',
-                        onMatch && 'hover:border-brand-500',
-                        highlight?.has(m.id) ? 'border-accent-500 ring-1 ring-accent-500' : 'border-zinc-200/80',
-                      )}
-                    >
-                      {[m.player1, m.player2].map((p, idx) => {
-                        const legs = idx === 0 ? m.legs1 : m.legs2;
-                        const won = m.winner !== null && m.winner === p;
-                        return (
-                          <div key={idx} className={cx('flex justify-between gap-2', won ? 'font-semibold text-zinc-950' : m.winner ? 'text-zinc-400' : 'text-zinc-800')}>
-                            <span className="truncate">{p ? name(p) : <span className="text-zinc-300">…</span>}</span>
-                            <span className="tabular-nums">{legs ?? ''}</span>
-                          </div>
-                        );
-                      })}
-                    </button>
-                  ),
-                )}
-              </div>
+        {columns.map((col) => (
+          <div key={col.round} className="flex w-40 flex-col">
+            <div className="mb-1 text-center text-2xs font-semibold text-zinc-500">
+              {col.name} <span className="font-normal text-zinc-400">· bo{col.bestOf}</span>
             </div>
-          );
-        })}
+            <div className="flex flex-1 flex-col justify-around gap-1">
+              {col.slots.map((m, i) =>
+                m === null ? (
+                  <div key={`bye-${i}`} className="flex h-[46px] items-center justify-center rounded-md border border-dashed border-zinc-200 text-2xs text-zinc-400">
+                    bye
+                  </div>
+                ) : (
+                  <button
+                    key={m.id}
+                    type="button"
+                    disabled={!onMatch}
+                    onClick={() => onMatch?.(m)}
+                    className={cx(
+                      'rounded-md border bg-white px-2 py-1 text-left text-xs leading-[18px] shadow-xs',
+                      onMatch && 'hover:border-brand-500',
+                      highlight?.has(m.id) ? 'border-accent-500 ring-1 ring-accent-500' : 'border-zinc-200/80',
+                    )}
+                  >
+                    {[m.player1, m.player2].map((p, idx) => {
+                      const legs = idx === 0 ? m.legs1 : m.legs2;
+                      const won = m.winner !== null && m.winner === p;
+                      return (
+                        <div key={idx} className={cx('flex justify-between gap-2', won ? 'font-semibold text-zinc-950' : m.winner ? 'text-zinc-400' : 'text-zinc-800')}>
+                          <span className="truncate">{p ? name(p) : <span className="text-zinc-300">…</span>}</span>
+                          <span className="tabular-nums">{legs ?? ''}</span>
+                        </div>
+                      );
+                    })}
+                  </button>
+                ),
+              )}
+            </div>
+          </div>
+        ))}
       </div>
     </div>
   );
 }
+
+/** Korte naam van het schema waarin een eindplaats bepaald werd. */
+const PLACEMENT_BADGE: Record<BracketStage, { label: string; tone: Tone }> = {
+  A: { label: 'A', tone: 'blue' },
+  B: { label: 'B', tone: 'stone' },
+  W: { label: 'W', tone: 'blue' },
+  GF: { label: 'Finale', tone: 'blue' },
+  L: { label: 'L', tone: 'stone' },
+  M: { label: 'Hoofd', tone: 'blue' },
+  P: { label: 'Plate', tone: 'stone' },
+};
 
 const MEDAL = ['bg-amber-400 text-amber-950', 'bg-zinc-300 text-zinc-900', 'bg-orange-300 text-orange-950'];
 
@@ -242,7 +243,7 @@ export function PlacementsTable({ placements, name, points }: { placements: Plac
           <tr className="border-b border-zinc-100">
             <th className="w-14 py-1.5 text-center font-medium">Plaats</th>
             <th className="py-1.5 text-left font-medium">Speler</th>
-            <th className="w-12 text-center font-medium">Schema</th>
+            <th className="w-14 text-center font-medium">Schema</th>
             {points && <th className="w-12 text-center font-medium">Ptn</th>}
           </tr>
         </thead>
@@ -258,7 +259,7 @@ export function PlacementsTable({ placements, name, points }: { placements: Plac
               </td>
               <td className="py-1 font-medium text-zinc-900">{name(p.playerId)}</td>
               <td className="text-center">
-                <Badge tone={p.stage === 'A' ? 'blue' : 'stone'}>{p.stage}</Badge>
+                <Badge tone={PLACEMENT_BADGE[p.stage].tone}>{PLACEMENT_BADGE[p.stage].label}</Badge>
               </td>
               {points && <td className="text-center font-semibold tabular-nums">{points.get(p.playerId) ?? ''}</td>}
             </tr>

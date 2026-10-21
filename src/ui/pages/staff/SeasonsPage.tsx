@@ -370,6 +370,10 @@ function SeasonSettingsForm({ season }: { season: SeasonRow }) {
               <LegsInput label={`${stage}: finale`} value={s.legs[stage].final} onChange={(v) => setBracket(stage, { final: v })} />
             </div>
           ))}
+          <p className="mt-2 text-2xs text-zinc-500">
+            Bij double elimination gelden de A-legs voor het winnaarsschema en de grote finale, de B-legs voor het verliezersschema. Bij knock-out met plate: A voor het
+            hoofdschema, B voor de plate.
+          </p>
         </div>
 
         <div>

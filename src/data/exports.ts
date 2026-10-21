@@ -53,8 +53,18 @@ export function resultsCsv(input: { events: readonly EventRow[]; results: readon
   ]);
 }
 
-const STAGE_LABEL: Record<MatchRow['stage'], string> = { pool: 'Poule', barrage: 'Barrage', A: 'A-schema', B: 'B-schema' };
-const STAGE_ORDER: Record<MatchRow['stage'], number> = { pool: 0, barrage: 1, A: 2, B: 3 };
+const STAGE_LABEL: Record<MatchRow['stage'], string> = {
+  pool: 'Poule',
+  barrage: 'Barrage',
+  A: 'A-schema',
+  B: 'B-schema',
+  W: 'Winnaarsschema',
+  L: 'Verliezersschema',
+  GF: 'Grote finale',
+  M: 'Hoofdschema',
+  P: 'Plate',
+};
+const STAGE_ORDER: Record<MatchRow['stage'], number> = { pool: 0, barrage: 1, A: 2, B: 3, W: 4, L: 5, GF: 6, M: 7, P: 8 };
 
 /** Alle gespeelde matchen, met 180's en hoogste uitgooi per speler. */
 export function matchesCsv(input: { events: readonly EventRow[]; matches: readonly MatchRow[]; stats: readonly MatchStatRow[]; name: NameFn }): string {

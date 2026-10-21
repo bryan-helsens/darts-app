@@ -1,10 +1,10 @@
 import { useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { roundName, type Match } from '../../../engine';
-import { buildEventView, type EventView } from '../../../data/eventView';
+import { STAGE_NAMES, type BracketStage, type Match } from '../../../engine';
+import { buildEventView, SCHEMA_STAGES, type EventView } from '../../../data/eventView';
 import { useEventBundle, usePlayerDirectory } from '../../../data/queries';
 import { formatLongDate } from '../../../lib/time';
-import { bracketSlots } from '../../components/darts';
+import { bracketLayout } from '../../components/bracketLayout';
 import { Button, ErrorBox, Icon, Spinner } from '../../components/ui';
 
 type NameFn = (id: string | null | undefined) => string;
@@ -41,8 +41,8 @@ export function PrintPage() {
         <div className="flex flex-wrap gap-x-4 gap-y-1.5 text-[13px]">
           {(
             [
-              ['pools', 'Poulebladen'],
-              ['brackets', 'A- en B-schema'],
+              ...(view.format === 'poules_ab' ? ([['pools', 'Poulebladen']] as const) : []),
+              ['brackets', view.format === 'poules_ab' ? 'A- en B-schema' : 'Schema'],
               ['sheets', `Wedstrijdbladen (${open.length} open matchen)`],
             ] as const
           ).map(([key, label]) => (
@@ -56,11 +56,12 @@ export function PrintPage() {
       </div>
 
       <h1 className="text-xl font-bold">Sanapolis Darts · {formatLongDate(view.event.event_date)}</h1>
-      {parts.pools && <PoolSheets view={view} name={name} />}
-      {parts.brackets && view.event.knockout && (
+      {parts.pools && view.format === 'poules_ab' && <PoolSheets view={view} name={name} />}
+      {parts.brackets && (view.format !== 'poules_ab' || view.event.knockout) && (
         <div className="page-break">
-          <PrintBracket view={view} stage="A" name={name} />
-          <PrintBracket view={view} stage="B" name={name} />
+          {SCHEMA_STAGES[view.format].map((stage) => (
+            <PrintBracket key={stage} view={view} stage={stage} name={name} />
+          ))}
         </div>
       )}
       {parts.sheets && <MatchSheets view={view} matches={open} name={name} />}
@@ -121,23 +122,21 @@ function PoolSheets({ view, name }: { view: EventView; name: NameFn }) {
   );
 }
 
-function PrintBracket({ view, stage, name }: { view: EventView; stage: 'A' | 'B'; name: NameFn }) {
-  const own = view.matches.filter((m) => m.stage === stage);
-  if (own.length === 0) return null;
-  const rounds = Math.max(...own.map((m) => m.round));
+function PrintBracket({ view, stage, name }: { view: EventView; stage: BracketStage; name: NameFn }) {
+  const columns = bracketLayout(stage, view.matches);
+  if (columns.length === 0) return null;
   return (
     <section className="mb-6 break-inside-avoid">
-      <h2 className="mb-2 text-lg font-bold">{stage}-schema</h2>
+      <h2 className="mb-2 text-lg font-bold">{STAGE_NAMES[stage]}</h2>
       <div className="flex gap-2 text-xs">
-        {Array.from({ length: rounds }, (_, i) => i + 1).map((r) => {
-          const inRound = own.filter((m) => m.round === r).sort((a, b) => a.position - b.position);
+        {columns.map((col) => {
           return (
-            <div key={r} className="flex w-36 flex-col">
+            <div key={col.round} className="flex w-36 flex-col">
               <div className="mb-1 text-center font-semibold">
-                {roundName(r, rounds)} (bo{inRound[0]?.bestOf})
+                {col.name} (bo{col.bestOf})
               </div>
               <div className="flex flex-1 flex-col justify-around gap-1">
-                {bracketSlots(inRound, rounds, r).map((m, idx) =>
+                {col.slots.map((m, idx) =>
                   m === null ? (
                     <div key={`bye-${idx}`} className="py-2 text-center text-zinc-400">
                       bye

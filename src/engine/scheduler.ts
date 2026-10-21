@@ -12,15 +12,17 @@
  * Keuze van de volgende match voor een vrij bord:
  *  1. liefst spelers die even rust hadden (geen twee matchen na elkaar);
  *  2. poules: de poule met de meeste resterende matchen eerst, dan op ronde;
- *     KO: de vroegste ronde (verst van de finale) eerst, dan het schema met
- *     de meeste resterende matchen;
+ *     schema's: de langste resterende keten eerst (via winnaar én verliezer,
+ *     bij A/B dus de vroegste ronde), dan het schema met de meeste
+ *     resterende matchen;
  *  3. de spelers die het langst niet speelden;
  *  4. vaste volgorde.
- * Een speler staat nooit op twee borden tegelijk. De A-finale gaat naar het
+ * Een speler staat nooit op twee borden tegelijk. De finale van de avond
+ * (A-finale, grote finale of finale van het hoofdschema) gaat naar het
  * hoofdbord en wacht (instelbaar) tot alle andere matchen gedaan zijn.
  */
 
-import type { Match, MatchId } from './types';
+import { isBracketMatch, isEventFinal, type Match, type MatchId } from './types';
 
 export type ScheduleLogEntry =
   | { type: 'boards'; at: number; boards: number[] }
@@ -80,8 +82,6 @@ export interface ScheduleResult {
 
 type DurationFn = (m: Match) => number;
 
-const isAFinal = (m: Match) => m.stage === 'A' && m.next === null && m.loserNext === null;
-
 function run(
   input: readonly SchedulableMatch[],
   log: readonly ScheduleLogEntry[],
@@ -126,10 +126,20 @@ function run(
     return keys;
   };
 
-  const roundsPerStage = new Map<string, number>();
-  for (const m of matches) {
-    if (m.stage === 'A' || m.stage === 'B') roundsPerStage.set(m.stage, Math.max(roundsPerStage.get(m.stage) ?? 0, m.round));
-  }
+  // Langste keten van matchen die nog op deze match wachten (via winnaar en verliezer).
+  // Bij een gewoon KO-schema is dat het aantal rondes tot de finale.
+  const chain = new Map<MatchId, number>();
+  const chainOf = (m: Match): number => {
+    const cached = chain.get(m.id);
+    if (cached !== undefined) return cached;
+    let length = 0;
+    for (const ref of [m.next, m.loserNext]) {
+      const target = ref ? byId.get(ref.matchId) : undefined;
+      if (target) length = Math.max(length, 1 + chainOf(target));
+    }
+    chain.set(m.id, length);
+    return length;
+  };
   const groupOf = (m: Match) => (m.stage === 'pool' ? `pool:${m.poolId}` : m.stage);
   const isPoolPhase = (m: Match) => m.stage === 'pool' || m.stage === 'barrage';
 
@@ -225,7 +235,7 @@ function run(
     if (m.afterPools && (poolsDoneAt === null || t < poolsDoneAt + transitionMs)) return false;
     for (const f of feeders.get(m.id) ?? []) if (!finished.has(f)) return false;
     if (keysOf(m).length < 2) return false;
-    if (config.holdFinal && isAFinal(m) && unfinished > 1) return false;
+    if (config.holdFinal && isEventFinal(m) && unfinished > 1) return false;
     return true;
   };
 
@@ -241,11 +251,10 @@ function run(
   /** Sorteersleutel: lager = eerder aan de beurt. */
   const priority = (m: Match, t: number): number[] => {
     const rest = restOf(m, t);
-    const knockout = m.stage === 'A' || m.stage === 'B';
     const rem = remaining.get(groupOf(m)) as number;
     const restKey = rest === Number.POSITIVE_INFINITY ? -1e15 : -rest;
-    return knockout
-      ? [rest >= config.minRestMs ? 0 : 1, 1, -((roundsPerStage.get(m.stage) as number) - m.round), -rem, restKey, m.position]
+    return isBracketMatch(m)
+      ? [rest >= config.minRestMs ? 0 : 1, 1, -chainOf(m), -rem, restKey, m.position]
       : [rest >= config.minRestMs ? 0 : 1, 0, -rem, m.round, restKey, m.position];
   };
 
@@ -267,7 +276,7 @@ function run(
     for (const board of freeBoards) {
       const eligible = candidates.filter((m) => {
         if (keysOf(m).some((k) => (busy.get(k) ?? 0) > 0)) return false;
-        if (isAFinal(m) && mainAvailable && board !== config.mainBoard) return false;
+        if (isEventFinal(m) && mainAvailable && board !== config.mainBoard) return false;
         return true;
       });
       const pick = eligible[0];

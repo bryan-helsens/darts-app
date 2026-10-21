@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { MIN, open } from '../../tests/engine/helpers';
+import { buildElimination } from './elimination';
 import { forecastSchedule, replaySchedule, upcomingByBoard, type ScheduleConfig, type ScheduleLogEntry } from './scheduler';
+import { DEFAULT_LEGS } from './settings';
 import type { Match } from './types';
 
 const config = (boards: number[], extra: Partial<ScheduleConfig> = {}): ScheduleConfig => ({
@@ -134,5 +136,26 @@ describe('prognose', () => {
   it('laat een uitgelopen match niet in het verleden eindigen', () => {
     const f = forecastSchedule([open('m0', 'a', 'b')], [], config([1]), 30 * MIN, () => 10 * MIN);
     expect(f.end).toBe(30 * MIN);
+  });
+});
+
+describe('bordplanning schema-formats', () => {
+  it('grote finale als laatste, op het hoofdbord', () => {
+    const { matches } = buildElimination('double_elim', ['a', 'b', 'c', 'd', 'e', 'f'], DEFAULT_LEGS, 0);
+    const forecast = forecastSchedule(matches, [], config([1, 2, 3], { mainBoard: 2 }), 0, () => 10 * MIN);
+    const gf = forecast.assignments.find((a) => a.matchId === 'GF-R1-1');
+    const others = forecast.assignments.filter((a) => a.matchId !== 'GF-R1-1');
+    expect(gf?.board).toBe(2);
+    expect(gf?.start).toBeGreaterThanOrEqual(Math.max(...others.map((a) => a.end ?? 0)));
+  });
+
+  it('de langste keten eerst: het verliezersschema loopt mee met het winnaarsschema', () => {
+    // 8 spelers op 2 borden: na W1 komen L1 (keten tot de grote finale) vóór W2.
+    const { matches } = buildElimination('double_elim', ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'], DEFAULT_LEGS, 0);
+    const forecast = forecastSchedule(matches, [], config([1, 2], { minRestMs: 0 }), 0, () => 10 * MIN);
+    const order = [...forecast.assignments].sort((x, y) => x.start - y.start || x.board - y.board).map((a) => a.matchId);
+    expect(order.slice(0, 4).every((id) => id.startsWith('W-R1'))).toBe(true);
+    expect(order.indexOf('L-R1-1')).toBeLessThan(order.indexOf('W-R2-1'));
+    expect(order.at(-1)).toBe('GF-R1-1');
   });
 });

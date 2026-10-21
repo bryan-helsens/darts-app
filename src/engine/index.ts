@@ -6,6 +6,7 @@ export * from './pools';
 export * from './standings';
 export * from './qualify';
 export * from './bracket';
+export * from './elimination';
 export * from './results';
 export * from './placements';
 export * from './points';
