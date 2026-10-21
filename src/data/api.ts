@@ -4,6 +4,7 @@
  */
 
 import type { PostgrestError } from '@supabase/supabase-js';
+import type { SeasonTables } from './exports';
 import { supabase } from './supabase';
 import type {
   AuditLogRow,
@@ -57,6 +58,17 @@ async function rpc<T>(fn: string, args: Record<string, unknown>): Promise<T> {
   return data as T;
 }
 
+/** PostgREST geeft standaard maximaal 1000 rijen per verzoek: haal alles op, pagina per pagina (met een vaste volgorde). */
+const PAGE = 1000;
+async function fetchAll<T>(page: (from: number, to: number) => PromiseLike<{ data: T[] | null; error: PostgrestError | null }>): Promise<T[]> {
+  const out: T[] = [];
+  for (let from = 0; ; from += PAGE) {
+    const rows = await must<T[]>(page(from, from + PAGE - 1));
+    out.push(...rows);
+    if (rows.length < PAGE) return out;
+  }
+}
+
 // ---------- Lezen ----------
 
 export const fetchSeasons = () => must<SeasonRow[]>(supabase.from('seasons').select('*').order('starts_on', { ascending: false }));
@@ -101,20 +113,49 @@ export async function fetchSeasonData(seasonId: string): Promise<{ events: Event
   const events = await must<EventRow[]>(supabase.from('events').select('*').eq('season_id', seasonId).order('event_date'));
   const ids = events.map((e) => e.id);
   if (ids.length === 0) return { events, results: [], matches: [], stats: [] };
+  // Een volledig seizoen telt al snel meer dan 1000 matchen: per pagina ophalen.
   const [results, matches, stats] = await Promise.all([
-    must<EventResultRow[]>(supabase.from('event_results').select('*').in('event_id', ids)),
-    must<MatchRow[]>(supabase.from('matches').select('*').in('event_id', ids).not('winner_id', 'is', null)),
-    must<MatchStatRow[]>(supabase.from('match_stats').select('*').in('event_id', ids)),
+    fetchAll<EventResultRow>((from, to) => supabase.from('event_results').select('*').in('event_id', ids).order('event_id').order('player_id').range(from, to)),
+    fetchAll<MatchRow>((from, to) => supabase.from('matches').select('*').in('event_id', ids).not('winner_id', 'is', null).order('id').range(from, to)),
+    fetchAll<MatchStatRow>((from, to) => supabase.from('match_stats').select('*').in('event_id', ids).order('match_id').order('player_id').range(from, to)),
   ]);
   return { events, results, matches, stats };
+}
+
+/** Alle tabellen van een seizoen, voor de JSON-back-up. */
+export async function fetchSeasonTables(seasonId: string): Promise<SeasonTables> {
+  const events = await must<EventRow[]>(supabase.from('events').select('*').eq('season_id', seasonId).order('event_date'));
+  const ids = events.map((e) => e.id);
+  const empty: SeasonTables = { events, registrations: [], pools: [], pool_members: [], matches: [], match_stats: [], event_log: [], event_results: [] };
+  if (ids.length === 0) return empty;
+  const [registrations, pools, pool_members, matches, match_stats, event_log, event_results] = await Promise.all([
+    fetchAll<RegistrationRow>((f, t) => supabase.from('registrations').select('*').in('event_id', ids).order('event_id').order('player_id').range(f, t)),
+    fetchAll<PoolRow>((f, t) => supabase.from('pools').select('*').in('event_id', ids).order('event_id').order('id').range(f, t)),
+    fetchAll<PoolMemberRow>((f, t) => supabase.from('pool_members').select('*').in('event_id', ids).order('event_id').order('player_id').range(f, t)),
+    fetchAll<MatchRow>((f, t) => supabase.from('matches').select('*').in('event_id', ids).order('id').range(f, t)),
+    fetchAll<MatchStatRow>((f, t) => supabase.from('match_stats').select('*').in('event_id', ids).order('match_id').order('player_id').range(f, t)),
+    fetchAll<EventLogRow>((f, t) => supabase.from('event_log').select('*').in('event_id', ids).order('id').range(f, t)),
+    fetchAll<EventResultRow>((f, t) => supabase.from('event_results').select('*').in('event_id', ids).order('event_id').order('player_id').range(f, t)),
+  ]);
+  return { events, registrations, pools, pool_members, matches, match_stats, event_log, event_results };
 }
 
 export const fetchProfiles = () => must<ProfileRow[]>(supabase.from('profiles').select('*').order('created_at'));
 
 export const fetchContacts = () => must<PlayerContactRow[]>(supabase.from('player_contacts').select('*'));
 
-export const fetchAuditLog = (limit = 200) =>
-  must<AuditLogRow[]>(supabase.from('audit_log').select('*').order('changed_at', { ascending: false }).limit(limit));
+export const AUDIT_PAGE = 100;
+
+/**
+ * Audit-log, nieuwste eerst. `before` is een cursor op `id` (oplopend in de
+ * volgorde van schrijven; `changed_at` is per transactie gelijk en dus niet uniek).
+ */
+export function fetchAuditLog(opts: { before?: number; tables?: readonly string[]; limit?: number } = {}) {
+  let query = supabase.from('audit_log').select('*');
+  if (opts.tables) query = query.in('table_name', [...opts.tables]);
+  if (opts.before !== undefined) query = query.lt('id', opts.before);
+  return must<AuditLogRow[]>(query.order('id', { ascending: false }).limit(opts.limit ?? AUDIT_PAGE));
+}
 
 // ---------- Schrijven ----------
 
@@ -224,22 +265,10 @@ export const setUserRole = (userId: string, role: Role) => rpc('set_user_role', 
 export type EloMatchRow = Pick<MatchRow, 'id' | 'event_id' | 'player1_id' | 'player2_id' | 'winner_id' | 'walkover' | 'finished_at'>;
 
 /** Haalt alle gespeelde matchen op, per 1000 (de standaardlimiet van PostgREST). */
-export async function fetchEloMatches(): Promise<EloMatchRow[]> {
-  const page = 1000;
-  const out: EloMatchRow[] = [];
-  for (let from = 0; ; from += page) {
-    const rows = await must<EloMatchRow[]>(
-      supabase
-        .from('matches')
-        .select('id,event_id,player1_id,player2_id,winner_id,walkover,finished_at')
-        .not('winner_id', 'is', null)
-        .order('id')
-        .range(from, from + page - 1),
-    );
-    out.push(...rows);
-    if (rows.length < page) return out;
-  }
-}
+export const fetchEloMatches = () =>
+  fetchAll<EloMatchRow>((from, to) =>
+    supabase.from('matches').select('id,event_id,player1_id,player2_id,winner_id,walkover,finished_at').not('winner_id', 'is', null).order('id').range(from, to),
+  );
 
 // ---------- Online inschrijven (publiek, zonder account) ----------
 
