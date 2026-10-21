@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { formatPlace } from './placements';
+import { buildElimination } from './elimination';
+import { eliminationPlacements, eventPlacements, formatPlace, formatPlacements } from './placements';
 import { eventPoints, placementPoints, validatePointsTable } from './points';
-import { DEFAULT_POINTS } from './settings';
+import { DEFAULT_LEGS, DEFAULT_POINTS } from './settings';
 import { simulateEvening } from './simulate';
 
 describe('eindplaatsen en punten', () => {
@@ -34,5 +35,14 @@ describe('eindplaatsen en punten', () => {
     expect(validatePointsTable([{ from: 1, to: 1, points: 10 }])).not.toBeNull();
     expect(validatePointsTable([{ from: 2, to: null, points: 10 }])).not.toBeNull();
     expect(validatePointsTable([{ from: 1, to: null, points: -1 }])).not.toBeNull();
+  });
+});
+
+describe('eindplaatsen per format', () => {
+  it('kiest de juiste berekening', () => {
+    const { matches } = buildElimination('single_elim_plate', ['a', 'b', 'c', 'd'], DEFAULT_LEGS, 0);
+    expect(formatPlacements('single_elim_plate', matches, null)).toEqual(eliminationPlacements(matches));
+    expect(formatPlacements('poules_ab', [], null)).toEqual({ placements: [], complete: false });
+    expect(formatPlacements('poules_ab', [], { A: ['a'], B: [] })).toEqual(eventPlacements([], { A: ['a'], B: [] }));
   });
 });

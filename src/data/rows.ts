@@ -90,7 +90,7 @@ export interface MatchRow {
   id: string;
   event_id: string;
   code: string;
-  stage: 'pool' | 'barrage' | 'A' | 'B';
+  stage: 'pool' | 'barrage' | 'A' | 'B' | 'W' | 'L' | 'GF' | 'M' | 'P';
   round: number;
   position: number;
   pool_id: string | null;

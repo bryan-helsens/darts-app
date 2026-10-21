@@ -10,6 +10,7 @@
  */
 
 import { buildKnockout } from './bracket';
+import { buildElimination } from './elimination';
 import { describeSizes, knockoutSizes, layoutOptions, poolMatchCount } from './poolLayouts';
 import { createPoolMatches } from './pools';
 import type { Qualifier } from './qualify';
@@ -23,7 +24,7 @@ import {
   type SchedulableMatch,
 } from './scheduler';
 import { MINUTE, type LegsSettings, type TimingSettings } from './settings';
-import type { Match, Pool } from './types';
+import type { EliminationFormat, Match, Pool } from './types';
 
 function binomial(n: number, k: number): number {
   let r = 1;
@@ -182,6 +183,90 @@ export function suggestAdjustments(input: PlanInput, limit: number): Suggestion[
     .filter((s) => s.estimate.end < base.end - MINUTE);
   evaluated.sort((a, b) => a.estimate.end - b.estimate.end);
   return evaluated;
+}
+
+// ---------------------------------------------------------------------------
+// Schema-formats (double elimination, enkelvoudig met plate)
+// ---------------------------------------------------------------------------
+
+export interface BracketPlanInput {
+  format: EliminationFormat;
+  players: number;
+  boards: number;
+  mainBoard?: number;
+  legs: LegsSettings;
+  timing: TimingSettings;
+  holdFinal: boolean;
+  start: number;
+}
+
+export interface BracketPlanEstimate {
+  end: number;
+  matches: number;
+  /** Grootte van het schema (macht van 2). */
+  size: number;
+  byes: number;
+  /** Spelers in de plate (enkel bij single_elim_plate). */
+  plateSize: number | null;
+}
+
+/** Het schema met virtuele spelers (voor de inschatting vóór de start). */
+export function virtualElimination(format: EliminationFormat, players: number, legs: LegsSettings, createdAt: number) {
+  return buildElimination(format, Array.from({ length: players }, (_, i) => `~s${i + 1}`), legs, createdAt);
+}
+
+export function estimateBracketPlan(input: BracketPlanInput): BracketPlanEstimate {
+  const built = virtualElimination(input.format, input.players, input.legs, input.start);
+  const config: ScheduleConfig = {
+    start: input.start,
+    boards: boardList(input.boards),
+    mainBoard: input.mainBoard ?? 1,
+    holdFinal: input.holdFinal,
+    minRestMs: input.timing.minRestMinutes * MINUTE,
+  };
+  const result = forecastSchedule(built.matches, [], config, input.start, (m) => matchDurationMs(m.bestOf, input.timing));
+  return { end: result.end ?? Number.POSITIVE_INFINITY, matches: built.matches.length, size: built.size, byes: built.byes, plateSize: built.plateSize };
+}
+
+export interface BracketSuggestion {
+  id: string;
+  label: string;
+  plan: BracketPlanInput;
+  estimate: BracketPlanEstimate;
+  meetsLimit: boolean;
+}
+
+/** Aanpassingen die een schema-avond korter maken, beste eerst. */
+export function suggestBracketAdjustments(input: BracketPlanInput, limit: number): BracketSuggestion[] {
+  const base = estimateBracketPlan(input);
+  const { legs } = input;
+  const candidates: Array<{ id: string; label: string; plan: BracketPlanInput }> = [];
+  if (legs.A.early > 1 || legs.B.early > 1) {
+    candidates.push({
+      id: 'early-bo1',
+      label: 'Eerste rondes best of 1',
+      plan: { ...input, legs: { ...legs, A: { ...legs.A, early: 1 }, B: { ...legs.B, early: 1 } } },
+    });
+  }
+  if (legs.A.semi > 3) {
+    candidates.push({ id: 'semi-bo3', label: 'Halve finales best of 3', plan: { ...input, legs: { ...legs, A: { ...legs.A, semi: 3 } } } });
+  }
+  if (input.format === 'double_elim') {
+    candidates.push({ id: 'format-plate', label: 'Enkelvoudige eliminatie met plate', plan: { ...input, format: 'single_elim_plate' } });
+  }
+  if (input.holdFinal) {
+    candidates.push({ id: 'no-hold-final', label: 'Finale niet laten wachten op de rest', plan: { ...input, holdFinal: false } });
+  }
+  if (input.boards < 8) {
+    candidates.push({ id: 'extra-board', label: 'Eén bord extra', plan: { ...input, boards: input.boards + 1 } });
+  }
+  return candidates
+    .map((c) => {
+      const estimate = estimateBracketPlan(c.plan);
+      return { ...c, estimate, meetsLimit: estimate.end <= limit };
+    })
+    .filter((s) => s.estimate.end < base.end - MINUTE)
+    .sort((a, b) => a.estimate.end - b.estimate.end);
 }
 
 /** Gemeten minuten per leg uit de gespeelde matchen (vanaf 3 matchen). */

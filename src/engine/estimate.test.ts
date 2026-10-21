@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { MIN, played } from '../../tests/engine/helpers';
-import { calibrateMinutesPerLeg, estimatePlan, expectedLegs, forecastLive, suggestAdjustments } from './estimate';
+import { calibrateMinutesPerLeg, estimateBracketPlan, estimatePlan, expectedLegs, forecastLive, suggestAdjustments, suggestBracketAdjustments } from './estimate';
 import { standardSizes } from './poolLayouts';
 import { replaySchedule } from './scheduler';
 import { DEFAULT_LEGS, DEFAULT_TIMING } from './settings';
@@ -74,5 +74,39 @@ describe('live bijsturen', () => {
     const withKo = forecastLive({ matches: ms, log: [], config: cfg, now: 11 * MIN, timing: DEFAULT_TIMING, legs: DEFAULT_LEGS, plannedKnockout: { sizes: [2, 2], advance: 1 } });
     const without = forecastLive({ matches: ms, log: [], config: cfg, now: 11 * MIN, timing: DEFAULT_TIMING, legs: DEFAULT_LEGS, plannedKnockout: null });
     expect(withKo.forecast.end).toBeGreaterThan(without.forecast.end as number);
+  });
+});
+
+describe('tijdsinschatting schema-formats', () => {
+  const bracket = (format: 'double_elim' | 'single_elim_plate', players: number, boards: number) => ({
+    format,
+    players,
+    boards,
+    legs: DEFAULT_LEGS,
+    timing: DEFAULT_TIMING,
+    holdFinal: true,
+    start: START,
+  });
+
+  it('telt de matchen, byes en de plate', () => {
+    expect(estimateBracketPlan(bracket('double_elim', 12, 6))).toMatchObject({ matches: 22, size: 16, byes: 4, plateSize: null });
+    expect(estimateBracketPlan(bracket('single_elim_plate', 12, 6))).toMatchObject({ matches: 11 + 7, size: 16, byes: 4, plateSize: 8 });
+  });
+
+  it('double elimination duurt langer dan enkelvoudig met plate, en meer borden helpt', () => {
+    for (const players of [10, 20, 32]) {
+      const de = estimateBracketPlan(bracket('double_elim', players, 6)).end;
+      const plate = estimateBracketPlan(bracket('single_elim_plate', players, 6)).end;
+      expect(de, `${players} spelers`).toBeGreaterThan(plate);
+      expect(estimateBracketPlan(bracket('double_elim', players, 8)).end).toBeLessThanOrEqual(estimateBracketPlan(bracket('double_elim', players, 4)).end);
+    }
+  });
+
+  it('stelt kortere varianten voor, met plate als alternatief voor double elimination', () => {
+    const input = bracket('double_elim', 32, 4);
+    const suggestions = suggestBracketAdjustments(input, at(23, 15));
+    expect(suggestions.map((s) => s.id)).toContain('format-plate');
+    expect(suggestions.every((s) => s.estimate.end < estimateBracketPlan(input).end)).toBe(true);
+    expect(suggestions.map((s) => s.estimate.end)).toEqual([...suggestions.map((s) => s.estimate.end)].sort((a, b) => a - b));
   });
 });

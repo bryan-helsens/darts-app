@@ -10,7 +10,7 @@ import { MatchModal } from './MatchModal';
 type NameFn = (id: string | null | undefined) => string;
 type Filter = 'open' | 'gespeeld' | 'alle';
 
-const STAGE_ORDER: Record<Match['stage'], number> = { pool: 0, barrage: 1, A: 2, B: 3 };
+const STAGE_ORDER: Record<Match['stage'], number> = { pool: 0, barrage: 1, A: 2, B: 3, W: 4, L: 5, GF: 6, M: 7, P: 8 };
 
 /**
  * Alle matchen van de avond, om achteraf een score in te voeren of te

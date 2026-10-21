@@ -10,11 +10,13 @@ import {
   createRng,
   defaultAdvance,
   layoutOptions,
+  simulateBracketEvening,
   simulateEvening,
   standardSizes,
+  type BracketSimulationOptions,
   type SimulationOptions,
 } from '../../src/engine';
-import { checkAll } from './invariants';
+import { checkAll, checkBracketAll } from './invariants';
 
 export const START = Date.UTC(2026, 10, 21, 18, 0); // 21/11/2026 19u00 in Brussel
 
@@ -62,5 +64,27 @@ export function runMatrix(fromPlayers: number, toPlayers: number) {
         }
       });
     });
+  }
+}
+
+/** Matrix voor de schema-formats: zelfde spelers, borden en verstoringen, zonder poules. */
+export function runFormatMatrix(fromPlayers: number, toPlayers: number) {
+  for (const format of ['double_elim', 'single_elim_plate'] as const) {
+    for (let n = fromPlayers; n <= toPlayers; n++) {
+      describe(`${format}, ${n} spelers`, () => {
+        for (let boards = 4; boards <= 8; boards++) {
+          for (const variant of ['plain', 'disrupt'] as const) {
+            it(`${boards} borden, ${variant === 'plain' ? 'gewone avond' : 'met verstoringen'}`, () => {
+              for (const seed of ['s1', 's2']) {
+                const { opts } = buildOptions(n, boards, variant, `${format}-${seed}`);
+                const bracketOpts: BracketSimulationOptions = { ...opts, format };
+                const result = simulateBracketEvening(bracketOpts);
+                expect(checkBracketAll({ opts: bracketOpts, result }), `seed ${seed}`).toEqual([]);
+              }
+            });
+          }
+        }
+      });
+    }
   }
 }
