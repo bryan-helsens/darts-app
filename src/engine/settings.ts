@@ -74,6 +74,23 @@ export interface BestOfSettings {
 
 export const DEFAULT_BEST_OF: BestOfSettings = { enabled: true, count: 8, of: 11 };
 
+/** Elo-rating: niveau over alle avonden en seizoenen heen. */
+export interface EloSettings {
+  /** Startwaarde voor een nieuwe speler. */
+  start: number;
+  /** K-factor: hoe sterk één match de rating verandert. */
+  k: number;
+  /** Hogere K voor nieuwe spelers, zodat hun rating snel op niveau komt. */
+  newcomerK: number;
+  /** Aantal eerste matchen waarvoor de nieuwkomers-K geldt. */
+  newcomerMatches: number;
+}
+
+export const DEFAULT_ELO: EloSettings = { start: 1500, k: 32, newcomerK: 48, newcomerMatches: 10 };
+
+/** Waarop de loting de sterkste spelers spreidt. */
+export type SeedingSource = 'elo' | 'ranking' | 'random';
+
 export interface SeasonSettings {
   points: PointsSettings;
   bestOf: BestOfSettings;
@@ -89,6 +106,9 @@ export interface SeasonSettings {
   startTime: string;
   registrationCloses: string;
   endLimit: string;
+  elo: EloSettings;
+  /** Standaard seedingbron bij de loting (per avond aan te passen). */
+  seeding: SeedingSource;
 }
 
 export const DEFAULT_SEASON_SETTINGS: SeasonSettings = {
@@ -102,6 +122,8 @@ export const DEFAULT_SEASON_SETTINGS: SeasonSettings = {
   startTime: '19:00',
   registrationCloses: '18:30',
   endLimit: '23:15',
+  elo: DEFAULT_ELO,
+  seeding: 'elo',
 };
 
 /** Vult ontbrekende velden aan met de standaard (handig voor oudere seizoensinstellingen). */
@@ -119,6 +141,7 @@ export function withDefaults(partial: Partial<SeasonSettings> | null | undefined
       B: { ...DEFAULT_LEGS.B, ...p.legs?.B },
     },
     timing: { ...DEFAULT_TIMING, ...p.timing },
+    elo: { ...DEFAULT_ELO, ...p.elo },
   };
 }
 

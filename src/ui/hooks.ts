@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
-import { placementPoints, seasonRanking, withDefaults, type RankingRow, type SeasonSettings } from '../engine';
-import { matchFromRow } from '../data/mappers';
-import { useEvents, useSeasonData, useSeasons } from '../data/queries';
+import { computeElo, placementPoints, seasonRanking, withDefaults, type EloMatch, type EloResult, type RankingRow, type SeasonSettings } from '../engine';
+import { matchFromRow, toMs } from '../data/mappers';
+import { useEloMatches, useEvents, useSeasonData, useSeasons } from '../data/queries';
 import type { EventRow, SeasonRow } from '../data/rows';
 import { todayInBrussels } from '../lib/time';
 
@@ -64,4 +64,48 @@ export function useSeasonRanking(season: SeasonRow | undefined): { rows: Ranking
 /** Seedingrangen voor de loting: de seizoensranking (zonder punten = geen rang). */
 export function seedRanksFrom(rows: readonly RankingRow[]): Map<string, number> {
   return new Map(rows.map((r) => [r.playerId, r.position]));
+}
+
+export interface EloState {
+  elo: EloResult | null;
+  /** Eerste avond ooit per speler ("jjjj-mm-dd"), ook als die enkel walk-overs had. */
+  firstSeen: Map<string, string>;
+  isLoading: boolean;
+}
+
+/** Elo van alle spelers, berekend uit alle gespeelde matchen van alle seizoenen. */
+export function useElo(): EloState {
+  const matches = useEloMatches();
+  const { data: events } = useEvents();
+  const { data: seasons } = useSeasons();
+  return useMemo(() => {
+    if (!matches.data || !events || !seasons) return { elo: null, firstSeen: new Map(), isLoading: matches.isLoading };
+    const eventById = new Map(events.map((e) => [e.id, e]));
+    const settingsBySeason = new Map(seasons.map((s) => [s.id, seasonSettings(s).elo]));
+    const fallback = withDefaults(null).elo;
+    const input: Array<EloMatch & { seasonId: string }> = [];
+    const firstSeen = new Map<string, string>();
+    for (const m of matches.data) {
+      const event = eventById.get(m.event_id);
+      if (!event || !m.player1_id || !m.player2_id || !m.winner_id) continue;
+      for (const p of [m.player1_id, m.player2_id]) {
+        const seen = firstSeen.get(p);
+        if (!seen || event.event_date < seen) firstSeen.set(p, event.event_date);
+      }
+      input.push({
+        id: m.id,
+        eventId: m.event_id,
+        seasonId: event.season_id,
+        date: event.event_date,
+        finishedAt: toMs(m.finished_at),
+        player1: m.player1_id,
+        player2: m.player2_id,
+        winner: m.winner_id,
+        walkover: m.walkover,
+      });
+    }
+    const seasonOf = new Map(input.map((m) => [m.id, m.seasonId]));
+    const elo = computeElo(input, (m) => settingsBySeason.get(seasonOf.get(m.id) ?? '') ?? fallback);
+    return { elo, firstSeen, isLoading: false };
+  }, [matches.data, matches.isLoading, events, seasons]);
 }

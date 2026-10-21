@@ -17,6 +17,7 @@ import { keys } from '../../../data/queries';
 import { formatTime } from '../../../lib/time';
 import { BoardsOverview, Bracket, MatchTile, PlacementsTable, PoolTable, shortTitle, TileGrid } from '../../components/darts';
 import { Badge, Button, Card, ConfirmModal, cx, Empty, ErrorBox, InfoBox, Modal, SectionTitle, Select, Stats, TextInput } from '../../components/ui';
+import { ShareResultButton } from '../../share/ShareResult';
 import { MatchModal } from './MatchModal';
 
 type NameFn = (id: string | null | undefined) => string;
@@ -30,6 +31,7 @@ function useRefresh(eventId: string) {
     // Ranking en spelersprofielen hangen af van de afgesloten avonden.
     await qc.invalidateQueries({ queryKey: ['season-data'] });
     await qc.invalidateQueries({ queryKey: ['player'] });
+    await qc.invalidateQueries({ queryKey: ['elo'] });
   };
 }
 
@@ -447,6 +449,11 @@ export function FinishPanel({ view, name, settings }: { view: EventView; name: N
           <Button size="lg" block onClick={() => setConfirm(true)}>
             {view.event.status === 'afgelopen' ? 'Punten opnieuw berekenen' : 'Avond afsluiten'}
           </Button>
+          {view.event.status === 'afgelopen' && (
+            <div className="flex justify-center">
+              <ShareResultButton view={view} points={new Map(points.map((p) => [p.playerId, p.total]))} name={name} size="md" />
+            </div>
+          )}
           {finalize.error && <ErrorBox error={finalize.error} />}
         </>
       )}

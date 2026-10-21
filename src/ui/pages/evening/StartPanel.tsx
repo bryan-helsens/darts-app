@@ -9,13 +9,14 @@ import {
   type LegsSettings,
   type PlanInput,
   type SeasonSettings,
+  type SeedingSource,
 } from '../../../engine';
 import { startTournament, updateEvent } from '../../../data/api';
 import { matchToInsert, poolsToInsert, type TournamentConfig } from '../../../data/mappers';
 import { keys } from '../../../data/queries';
 import type { EventRow, RegistrationRow } from '../../../data/rows';
 import { brusselsToUtc, formatTime, shortTime } from '../../../lib/time';
-import { Button, Card, ConfirmModal, cx, ErrorBox, Field, InfoBox, List, rowClass, rowHover, Select, Stepper } from '../../components/ui';
+import { Button, Card, ConfirmModal, cx, ErrorBox, Field, InfoBox, List, rowClass, rowHover, Segmented, Select, Stepper } from '../../components/ui';
 import { useNow } from '../../hooks';
 
 function LegsSelect({ label, value, onChange }: { label: string; value: number; onChange: (v: number) => void }) {
@@ -37,12 +38,13 @@ export function StartPanel({
   event,
   registrations,
   settings,
-  seedRanks,
+  seedSources,
 }: {
   event: EventRow;
   registrations: RegistrationRow[];
   settings: SeasonSettings;
-  seedRanks: Map<string, number>;
+  /** Seedingrangen per bron (1 = sterkste); "random" is leeg. */
+  seedSources: Record<SeedingSource, ReadonlyMap<string, number>>;
 }) {
   const qc = useQueryClient();
   const now = useNow(60_000);
@@ -57,6 +59,8 @@ export function StartPanel({
   const [legs, setLegs] = useState<LegsSettings>(settings.legs);
   const [holdFinal, setHoldFinal] = useState(settings.holdFinal);
   const [showLegs, setShowLegs] = useState(false);
+  const [source, setSource] = useState<SeedingSource>(settings.seeding);
+  const seedRanks = seedSources[source];
   const [confirm, setConfirm] = useState(false);
 
   const plannedStart = Math.max(now, brusselsToUtc(event.event_date, shortTime(event.start_time)));
@@ -91,6 +95,7 @@ export function StartPanel({
     mutationFn: async () => {
       if (!layout) return;
       const players = present.map((r) => ({ id: r.player_id, seedRank: seedRanks.get(r.player_id) ?? null }));
+      const snapshot = Object.fromEntries(players.filter((p) => p.seedRank !== null).map((p) => [p.id, p.seedRank as number]));
       const { pools, matches } = startPools({ players, sizes: layout.sizes, bestOf: legs.pool, rng: createRng(event.rng_seed), createdAt: 0 });
       const config: TournamentConfig = {
         layoutId: layout.id,
@@ -101,6 +106,8 @@ export function StartPanel({
         boards: Array.from({ length: boards }, (_, i) => i + 1),
         mainBoard,
         holdFinal,
+        seeding: source,
+        seedRanks: snapshot,
       };
       await updateEvent(event.id, { boards, main_board: mainBoard });
       await startTournament(event.id, poolsToInsert(pools), matches.map(matchToInsert), config);
@@ -120,11 +127,24 @@ export function StartPanel({
 
   return (
     <div className="space-y-3">
-      <div>
-        <div className="text-sm font-semibold text-zinc-950">{n} aanwezige spelers</div>
-        <p className="text-xs text-zinc-500">
-          Seeding op de seizoensranking: {ranked} met ranking, {n - ranked} zonder (willekeurig verdeeld).
-        </p>
+      <div className="flex flex-wrap items-start justify-between gap-2">
+        <div className="min-w-0">
+          <div className="text-sm font-semibold text-zinc-950">{n} aanwezige spelers</div>
+          <p className="text-xs text-zinc-500">
+            {source === 'random'
+              ? 'Volledig willekeurige loting.'
+              : `Seeding op ${source === 'elo' ? 'Elo' : 'de seizoensranking'}: ${ranked} met ${source === 'elo' ? 'rating' : 'ranking'}, ${n - ranked} zonder (willekeurig verdeeld).`}
+          </p>
+        </div>
+        <Segmented
+          value={source}
+          onChange={setSource}
+          options={[
+            { id: 'elo', label: 'Elo' },
+            { id: 'ranking', label: 'Ranking' },
+            { id: 'random', label: 'Willekeurig' },
+          ]}
+        />
       </div>
 
       <div>

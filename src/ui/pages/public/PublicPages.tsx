@@ -1,6 +1,6 @@
-import { useMemo, useState } from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
-import { formatPlace, isFinished } from '../../../engine';
+import { useMemo, useState, type ReactNode } from 'react';
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { eloChangeForEvent, formatPlace, isFinished, seasonLeaderboards } from '../../../engine';
 import { buildEventView } from '../../../data/eventView';
 import { matchFromRow } from '../../../data/mappers';
 import { useEventBundle, useEvents, usePlayerData, usePlayerDirectory, useRegistrationCounts, useSeasonData, useSeasons } from '../../../data/queries';
@@ -9,8 +9,9 @@ import { matchesSearch } from '../../../lib/names';
 import { formatDate, formatLongDate, formatTime, shortTime } from '../../../lib/time';
 import { BoardsOverview, Bracket, MatchTile, PlacementsTable, PoolTable, shortTitle, TileGrid } from '../../components/darts';
 import { displayName } from '../../components/players';
+import { ShareResultButton } from '../../share/ShareResult';
 import { Badge, Button, Card, cx, DateTile, Empty, ErrorBox, Icon, List, LiveBadge, PageTitle, rowClass, rowHover, SearchInput, SectionTitle, Select, Spinner, Tabs } from '../../components/ui';
-import { pickCurrentSeason, seasonSettings, useCurrentSeason, useNow, useSeasonRanking, useUpcoming } from '../../hooks';
+import { pickCurrentSeason, seasonSettings, useCurrentSeason, useElo, useNow, useSeasonRanking, useUpcoming } from '../../hooks';
 
 const time = (t: string) => formatTime(shortTime(t));
 
@@ -228,7 +229,16 @@ export function EventPublicPage() {
         <>
           <Tabs value={active} onChange={setTab} tabs={tabs} />
           {active === 'borden' && <BoardsOverview view={view} name={name} />}
-          {active === 'eindstand' && view.placements?.complete && <PlacementsTable placements={view.placements.placements} name={name} points={points} />}
+          {active === 'eindstand' && view.placements?.complete && (
+            <>
+              {event.status === 'afgelopen' && (
+                <div className="mb-2 flex justify-end">
+                  <ShareResultButton view={view} points={points} name={name} />
+                </div>
+              )}
+              <PlacementsTable placements={view.placements.placements} name={name} points={points} />
+            </>
+          )}
           {active === 'schema' &&
             (event.knockout ? (
               <>
@@ -332,76 +342,180 @@ export function ResultsPage() {
 // Seizoensranking
 // ---------------------------------------------------------------------------
 
+type Board = 'punten' | 'elo' | '180' | 'finish' | 'deelnames' | 'nieuwkomers';
+
+const BOARDS: Array<{ id: Board; label: string }> = [
+  { id: 'punten', label: 'Punten' },
+  { id: 'elo', label: 'Elo' },
+  { id: '180', label: '180’s' },
+  { id: 'finish', label: 'Hoogste uitgooi' },
+  { id: 'deelnames', label: 'Deelnames' },
+  { id: 'nieuwkomers', label: 'Nieuwkomers' },
+];
+
+const positionClass = (position: number) =>
+  cx(
+    'inline-flex h-5 w-5 items-center justify-center rounded-full text-2xs font-bold tabular-nums',
+    position === 1 ? 'bg-amber-400 text-amber-950' : position === 2 ? 'bg-zinc-300 text-zinc-800' : position === 3 ? 'bg-orange-300 text-orange-950' : 'text-zinc-500',
+  );
+
+/** Eenvoudig klassement: positie, speler, één waarde (en optioneel een detail). */
+function LeaderTable({ rows, name, valueLabel, detail }: { rows: Array<{ playerId: string; position: number; value: ReactNode; detail?: ReactNode }>; name: (id: string) => string; valueLabel: string; detail?: string }) {
+  if (rows.length === 0) return <Empty>Nog niets in dit klassement.</Empty>;
+  return (
+    <div className="overflow-hidden rounded-lg border border-zinc-200/80 bg-white shadow-xs">
+      <table className="w-full text-[13px]">
+        <thead className="border-b border-zinc-100 bg-zinc-50/80 text-2xs text-zinc-500">
+          <tr>
+            <th className="w-10 py-1.5 text-center font-medium">#</th>
+            <th className="py-1.5 text-left font-medium">Speler</th>
+            {detail && <th className="w-24 text-right font-medium">{detail}</th>}
+            <th className="w-16 pr-3 text-right font-medium">{valueLabel}</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((r) => (
+            <tr key={r.playerId} className="border-t border-zinc-100 first:border-t-0 hover:bg-zinc-50">
+              <td className="py-1.5 text-center">
+                <span className={positionClass(r.position)}>{r.position}</span>
+              </td>
+              <td className="max-w-0 truncate py-1.5">
+                <Link to={`/spelers/${r.playerId}`} className="font-medium text-zinc-950 hover:text-brand-700">
+                  {name(r.playerId)}
+                </Link>
+              </td>
+              {detail && <td className="text-right text-2xs text-zinc-500 tabular-nums">{r.detail}</td>}
+              <td className="pr-3 text-right font-semibold text-zinc-950 tabular-nums">{r.value}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
 export function RankingPage() {
   const { seasonId } = useParams();
   const navigate = useNavigate();
+  const [params, setParams] = useSearchParams();
+  const board = (BOARDS.find((b) => b.id === params.get('klassement'))?.id ?? 'punten') as Board;
   const { data: seasons, isLoading: loadingSeasons } = useSeasons();
   const season = seasons?.find((s) => s.id === seasonId) ?? pickCurrentSeason(seasons);
   const settings = seasonSettings(season);
   const { rows, isLoading, error, data } = useSeasonRanking(season);
+  const { elo, firstSeen } = useElo();
   const directory = usePlayerDirectory();
+  const boards = useMemo(
+    () =>
+      season && data
+        ? seasonLeaderboards({
+            stats: data.stats.map((s) => ({ playerId: s.player_id, eventId: s.event_id, count180: s.count_180, highestFinish: s.highest_finish })),
+            participations: data.results.map((r) => ({ playerId: r.player_id, eventId: r.event_id })),
+            ranking: rows,
+            firstSeen,
+            seasonStart: season.starts_on,
+            seasonEnd: season.ends_on,
+          })
+        : null,
+    [season, data, rows, firstSeen],
+  );
   if (loadingSeasons || isLoading) return <Spinner />;
   if (error) return <ErrorBox error={error} />;
   const played = (data?.events ?? []).filter((e) => e.status === 'afgelopen').length;
+  const dateOf = new Map((data?.events ?? []).map((e) => [e.id, e.event_date]));
+
+  const eloRows = elo
+    ? [...elo.ratings.entries()]
+        .filter(([p]) => directory.byId.has(p))
+        .sort((a, b) => b[1] - a[1])
+        .map(([playerId, rating], i) => ({
+          playerId,
+          position: i + 1,
+          value: Math.round(rating),
+          detail: `${(elo.matches.get(playerId) ?? 0) < settings.elo.newcomerMatches ? 'voorlopig · ' : ''}${elo.matches.get(playerId) ?? 0}`,
+        }))
+    : [];
+
   return (
     <div>
       <PageTitle
         sub={
-          settings.bestOf.enabled
-            ? `De beste ${settings.bestOf.count} van ${settings.bestOf.of} avonden tellen mee · ${played} avond${played === 1 ? '' : 'en'} gespeeld`
-            : `Alle avonden tellen mee · ${played} gespeeld`
+          board === 'elo'
+            ? 'Niveau over alle avonden en seizoenen heen; gebruikt voor de loting.'
+            : settings.bestOf.enabled
+              ? `De beste ${settings.bestOf.count} van ${settings.bestOf.of} avonden tellen mee · ${played} avond${played === 1 ? '' : 'en'} gespeeld`
+              : `Alle avonden tellen mee · ${played} gespeeld`
         }
-        actions={<SeasonSelect value={season?.id} onChange={(id) => navigate(`/ranking/${id}`)} />}
+        actions={board !== 'elo' && <SeasonSelect value={season?.id} onChange={(id) => navigate(`/ranking/${id}?klassement=${board}`)} />}
       >
-        Ranking {season?.name}
+        {board === 'elo' ? 'Elo-rating' : `Ranking ${season?.name ?? ''}`}
       </PageTitle>
-      {rows.length === 0 ? (
-        <Empty>Nog geen punten in dit seizoen.</Empty>
-      ) : (
-        <div className="overflow-hidden rounded-lg border border-zinc-200/80 bg-white shadow-xs">
-          <table className="w-full text-[13px]">
-            <thead className="border-b border-zinc-100 bg-zinc-50/80 text-2xs text-zinc-500">
-              <tr>
-                <th className="w-10 py-1.5 text-center font-medium">#</th>
-                <th className="py-1.5 text-left font-medium">Speler</th>
-                <th className="w-12 text-center font-medium">Ptn</th>
-                <th className="w-12 text-center font-medium">Av.</th>
-                <th className="hidden w-14 text-center font-medium sm:table-cell">Zeges</th>
-                <th className="w-12 text-center font-medium">Beste</th>
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((r) => (
-                <tr key={r.playerId} className="border-t border-zinc-100 first:border-t-0 hover:bg-zinc-50">
-                  <td className="py-1.5 text-center">
-                    <span
-                      className={cx(
-                        'inline-flex h-5 w-5 items-center justify-center rounded-full text-2xs font-bold tabular-nums',
-                        r.position === 1 ? 'bg-amber-400 text-amber-950' : r.position === 2 ? 'bg-zinc-300 text-zinc-800' : r.position === 3 ? 'bg-orange-300 text-orange-950' : 'text-zinc-500',
-                      )}
-                    >
-                      {r.position}
-                    </span>
-                  </td>
-                  <td className="max-w-0 truncate py-1.5">
-                    <Link to={`/spelers/${r.playerId}`} className="font-medium text-zinc-950 hover:text-brand-700">
-                      {directory.name(r.playerId)}
-                    </Link>
-                    {settings.bestOf.enabled && r.total !== r.counted && <span className="ml-1 text-2xs text-zinc-400">({r.total})</span>}
-                  </td>
-                  <td className="text-center font-semibold text-zinc-950 tabular-nums">{r.counted}</td>
-                  <td className="text-center text-zinc-500 tabular-nums">{r.events}</td>
-                  <td className="hidden text-center text-zinc-500 tabular-nums sm:table-cell">{r.wins}</td>
-                  <td className="text-center text-zinc-500 tabular-nums">{r.bestPlace}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+      <Tabs
+        value={board}
+        onChange={(b) => setParams(b === 'punten' ? {} : { klassement: b }, { replace: true })}
+        tabs={BOARDS}
+      />
+
+      {board === 'punten' &&
+        (rows.length === 0 ? (
+          <Empty>Nog geen punten in dit seizoen.</Empty>
+        ) : (
+          <>
+            <div className="overflow-hidden rounded-lg border border-zinc-200/80 bg-white shadow-xs">
+              <table className="w-full text-[13px]">
+                <thead className="border-b border-zinc-100 bg-zinc-50/80 text-2xs text-zinc-500">
+                  <tr>
+                    <th className="w-10 py-1.5 text-center font-medium">#</th>
+                    <th className="py-1.5 text-left font-medium">Speler</th>
+                    <th className="w-12 text-center font-medium">Ptn</th>
+                    <th className="w-12 text-center font-medium">Av.</th>
+                    <th className="hidden w-14 text-center font-medium sm:table-cell">Zeges</th>
+                    <th className="w-12 text-center font-medium">Beste</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {rows.map((r) => (
+                    <tr key={r.playerId} className="border-t border-zinc-100 first:border-t-0 hover:bg-zinc-50">
+                      <td className="py-1.5 text-center">
+                        <span className={positionClass(r.position)}>{r.position}</span>
+                      </td>
+                      <td className="max-w-0 truncate py-1.5">
+                        <Link to={`/spelers/${r.playerId}`} className="font-medium text-zinc-950 hover:text-brand-700">
+                          {directory.name(r.playerId)}
+                        </Link>
+                        {settings.bestOf.enabled && r.total !== r.counted && <span className="ml-1 text-2xs text-zinc-400">({r.total})</span>}
+                      </td>
+                      <td className="text-center font-semibold text-zinc-950 tabular-nums">{r.counted}</td>
+                      <td className="text-center text-zinc-500 tabular-nums">{r.events}</td>
+                      <td className="hidden text-center text-zinc-500 tabular-nums sm:table-cell">{r.wins}</td>
+                      <td className="text-center text-zinc-500 tabular-nums">{r.bestPlace}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <p className="mt-2 text-2xs text-zinc-500">
+              Tussen haakjes: totaal van alle avonden. Bij gelijke punten: aantal overwinningen → beste resultaat → onderling resultaat → gewonnen legs → loting.
+            </p>
+          </>
+        ))}
+      {board === 'elo' && <LeaderTable rows={eloRows} name={directory.name} valueLabel="Elo" detail="Matchen" />}
+      {board === '180' && boards && <LeaderTable rows={boards.most180} name={directory.name} valueLabel="180’s" />}
+      {board === 'finish' && boards && (
+        <LeaderTable
+          rows={boards.highestFinish.map((r) => ({ ...r, detail: r.eventId && dateOf.get(r.eventId) ? formatDate(dateOf.get(r.eventId) as string) : '' }))}
+          name={directory.name}
+          valueLabel="Uitgooi"
+          detail="Avond"
+        />
       )}
-      <p className="mt-2 text-2xs text-zinc-500">
-        Tussen haakjes: totaal van alle avonden. Bij gelijke punten: aantal overwinningen → beste resultaat → onderling resultaat → gewonnen legs → loting.
-      </p>
+      {board === 'deelnames' && boards && <LeaderTable rows={boards.attendances} name={directory.name} valueLabel="Avonden" />}
+      {board === 'nieuwkomers' && boards && (
+        <>
+          <LeaderTable rows={boards.newcomers} name={directory.name} valueLabel="Ptn" />
+          <p className="mt-2 text-2xs text-zinc-500">Spelers die hun allereerste avond in dit seizoen speelden, gerangschikt op hun punten.</p>
+        </>
+      )}
     </div>
   );
 }
@@ -438,6 +552,7 @@ export function PlayerPage() {
   const { data: events } = useEvents();
   const { season } = useCurrentSeason();
   const { rows } = useSeasonRanking(season);
+  const { elo } = useElo();
   const player = directory.byId.get(playerId ?? '');
   if (isLoading || directory.isLoading) return <Spinner />;
   if (error) return <ErrorBox error={error} />;
@@ -453,11 +568,16 @@ export function PlayerPage() {
   const n180 = (data?.stats ?? []).reduce((s, x) => s + x.count_180, 0);
   const bestFinish = Math.max(0, ...(data?.stats ?? []).map((x) => x.highest_finish ?? 0));
   const rank = rows.find((r) => r.playerId === player.id);
+  const history = elo?.history.get(player.id) ?? [];
+  const rating = elo?.ratings.get(player.id);
+  const lastChange = history.length > 0 ? eloChangeForEvent(history, history[history.length - 1].eventId) : null;
+  const peak = history.length > 0 ? Math.max(...history.map((h) => h.after)) : null;
 
-  const stat = (label: string, value: string | number) => (
+  const stat = (label: string, value: string | number, sub?: string) => (
     <div className="bg-white px-1.5 py-2 text-center">
       <div className="text-base leading-5 font-semibold text-zinc-950 tabular-nums">{value}</div>
       <div className="truncate text-2xs text-zinc-500">{label}</div>
+      {sub && <div className="truncate text-2xs text-zinc-400 tabular-nums">{sub}</div>}
     </div>
   );
 
@@ -470,6 +590,7 @@ export function PlayerPage() {
           <p className="text-xs text-zinc-500">
             {player.nickname ? `“${player.nickname}” · ` : ''}
             {rank ? `#${rank.position} in ${season?.name ?? 'de ranking'}` : 'nog niet gerankt'}
+            {peak !== null && ` · Elo-piek ${Math.round(peak)}`}
           </p>
         </div>
       </div>
@@ -481,7 +602,11 @@ export function PlayerPage() {
         {stat('legs', `${legsFor}–${legsAgainst}`)}
         {stat('180’s', n180)}
         {stat('uitgooi', bestFinish || '–')}
-        {stat('ranking', rank ? `#${rank.position}` : '–')}
+        {stat(
+          'Elo',
+          rating !== undefined ? Math.round(rating) : '–',
+          lastChange !== null ? `${lastChange >= 0 ? '▲' : '▼'} ${Math.abs(Math.round(lastChange))} laatste avond` : undefined,
+        )}
       </div>
       <SectionTitle>Resultaten per avond</SectionTitle>
       {results.length === 0 ? (
