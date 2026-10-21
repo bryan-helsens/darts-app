@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { eloSeedRanks } from '../../../engine';
-import { buildEventView, PHASE_LABEL } from '../../../data/eventView';
+import { buildEventView, FORMAT_LABEL, PHASE_LABEL } from '../../../data/eventView';
 import { useEventBundle, usePlayerDirectory, useRegistrations, useScorerPin, useSeasons } from '../../../data/queries';
 import { formatLongDate } from '../../../lib/time';
 import { PlacementsTable } from '../../components/darts';
@@ -43,6 +43,9 @@ export function EveningPage() {
   if (bundle.error || !view) return <ErrorBox error={bundle.error ?? 'Speelavond niet gevonden.'} />;
 
   const { event } = view;
+  const pooled = view.format === 'poules_ab';
+  // Schema-formats hebben geen poules: enkel het schema.
+  const schemaTab = { id: 'schema' as const, label: pooled ? 'A/B-schema' : 'Schema' };
   const tabs: Array<{ id: Tab; label: string }> =
     event.status === 'gepland'
       ? [
@@ -53,16 +56,16 @@ export function EveningPage() {
         ? [
             { id: 'borden', label: 'Borden' },
             { id: 'matchen', label: 'Matchen' },
-            { id: 'poules', label: 'Poules' },
-            { id: 'schema', label: 'A/B-schema' },
+            ...(pooled ? [{ id: 'poules' as const, label: 'Poules' }] : []),
+            schemaTab,
             { id: 'afsluiten', label: 'Afsluiten' },
             { id: 'checkin', label: 'Check-in' },
           ]
         : [
             { id: 'uitslag', label: 'Uitslag' },
             { id: 'matchen', label: 'Matchen' },
-            { id: 'schema', label: 'A/B-schema' },
-            { id: 'poules', label: 'Poules' },
+            schemaTab,
+            ...(pooled ? [{ id: 'poules' as const, label: 'Poules' }] : []),
             { id: 'afsluiten', label: 'Correcties' },
           ];
   const active = tab && tabs.some((t) => t.id === tab) ? tab : tabs[0].id;
@@ -75,6 +78,7 @@ export function EveningPage() {
           <h1 className="truncate text-lg leading-tight font-semibold tracking-tight text-zinc-950">{formatLongDate(event.event_date)}</h1>
           <div className="mt-1 flex flex-wrap items-center gap-x-2.5 gap-y-1 text-xs">
             <Badge tone={event.status === 'bezig' ? 'red' : event.status === 'afgelopen' ? 'dark' : 'blue'}>{PHASE_LABEL[view.phase]}</Badge>
+            {!pooled && <Badge>{FORMAT_LABEL[view.format]}</Badge>}
             <Link to={`/avond/${event.id}`} className="inline-flex items-center gap-1 font-medium text-zinc-500 hover:text-zinc-900">
               <Icon name="globe" className="h-3.5 w-3.5" />
               Publiek

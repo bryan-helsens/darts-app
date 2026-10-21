@@ -1,5 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { expect, test, type Page } from '@playwright/test';
+import { nextWeek, playAllBoards } from './helpers';
 
 /**
  * Een volledige speelavond door de app heen, zoals een vrijwilliger hem
@@ -10,39 +11,6 @@ import { expect, test, type Page } from '@playwright/test';
 const PLAYERS = ['Arne Beke', 'Bram Claes', 'Cindy Dewitte', 'Dries Engels', 'Eva Fierens', 'Frank Goethals', 'Greet Hoste', 'Hans Ide', 'Inge Joos'];
 /** Deze speler schrijft zich vooraf online in; de rest wordt ter plaatse toegevoegd. */
 const ONLINE = 'Inge Joos';
-
-/** Datum binnen een week, zodat de online inschrijving zeker nog open is. */
-function nextWeek(): string {
-  const d = new Date(Date.now() + 7 * 24 * 3600_000);
-  return d.toISOString().slice(0, 10);
-}
-
-async function enterScore(page: Page, card: ReturnType<Page['locator']>) {
-  await card.click();
-  const dialog = page.getByRole('dialog');
-  // Speler 1 wint met het maximum, speler 2 krijgt 0 legs.
-  await dialog.locator('[data-legs-row="1"] button').last().click();
-  await dialog.locator('[data-legs-row="2"] button').first().click();
-  await dialog.getByRole('button', { name: 'Verder' }).click();
-  await dialog.getByRole('button', { name: 'Ja, opslaan' }).click();
-  await expect(dialog).toBeHidden();
-  await expect(page.getByRole('button', { name: '✓ Alles gesynchroniseerd' })).toBeVisible({ timeout: 15_000 });
-}
-
-/** Speelt alle matchen die op de borden komen tot er niets meer klaarstaat. */
-async function playAllBoards(page: Page) {
-  for (let i = 0; i < 60; i++) {
-    await page.getByRole('button', { name: 'Borden', exact: true }).click();
-    const card = page.locator('[role=button]:has-text("Bord ")').first();
-    try {
-      await card.waitFor({ timeout: 4000 });
-    } catch {
-      return;
-    }
-    await enterScore(page, card);
-  }
-  throw new Error('Te veel matchen');
-}
 
 test('een volledige speelavond', async ({ page, browser }) => {
   // Eerste account wordt admin.

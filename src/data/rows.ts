@@ -46,7 +46,7 @@ export interface EventRow {
   season_id: string;
   event_date: string;
   status: EventStatus;
-  format: 'poules_ab';
+  format: 'poules_ab' | 'double_elim' | 'single_elim_plate';
   boards: number;
   main_board: number;
   start_time: string;

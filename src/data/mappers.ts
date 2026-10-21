@@ -14,6 +14,7 @@ import {
   type ScheduleLogEntry,
   type SeedingSource,
   type TimingSettings,
+  type TournamentFormat,
 } from '../engine';
 import type { EventLogRow, EventRow, MatchRow, PoolMemberRow, PoolRow } from './rows';
 
@@ -95,6 +96,11 @@ export function acceptedLotsFromRows(rows: readonly EventLogRow[]): Set<string> 
 
 /** Toernooiconfiguratie die bij de start in events.settings.tournament bewaard wordt. */
 export interface TournamentConfig {
+  /** Format van de avond (ontbreekt bij avonden van vóór de schema-formats: poules_ab). */
+  format: TournamentFormat;
+  /** Seedvolgorde van het schema (enkel bij de schema-formats; 1e = topseed). */
+  seeds?: string[];
+  /** Poule-indeling (leeg bij de schema-formats). */
   layoutId: string;
   sizes: number[];
   advance: number;
@@ -111,10 +117,13 @@ export interface TournamentConfig {
 
 export function tournamentConfig(event: EventRow): TournamentConfig | null {
   const t = (event.settings as { tournament?: Partial<TournamentConfig> }).tournament;
-  if (!t || !t.sizes) return null;
+  if (!t || (!t.sizes && !t.format)) return null;
+  const sizes = t.sizes ?? [];
   return {
-    layoutId: t.layoutId ?? t.sizes.join('-'),
-    sizes: t.sizes,
+    format: t.format ?? event.format ?? 'poules_ab',
+    seeds: t.seeds,
+    layoutId: t.layoutId ?? sizes.join('-'),
+    sizes,
     advance: t.advance ?? 2,
     legs: { ...DEFAULT_LEGS, ...t.legs },
     timing: { ...DEFAULT_TIMING, ...t.timing },

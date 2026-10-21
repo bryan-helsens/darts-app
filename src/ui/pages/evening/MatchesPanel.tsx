@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { roundName, type Match } from '../../../engine';
+import { roundName, STAGE_NAMES, stageRoundName, type Match } from '../../../engine';
 import type { EventView } from '../../../data/eventView';
 import { usePendingScores } from '../../../data/outbox';
 import { normalizeName } from '../../../lib/names';
@@ -39,8 +39,16 @@ export function MatchesPanel({ view, name }: { view: EventView; name: NameFn }) 
     const out: Array<{ key: string; title: string; matches: Array<{ m: Match; label: string }> }> = [];
     for (const m of list) {
       const key = m.stage === 'pool' ? `pool:${m.poolId}` : m.stage;
-      const title = m.stage === 'pool' ? (view.pools.find((p) => p.id === m.poolId)?.label ?? 'Poule') : m.stage === 'barrage' ? 'Barrages' : `${m.stage}-schema`;
-      const label = m.stage === 'A' || m.stage === 'B' ? roundName(m.round, rounds.get(m.stage) ?? m.round) : m.stage === 'pool' ? `Ronde ${m.round}` : '';
+      const title = m.stage === 'pool' ? (view.pools.find((p) => p.id === m.poolId)?.label ?? 'Poule') : m.stage === 'barrage' ? 'Barrages' : STAGE_NAMES[m.stage];
+      const stageRounds = rounds.get(m.stage) ?? m.round;
+      const label =
+        m.stage === 'A' || m.stage === 'B' || m.stage === 'M'
+          ? roundName(m.round, stageRounds)
+          : m.stage === 'pool'
+            ? `Ronde ${m.round}`
+            : m.stage === 'barrage' || m.stage === 'GF'
+              ? ''
+              : stageRoundName(m.stage, m.round, stageRounds);
       if (out.at(-1)?.key !== key) out.push({ key, title, matches: [] });
       out.at(-1)?.matches.push({ m, label });
     }

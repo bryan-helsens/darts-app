@@ -1,7 +1,8 @@
 import { useQueryClient } from '@tanstack/react-query';
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { buildEventView } from '../../../data/eventView';
+import { STAGE_NAMES } from '../../../engine';
+import { buildEventView, SCHEMA_STAGES } from '../../../data/eventView';
 import { useEventBundle, usePlayerDirectory, useRegistrationCounts } from '../../../data/queries';
 import { onlineRegistrationOpen, registrationClosesAt } from '../../../data/registration';
 import { formatDate, formatLongDate, formatTime, shortTime } from '../../../lib/time';
@@ -60,11 +61,12 @@ export function TvPage() {
   const slides: Slide[] = [];
   if (live && view) {
     slides.push({ id: 'borden', title: 'Nu op de borden', body: <TvBoards view={view} name={name} /> });
-    if (view.event.knockout) {
+    if (view.format !== 'poules_ab' || view.event.knockout) {
       const liveIds = new Set((view.replay?.boards ?? []).map((b) => b.matchId).filter((x): x is string => Boolean(x)));
-      for (const stage of ['A', 'B'] as const) {
+      // De grote finale (één match) staat op het bordenscherm; geen apart scherm.
+      for (const stage of SCHEMA_STAGES[view.format].filter((s) => s !== 'GF')) {
         if (view.matches.some((m) => m.stage === stage)) {
-          slides.push({ id: 'schema', title: `${stage}-schema`, body: <TvBracket stage={stage} matches={view.matches} name={name} live={liveIds} /> });
+          slides.push({ id: 'schema', title: STAGE_NAMES[stage], body: <TvBracket stage={stage} matches={view.matches} name={name} live={liveIds} /> });
         }
       }
     } else if (view.poolStatus) {

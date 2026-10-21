@@ -5,7 +5,7 @@
  */
 
 import {
-  eventPlacements,
+  formatPlacements,
   forecastLive,
   poolPhaseStatus,
   replaySchedule,
@@ -19,7 +19,9 @@ import {
   type Pool,
   type ScheduleConfig,
   type ScheduleLogEntry,
+  type BracketStage,
   type ScheduleResult,
+  type TournamentFormat,
 } from '../engine';
 import type { EventBundle } from './api';
 import {
@@ -34,7 +36,7 @@ import {
 } from './mappers';
 import type { EventRow, MatchRow, MatchStatRow } from './rows';
 
-export type Phase = 'gepland' | 'poules' | 'barrages' | 'ko-klaar' | 'ko' | 'klaar' | 'afgelopen';
+export type Phase = 'gepland' | 'poules' | 'barrages' | 'ko-klaar' | 'ko' | 'schema' | 'klaar' | 'afgelopen';
 
 export const PHASE_LABEL: Record<Phase, string> = {
   gepland: 'Gepland',
@@ -42,12 +44,28 @@ export const PHASE_LABEL: Record<Phase, string> = {
   barrages: 'Barrages',
   'ko-klaar': 'Poules afgelopen',
   ko: 'A- en B-schema',
+  schema: 'Schema bezig',
   klaar: 'Alle matchen gespeeld',
   afgelopen: 'Afgelopen',
 };
 
+/** De schema's van een format, in volgorde van weergave. */
+export const SCHEMA_STAGES: Record<TournamentFormat, BracketStage[]> = {
+  poules_ab: ['A', 'B'],
+  double_elim: ['W', 'L', 'GF'],
+  single_elim_plate: ['M', 'P'],
+};
+
+export const FORMAT_LABEL: Record<TournamentFormat, string> = {
+  poules_ab: 'Poules + A/B-schema',
+  double_elim: 'Double elimination',
+  single_elim_plate: 'Knock-out met plate',
+};
+
 export interface EventView {
   event: EventRow;
+  /** Format van de avond (poules + A/B of een schema-format). */
+  format: TournamentFormat;
   config: TournamentConfig | null;
   matches: Match[];
   byCode: Map<string, Match>;
@@ -73,6 +91,8 @@ export interface EventView {
 export function buildEventView(bundle: EventBundle, clientNow = Date.now()): EventView {
   const { event } = bundle;
   const config = tournamentConfig(event);
+  const format: TournamentFormat = event.format ?? 'poules_ab';
+  const pooled = format === 'poules_ab';
   const matches = bundle.matches.map(matchFromRow);
   const byCode = new Map(matches.map((m) => [m.id, m]));
   const rowByCode = new Map(bundle.matches.map((r) => [r.code, r]));
@@ -103,18 +123,22 @@ export function buildEventView(bundle: EventBundle, clientNow = Date.now()): Eve
 
   if (config && event.started_at) {
     schedule = scheduleConfig(event, config);
-    poolStatus = poolPhaseStatus({
-      pools,
-      matches,
-      advance: config.advance,
-      lotSeed: event.rng_seed,
-      withdrawn,
-      acceptedLots,
-    });
-    if (event.knockout) placements = eventPlacements(matches, event.knockout);
+    if (pooled) {
+      poolStatus = poolPhaseStatus({
+        pools,
+        matches,
+        advance: config.advance,
+        lotSeed: event.rng_seed,
+        withdrawn,
+        acceptedLots,
+      });
+    }
+    if (!pooled || event.knockout) placements = formatPlacements(format, matches, event.knockout);
     if (event.status === 'bezig') {
-      if (!event.knockout) {
-        phase = !poolStatus.poolsComplete ? 'poules' : poolStatus.barrageNeeds.length > 0 || poolStatus.barragesOpen ? 'barrages' : 'ko-klaar';
+      if (!pooled) {
+        phase = placements?.complete ? 'klaar' : 'schema';
+      } else if (!event.knockout) {
+        phase = !poolStatus?.poolsComplete ? 'poules' : poolStatus.barrageNeeds.length > 0 || poolStatus.barragesOpen ? 'barrages' : 'ko-klaar';
       } else {
         phase = placements?.complete ? 'klaar' : 'ko';
       }
@@ -126,7 +150,7 @@ export function buildEventView(bundle: EventBundle, clientNow = Date.now()): Eve
         now,
         timing: config.timing,
         legs: config.legs,
-        plannedKnockout: event.knockout ? null : { sizes: config.sizes, advance: config.advance },
+        plannedKnockout: pooled && !event.knockout ? { sizes: config.sizes, advance: config.advance } : null,
       });
       scorers = suggestScorers({ matches, replay, upcoming: upcomingByBoard(live.forecast, now), withdrawn, seed: event.rng_seed });
     }
@@ -137,6 +161,7 @@ export function buildEventView(bundle: EventBundle, clientNow = Date.now()): Eve
 
   return {
     event,
+    format,
     config,
     matches,
     byCode,

@@ -1,7 +1,7 @@
 import { useMemo, useState, type ReactNode } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
-import { eloChangeForEvent, formatPlace, isFinished, seasonLeaderboards } from '../../../engine';
-import { buildEventView } from '../../../data/eventView';
+import { eloChangeForEvent, formatPlace, isFinished, seasonLeaderboards, STAGE_NAMES } from '../../../engine';
+import { buildEventView, SCHEMA_STAGES } from '../../../data/eventView';
 import { matchFromRow } from '../../../data/mappers';
 import { useEventBundle, useEvents, usePlayerData, usePlayerDirectory, useRegistrationCounts, useSeasonData, useSeasons } from '../../../data/queries';
 import { onlineRegistrationOpen } from '../../../data/registration';
@@ -179,19 +179,13 @@ export function EventPublicPage() {
   if (bundle.isLoading) return <Spinner />;
   if (!view) return <ErrorBox error={bundle.error ?? 'Speelavond niet gevonden.'} />;
   const { event } = view;
+  const pooled = view.format === 'poules_ab';
+  const schemaTab = { id: 'schema' as const, label: pooled ? 'A/B-schema' : 'Schema' };
+  const poulesTab = pooled ? [{ id: 'poules' as const, label: 'Poules' }] : [];
   const tabs: Array<{ id: PublicTab; label: string }> =
     event.status === 'bezig'
-      ? [
-          { id: 'borden', label: 'Borden' },
-          { id: 'poules', label: 'Poules' },
-          { id: 'schema', label: 'A/B-schema' },
-          { id: 'uitslagen', label: 'Laatste uitslagen' },
-        ]
-      : [
-          { id: 'eindstand', label: 'Eindstand' },
-          { id: 'schema', label: 'A/B-schema' },
-          { id: 'poules', label: 'Poules' },
-        ];
+      ? [{ id: 'borden', label: 'Borden' }, ...poulesTab, schemaTab, { id: 'uitslagen', label: 'Laatste uitslagen' }]
+      : [{ id: 'eindstand', label: 'Eindstand' }, schemaTab, ...poulesTab];
   const active = tab && tabs.some((t) => t.id === tab) ? tab : tabs[0].id;
   const name = directory.name;
   const points = new Map((bundle.data?.results ?? []).map((r) => [r.player_id, r.points]));
@@ -240,13 +234,13 @@ export function EventPublicPage() {
             </>
           )}
           {active === 'schema' &&
-            (event.knockout ? (
-              <>
-                <SectionTitle>A-schema</SectionTitle>
-                <Bracket stage="A" matches={view.matches} name={name} />
-                <SectionTitle>B-schema</SectionTitle>
-                <Bracket stage="B" matches={view.matches} name={name} />
-              </>
+            (!pooled || event.knockout ? (
+              SCHEMA_STAGES[view.format].map((stage) => (
+                <div key={stage}>
+                  <SectionTitle>{STAGE_NAMES[stage]}</SectionTitle>
+                  <Bracket stage={stage} matches={view.matches} name={name} />
+                </div>
+              ))
             ) : (
               <Empty>De A- en B-schema’s verschijnen zodra de poules gespeeld zijn.</Empty>
             ))}

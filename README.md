@@ -149,3 +149,25 @@ De lokale nabootsing (`scripts/local`) draait dezelfde migraties, RLS en functie
 - **Eindplaatsen**: A-schema eerst (gedeelde plaatsen per ronde: 3–4, 5–8, …), dan het B-schema. Bij een gedeelde plaats krijg je de punten van de hoogste plaats in dat bereik.
 - **Ranking**: beste X van Y avonden (op het totaal per avond, deelnamepunten inbegrepen). Bij gelijke stand: aantal overwinningen → beste resultaat → onderling resultaat → gewonnen legs → loting.
 - **Planning**: een speler speelt nooit op twee borden tegelijk. Wie net gespeeld heeft, krijgt liefst eerst wat rust. Borden blijven zoveel mogelijk bezet. A en B lopen tegelijk, en de A-finale wordt als laatste op het hoofdbord gespeeld (instelbaar).
+
+### Formats
+
+Bij **Starten** kies je het format van de avond. Elk format toont meteen een geschatte eindtijd.
+
+- **Poules + A/B-schema** (standaard): zoals hierboven.
+- **Double elimination**: geen poules. Wie twee keer verliest, ligt eruit.
+  - Iedereen begint in het **winnaarsschema**. Wie daar verliest, gaat naar het **verliezersschema**.
+  - De winnaars van beide schema's spelen **één grote finale**, zonder herkansing.
+  - Iedereen speelt minstens 2 matchen. In totaal zijn er 2 × spelers − 2 matchen.
+  - Byes gaan naar de topseeds.
+  - Plaatsen: winnaar en verliezer van de grote finale, dan de verliezer van de verliezersfinale, dan per ronde van het verliezersschema (gedeeld).
+  - Legs: de A-legs gelden voor het winnaarsschema en de grote finale, de B-legs voor het verliezersschema.
+  - Met meer dan 32 spelers duurt dit erg lang.
+- **Knock-out met plate**: een gewoon knock-outschema (**hoofdschema**) met een **plate** (troostschema).
+  - Zijn er byes, dan gaan alle verliezers van ronde 1 én ronde 2 naar de plate, ook wie in ronde 1 een bye had. Anders enkel de verliezers van ronde 1.
+  - Zo speelt iedereen minstens 2 matchen.
+  - In de plate krijgen de verliezers van ronde 2 eerst de byes. Niemand treft in zijn eerste plate-match de speler die hem net uitschakelde, behalve bij 5 spelers, waar dat niet anders kan.
+  - Plaatsen: eerst het hoofdschema, dan de plate.
+  - Legs: A voor het hoofdschema, B voor de plate.
+
+De seeding (Elo, ranking of willekeurig) werkt bij elk format. Barrages bestaan enkel bij poules. **Toernooi terugzetten** zet het format terug op poules + A/B.
