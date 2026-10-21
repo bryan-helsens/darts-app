@@ -9,6 +9,7 @@ import type { EventRow, SeasonRow } from '../../../data/rows';
 import { formatDate, formatLongDate, shortTime, thirdSaturday, todayInBrussels } from '../../../lib/time';
 import { Badge, Button, Card, ConfirmModal, Empty, ErrorBox, Field, Icon, InfoBox, Modal, PageTitle, SectionTitle, Select, Spinner, TextInput } from '../../components/ui';
 import { seasonSettings } from '../../hooks';
+import { SeasonExport } from './SeasonExport';
 
 export const STATUS_TONE = { gepland: 'blue', bezig: 'red', afgelopen: 'dark' } as const;
 
@@ -143,6 +144,7 @@ export function SeasonDetailPage() {
         </div>
       )}
 
+      <SeasonExport season={season} />
       {isAdmin && <SeasonSettingsForm season={season} />}
       {editingEvent && <EventForm season={season} event={editingEvent === 'new' ? null : editingEvent} onClose={() => setEditingEvent(null)} />}
     </div>

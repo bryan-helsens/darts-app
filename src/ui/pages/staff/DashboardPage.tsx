@@ -67,6 +67,19 @@ export function DashboardPage() {
       </a>
 
       {isAdmin && (
+        <Link
+          to="/beheer/logboek"
+          className="mt-3 flex items-center justify-between gap-3 rounded-lg border border-zinc-200/80 bg-white px-3 py-2.5 shadow-xs hover:bg-zinc-50"
+        >
+          <span className="min-w-0">
+            <span className="block text-[13px] font-semibold text-zinc-950">Logboek</span>
+            <span className="block truncate text-xs text-zinc-500">Wie veranderde wat: uitslagen, correcties, inschrijvingen, spelers.</span>
+          </span>
+          <Icon name="history" className="text-zinc-400" />
+        </Link>
+      )}
+
+      {isAdmin && (
         <div className="mt-3">
           <DemoDataCard />
         </div>

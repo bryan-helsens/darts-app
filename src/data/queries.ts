@@ -3,9 +3,10 @@
  * de persistente cache in App.tsx) en realtime verversen via Supabase.
  */
 
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useInfiniteQuery, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useMemo } from 'react';
 import {
+  AUDIT_PAGE,
   fetchAuditLog,
   fetchContacts,
   fetchEloMatches,
@@ -47,7 +48,15 @@ export const usePlayers = () => useQuery({ queryKey: keys.players, queryFn: fetc
 export const useRegistrationCounts = () => useQuery({ queryKey: keys.counts, queryFn: fetchRegistrationCounts });
 export const useProfiles = (enabled = true) => useQuery({ queryKey: keys.profiles, queryFn: fetchProfiles, enabled });
 export const useContacts = (enabled = true) => useQuery({ queryKey: keys.contacts, queryFn: fetchContacts, enabled });
-export const useAuditLog = (enabled = true) => useQuery({ queryKey: keys.audit, queryFn: () => fetchAuditLog(), enabled });
+/** Audit-log per pagina ("Meer laden"); `tables` beperkt tot één soort wijzigingen. */
+export const useAuditLog = (filter: string, tables: readonly string[] | undefined, enabled = true) =>
+  useInfiniteQuery({
+    queryKey: [...keys.audit, filter],
+    queryFn: ({ pageParam }) => fetchAuditLog({ before: pageParam, tables }),
+    initialPageParam: undefined as number | undefined,
+    getNextPageParam: (last) => (last.length < AUDIT_PAGE ? undefined : last[last.length - 1].id),
+    enabled,
+  });
 
 export const useEloMatches = () => useQuery({ queryKey: keys.elo, queryFn: fetchEloMatches });
 

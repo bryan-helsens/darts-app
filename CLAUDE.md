@@ -32,9 +32,9 @@ Na een wijziging aan migraties: `npm run db:bundle` (en `npm run seed` als het s
 src/engine/   Pure toernooilogica (geen React/Supabase; afgedwongen via ESLint)
 src/data/     Supabase-client, API, queries (TanStack Query), realtime, offline-outbox, eventView
 src/ui/       React-schermen (components/, layout/, pages/{public,staff,evening,print})
-src/lib/      Tijd (Europe/Brussels, dd/mm/jjjj, "19u00"), namen (dubbels zoeken)
+src/lib/      Tijd (Europe/Brussels, dd/mm/jjjj, "19u00"), namen (dubbels zoeken), CSV (`toCsv`)
 src/demo/     Demo-dataset (gedeeld door de knop "Demo-data laden" en scripts/seed)
-supabase/     migrations/ (bron van waarheid), config.toml, setup.sql (gebundeld), seed.sql, demo-cleanup.sql
+supabase/     migrations/ (bron van waarheid), config.toml, setup.sql (gebundeld), seed.sql, demo-cleanup.sql, restore-backup.sql
 scripts/      seed-generator, migratiebundel, lokale Supabase-nabootsing (scripts/local)
 tests/        engine-invarianten + matrix, PGlite-databasetests
 e2e/          Playwright
@@ -60,7 +60,8 @@ e2e/          Playwright
 - Rechten: RLS op alle tabellen. Publiek leest spelers (naam/bijnaam), avonden, poules, matchen, uitslagen. `player_contacts`, `registrations`, `event_secrets` alleen staff (`is_staff()` = admin of leider). Interne functies in schema `private` (niet via de API bereikbaar).
 - Schrijvers zonder account: `submit_score(p_event_id, p_code, p_pin, …, p_client_id)`. Idempotent via `result_client_id`; conflict bij een andere bestaande uitslag; rem na 20 foute pins per 10 minuten.
 - Eerste account wordt automatisch admin (`private.handle_new_user`); volgende accounts zijn `aanvraag` tot een admin ze goedkeurt.
-- Audit-log via triggers; `app.skip_audit` / `app.skip_advance` (transactie-lokaal) voor bulkbewerkingen (seed, samenvoegen, anonimiseren).
+- Audit-log via triggers; `app.skip_audit` / `app.skip_advance` (transactie-lokaal) voor bulkbewerkingen (seed, samenvoegen, anonimiseren). `app.actor` labelt wie zonder account schreef (`score-pin`, `online-inschrijving`).
+- Back-up terugzetten: `supabase/restore-backup.sql` (SQL Editor; enkel ontbrekende avonden, idempotent; getest in `tests/db/backup.test.ts`).
 - Matchcodes (`P1-R2-1`, `A-R1-3`, `P2-BAR-1`) zijn de engine-id's; `src/data/mappers.ts` zet rijen om.
 - Online inschrijven: `preregister(p_event_id, p_player_id | p_name, p_email, p_phone)` (anon, rem 40 pogingen per avond per 10 min via `registration_attempts`). Nieuwe namen worden spelers met `pending = true`: onzichtbaar voor anon (RLS) tot ze bij de check-in aanwezig gezet worden (trigger `registrations_confirm_player`).
 - Demo-data: `load_demo_data(jsonb)` / `remove_demo_data()` / `has_demo_data()` (admin). Alle demo-id's beginnen met `de000000-`; enkel die rijen worden geladen of verwijderd. De dataset bouwt `src/demo/demoData.ts` in de browser (zelfde bouwer als de seed).
@@ -68,7 +69,9 @@ e2e/          Playwright
 ### Data en offline (src/data)
 - `eventView.buildEventView(bundle, now)`: alles wat een avondscherm nodig heeft (fase, replay, forecast, stand, eindplaatsen, schrijver per bord).
 - `registration`: tot wanneer online inschrijven kan (`onlineRegistrationOpen`).
-- Elo: `fetchEloMatches` haalt alle gespeelde matchen op per 1000 (PostgREST-limiet); `useElo()` (src/ui/hooks.ts) rekent ze om. Bij de start bewaart `TournamentConfig` de gekozen seedingbron en een momentopname `seedRanks` (ook gebruikt voor de KO). "Nu" = max(klok, laatste servertijdstip).
+- `audit`: `describeAudit(row, ctx)` maakt van een audit-rij een Vlaamse zin (logboek `/beheer/logboek`, admin). `fetchAuditLog` pagineert met een cursor op `id` (niet `changed_at`: dat is per transactie gelijk); filters per tabel via `AUDIT_TABLES`.
+- `exports`: `rankingCsv`, `resultsCsv`, `matchesCsv` en `buildSeasonBackup` (JSON, contacten enkel voor admins). Seizoenstabellen haal je op met `fetchAll` (per 1000 rijen, met vaste volgorde): PostgREST geeft nooit meer dan 1000 rijen per verzoek.
+- Elo: `fetchEloMatches` haalt alle gespeelde matchen op (via `fetchAll`); `useElo()` (src/ui/hooks.ts) rekent ze om. Bij de start bewaart `TournamentConfig` de gekozen seedingbron en een momentopname `seedRanks` (ook gebruikt voor de KO). "Nu" = max(klok, laatste servertijdstip).
 - `outbox`: scores en check-in gaan via IndexedDB en worden met retry gesynchroniseerd. `SyncBadge` toont de status. Na een sync werkt `App.tsx` de cache meteen bij.
 - Query-cache wordt bewaard in localStorage (offline tonen); `staleTime: 0`, zodat online altijd ververst wordt.
 - Realtime: `useEventRealtime` + polling elke 30 s als vangnet.
@@ -83,6 +86,7 @@ e2e/          Playwright
 - TV-modus (`src/ui/pages/tv`): eigen donkere componenten; `TvPage` schaalt de rem mee met de schermbreedte en houdt het scherm wakker. `?toon=<scherm>` zet één scherm vast.
 - Indeling (`src/ui/layout/Layouts.tsx`): op gsm een tabbalk onderaan (zoals een app), vanaf `md` de navigatie in de kop. Matchen tonen als scorebord (`MatchLine`: twee regels, legs rechts) en in rasters van tegeltjes (`MatchTile` + `TileGrid`, 2 kolommen op gsm).
 - Scores invoeren: per speler het aantal gewonnen legs (`ScoreEntry`, rijen met `data-legs-row`). Het tabblad **Matchen** (`MatchesPanel`) laat de leider elke match achteraf invoeren of corrigeren.
+- Exports: CSV met `;`, komma als decimaalteken, UTF-8 BOM en formule-bescherming (`src/lib/csv.ts`); downloaden via `downloadFile` (`src/ui/export`).
 - Hardcodeer nergens een domein; Supabase-URL en -sleutel komen uit `VITE_SUPABASE_URL` / `VITE_SUPABASE_ANON_KEY`.
 - Privacy: publiek enkel naam en bijnaam. Contactgegevens nooit in publieke queries of logs.
 

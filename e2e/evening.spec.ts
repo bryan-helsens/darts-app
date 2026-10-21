@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import { expect, test, type Page } from '@playwright/test';
 
 /**
@@ -150,8 +151,17 @@ test('een volledige speelavond', async ({ page, browser }) => {
   await page.getByRole('button', { name: 'A/B-schema' }).click();
   await expect(page.getByText('Halve finale').first()).toBeVisible();
 
-  // KO uitspelen en afsluiten.
+  // KO uitspelen, de A-finale corrigeren (zelfde winnaar, andere score) en afsluiten.
   await playAllBoards(page);
+  await page.getByRole('button', { name: 'Matchen', exact: true }).click();
+  await page.getByRole('button', { name: /^Gespeeld/ }).click();
+  await page.getByRole('button', { name: /^Finale/ }).first().click();
+  const fix = page.getByRole('dialog');
+  await fix.getByRole('button', { name: 'Uitslag corrigeren' }).click();
+  await fix.locator('[data-legs-row="2"] button').nth(1).click();
+  await fix.getByRole('button', { name: 'Verder' }).click();
+  await fix.getByRole('button', { name: 'Ja, opslaan' }).click();
+  await expect(fix).toBeHidden();
   await page.getByRole('button', { name: 'Afsluiten', exact: true }).click();
   await page.getByRole('button', { name: 'Avond afsluiten' }).click();
   await page.getByRole('dialog').getByRole('button', { name: 'Afsluiten' }).click();
@@ -172,6 +182,27 @@ test('een volledige speelavond', async ({ page, browser }) => {
   await page.getByRole('button', { name: 'Deel de uitslag' }).click();
   const [download] = await Promise.all([page.waitForEvent('download'), page.getByRole('dialog').getByRole('button', { name: 'Downloaden' }).click()]);
   expect(download.suggestedFilename()).toMatch(/^sanapolis-darts-\d{4}-\d{2}-\d{2}\.png$/);
+
+  // Logboek: de correctie staat erin, ook met de filter op uitslagen.
+  await page.goto('/beheer/logboek');
+  await expect(page.getByText(/gecorrigeerd: \d–0 → \d–1/)).toBeVisible();
+  await page.getByRole('button', { name: 'Uitslagen', exact: true }).click();
+  await expect(page.getByText(/gecorrigeerd: \d–0 → \d–1/)).toBeVisible();
+  await expect(page.getByText(/schreef zich online in/)).toHaveCount(0);
+
+  // Export: ranking als CSV (BOM, kop + 9 spelers) en de volledige back-up.
+  await page.goto('/beheer/seizoenen');
+  await page.locator('a[href^="/beheer/seizoenen/"]').first().click();
+  const [csv] = await Promise.all([page.waitForEvent('download'), page.getByRole('button', { name: 'Ranking (CSV)' }).click()]);
+  expect(csv.suggestedFilename()).toMatch(/^sanapolis-ranking-.+\.csv$/);
+  const lines = readFileSync(await csv.path(), 'utf8').trimEnd().split('\r\n');
+  expect(lines[0]).toBe('\uFEFFPositie;Speler;Punten;Totaal (alle avonden);Avonden;Avondzeges;Beste plaats;Gewonnen legs;Gelijk na loting');
+  expect(lines).toHaveLength(10);
+  const [json] = await Promise.all([page.waitForEvent('download'), page.getByRole('button', { name: 'Volledige back-up (JSON)' }).click()]);
+  const backup = JSON.parse(readFileSync(await json.path(), 'utf8')) as { players: unknown[]; event_results: unknown[]; player_contacts: unknown[] };
+  expect(backup.players).toHaveLength(9);
+  expect(backup.event_results).toHaveLength(9);
+  expect(Array.isArray(backup.player_contacts)).toBe(true);
 });
 
 async function enterScoreOffline(scorer: Page) {

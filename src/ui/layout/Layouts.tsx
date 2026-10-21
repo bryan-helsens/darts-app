@@ -163,7 +163,13 @@ export function StaffLayout() {
     { to: '/beheer', label: 'Overzicht', icon: 'home', end: true, also: ['/beheer/avond'] },
     { to: '/beheer/spelers', label: 'Spelers', icon: 'users' },
     { to: '/beheer/seizoenen', label: 'Seizoenen', icon: 'calendar' },
-    ...(isAdmin ? [{ to: '/beheer/gebruikers', label: 'Gebruikers', icon: 'shield' } as NavItem] : []),
+    ...(isAdmin
+      ? ([
+          { to: '/beheer/gebruikers', label: 'Gebruikers', icon: 'shield' },
+          // De tabbalk op gsm is vol: het logboek staat daar op het overzicht.
+          { to: '/beheer/logboek', label: 'Logboek', icon: 'history', desktopOnly: true },
+        ] as NavItem[])
+      : []),
     { to: '/', label: 'Publieke site', short: 'Site', icon: 'globe', end: true },
   ];
   return (

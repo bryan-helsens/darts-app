@@ -19,6 +19,7 @@ import { RegisterPage } from './pages/public/RegisterPage';
 import { ScorePage } from './pages/ScorePage';
 import { SetupPage } from './pages/SetupPage';
 import { TvPage } from './pages/tv/TvPage';
+import { AuditPage } from './pages/staff/AuditPage';
 import { DashboardPage } from './pages/staff/DashboardPage';
 import { PlayersAdminPage } from './pages/staff/PlayersAdminPage';
 import { SeasonDetailPage, SeasonsPage } from './pages/staff/SeasonsPage';
@@ -73,6 +74,7 @@ const router = createBrowserRouter([
       { path: 'seizoenen', element: <SeasonsPage /> },
       { path: 'seizoenen/:seasonId', element: <SeasonDetailPage /> },
       { path: 'gebruikers', element: <UsersPage /> },
+      { path: 'logboek', element: <AuditPage /> },
       { path: 'avond/:eventId', element: <EveningPage /> },
     ],
   },
