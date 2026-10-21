@@ -96,5 +96,5 @@ e2e/          Playwright
 
 ## Fasering
 - Fase 1 (klaar): alles hierboven.
-- Fase 2 (klaar op de branch, 2a–2c gemerged): online voorinschrijving (RPC met rem), TV-modus `/tv`, schrijver-suggestie, Elo (seedingbron), extra klassementen, deelbare uitslagafbeelding, double elimination en knock-out met plate, logboek, CSV/JSON-export.
+- Fase 2 (klaar, PR #7–#10): online voorinschrijving (RPC met rem), TV-modus `/tv`, schrijver-suggestie, Elo (seedingbron), extra klassementen, deelbare uitslagafbeelding, double elimination en knock-out met plate, logboek, CSV/JSON-export.
 - Fase 3: 501-scorer per beurt, Masters, grafieken, .ics, volwaardige PWA.

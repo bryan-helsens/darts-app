@@ -73,11 +73,11 @@
   - **2a merged as PR #7** (squash `bd72bb9`): migration `20261020150000_preregistration.sql` (`players.pending`, `registration_attempts`, `preregister` RPC, confirm-on-check-in trigger), `/inschrijven/:eventId`, `src/engine/scorer.ts`, `/tv` (`src/ui/pages/tv`).
   - **2b merged as PR #8** (squash `300ed45`): `src/engine/elo.ts` (+ `SeasonSettings.elo`, `seeding`), `src/engine/leaderboards.ts`, `useElo()`, seeding Segmented in StartPanel with snapshot in TournamentConfig, ranking page tabs (Punten/Elo/180's/Uitgooi/Deelnames/Nieuwkomers), Elo on the player profile, share image `src/ui/share/*`. No DB changes.
   - **2c merged as PR #9** (squash `36fb8a4`, no migration): logbook `/beheer/logboek` (admin; `src/data/audit.ts` `describeAudit`, paged `useAuditLog` with an `id` cursor because `changed_at` is equal within one transaction), "Exporteren" block on the season page (`src/data/exports.ts`: ranking/results/matches CSV + `buildSeasonBackup` JSON; `src/lib/csv.ts` with `;`, decimal comma, BOM, formula guard), `supabase/restore-backup.sql` (SQL Editor restore, only missing events, idempotent; `tests/db/backup.test.ts`). Generic `fetchAll` pagination now also used by `fetchSeasonData` (a full season can exceed 1000 matches).
-  - **2d done on the branch** (two commits: engine `8c43a9d`, then migration + UI):
+  - **2d merged as PR #10** (squash `7a6d497`; migration `20261021100000_formats.sql` deploys to production on merge):
     - engine: `src/engine/elimination.ts` (`resolveBracket` on a symbolic 2^k grid; DE with reversed drop-in in odd drop-in rounds, 2n−2 matches; plate with R1+R2 losers when there are byes, R2 losers get plate byes first, rematch-free first plate match except n=5), `isEventFinal`, chain priority in the scheduler (A/B unchanged: `seed.sql` byte-identical), `eliminationPlacements`/`formatPlacements`, `estimateBracketPlan`/`suggestBracketAdjustments`, `simulateBracketEvening`, format matrix tests;
     - DB: migration `20261021100000_formats.sql` (CHECKs widened, `start_tournament` reads `p_config.format`, `private.require_format` guards, reset → `poules_ab`), `tests/db/formats.test.ts`;
     - UI: format choice in StartPanel (estimated end per format, summary, legs labels per format, warning for DE > 32), tabs without Poules, generic `Bracket` via `bracketLayout`, TV/print/public follow, `e2e/formats.spec.ts` (DE with 6 players) and shared `e2e/helpers.ts`.
-- **Next:** PR for 2d (the user decides one PR with both commits or the planned split). Phase 2 is then complete; phase 3 next (501 scorer, Masters, charts, .ics, PWA).
+- **Phase 2 is complete** (PRs #7–#10). **Next:** phase 3 (501 scorer per visit, Masters, charts, .ics, full PWA) when Bryan asks.
 
 ## 4. Phase backlog
 
@@ -133,3 +133,4 @@
 - 2026-10-20: second, more compact and modern redesign (design system v2, bottom tab bar, scoreboard tiles) merged as PR #6 (squash `7bdc7f0`); no database changes.
 - 2026-10-21: phase 2b merged as PR #8 (squash `300ed45`); phase 2c (logbook, CSV/JSON export, restore script) built on the branch.
 - 2026-10-21: phase 2c merged as PR #9 (squash `36fb8a4`); phase 2d (double elimination, knock-out with plate) built on the branch.
+- 2026-10-21: phase 2d merged as PR #10 (squash `7a6d497`, formats migration); phase 2 complete.
