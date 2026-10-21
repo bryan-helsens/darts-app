@@ -24,6 +24,7 @@ import { DashboardPage } from './pages/staff/DashboardPage';
 import { PlayersAdminPage } from './pages/staff/PlayersAdminPage';
 import { SeasonDetailPage, SeasonsPage } from './pages/staff/SeasonsPage';
 import { UsersPage } from './pages/staff/UsersPage';
+import { UpdateBanner } from './pwa/UpdateBanner';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -143,6 +144,7 @@ export function App() {
       <AuthProvider>
         <OutboxRefresher />
         <RouterProvider router={router} />
+        <UpdateBanner />
       </AuthProvider>
     </PersistQueryClientProvider>
   );

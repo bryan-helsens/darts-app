@@ -18,3 +18,4 @@ export * from './simulate';
 export * from './scorer';
 export * from './elo';
 export * from './leaderboards';
+export * from './progress';

@@ -77,7 +77,17 @@
     - engine: `src/engine/elimination.ts` (`resolveBracket` on a symbolic 2^k grid; DE with reversed drop-in in odd drop-in rounds, 2n−2 matches; plate with R1+R2 losers when there are byes, R2 losers get plate byes first, rematch-free first plate match except n=5), `isEventFinal`, chain priority in the scheduler (A/B unchanged: `seed.sql` byte-identical), `eliminationPlacements`/`formatPlacements`, `estimateBracketPlan`/`suggestBracketAdjustments`, `simulateBracketEvening`, format matrix tests;
     - DB: migration `20261021100000_formats.sql` (CHECKs widened, `start_tournament` reads `p_config.format`, `private.require_format` guards, reset → `poules_ab`), `tests/db/formats.test.ts`;
     - UI: format choice in StartPanel (estimated end per format, summary, legs labels per format, warning for DE > 32), tabs without Poules, generic `Bracket` via `bracketLayout`, TV/print/public follow, `e2e/formats.spec.ts` (DE with 6 players) and shared `e2e/helpers.ts`.
-- **Phase 2 is complete** (PRs #7–#10). **Next:** phase 3 (501 scorer per visit, Masters, charts, .ics, full PWA) when Bryan asks.
+- **Phase 2 is complete** (PRs #7–#10).
+- **Phase 3 plan** (answers from Bryan, 2026-10-21):
+  - 501 scorer: optional per match ("Snel" vs "501 per beurt", season default `quick`). The phone keeps the running leg in IndexedDB and syncs after every leg through the outbox, as a cumulative snapshot via a new RPC `submit_legs`. There is a new table `match_legs`, and `match_stats` gains darts/points columns.
+  - Average as pool tiebreak: only when all of a player's pool matches were scored per visit, and only if snapshotted in the TournamentConfig.
+  - Masters: a separate evening (`events.kind`). It doesn't count for the ranking or the leaderboards, but does count for Elo. Absent players are replaced by the next in the ranking. The leader picks the format (default double elimination); off by default.
+  - Agenda: download per evening, plus a subscription feed via a Netlify function.
+  - PWA: installable with an update prompt; **no** push notifications for now.
+  - Sub-phases: **3a** PWA + .ics + charts (no migration); **3b** 501 scorer (migration `…_x01_scorer.sql`); **3c** Masters (migration `…_masters.sql`).
+  - **3a done on the branch:** PNG icons via `scripts/generate-icons.ts`, `UpdateBanner`/`InstallCard` (`src/ui/pwa`), `src/lib/ics.ts` + `src/data/calendar.ts` + `netlify/functions/kalender.mts` (rewrite `/kalender.ics` before the SPA rule), `src/engine/progress.ts` + `LineChart`/`chartGeometry` on the player page.
+  - To check after the merge: open `https://<site>/kalender.ics` on the deploy preview or live site; the function cannot run locally.
+- **Next:** PR for 3a, then 3b.
 
 ## 4. Phase backlog
 
@@ -112,7 +122,7 @@
 ## 6. Gotchas and environment notes
 
 - **Environment:** Node 22. The container has no Docker daemon (no real local Supabase) and cannot reach supabase.com. Use Chromium at `/opt/pw-browsers/chromium`; Playwright picks it up via `playwright.config.ts`. Never run `playwright install` here.
-- **Test runtimes:** `npm test` ≈ 60 s (1269 tests incl. 2 format-matrix files: 4 matrix files + PGlite DB tests). `npm run test:e2e` ≈ 30 s on a **Pixel 7 viewport** (one full evening, including an offline scorer, a correction, the logbook and the CSV/JSON export; plus a double-elimination evening in `e2e/formats.spec.ts`). E2e selectors: check-in rows via `[data-player-row]`, legs buttons via `[data-legs-row="1"] button`, pin via `[data-pin]`, sync badge via its accessible name.
+- **Test runtimes:** `npm test` ≈ 65 s (1282 tests incl. 2 format-matrix files: 4 matrix files + PGlite DB tests). `npm run test:e2e` ≈ 30 s on a **Pixel 7 viewport** (one full evening, including an offline scorer, a correction, the logbook and the CSV/JSON export; plus a double-elimination evening in `e2e/formats.spec.ts`). E2e selectors: check-in rows via `[data-player-row]`, legs buttons via `[data-legs-row="1"] button`, pin via `[data-pin]`, sync badge via its accessible name.
 - **Generated files are checked by tests.** After changing migrations, run `npm run db:bundle`. After changing the seed schema or engine output, run `npm run seed`.
 - **PGlite:** pass `parsers` per query (DATE/TIME as text, TIMESTAMPTZ → ISO, INT8 → number). Script imports from the scratchpad need absolute paths; use `.mjs`/`.mts` for top-level await.
 - **E2e lesson:** never `page.goto` right after a click that fires a request; wait for the resulting URL or state (CI is slower).
@@ -134,3 +144,4 @@
 - 2026-10-21: phase 2b merged as PR #8 (squash `300ed45`); phase 2c (logbook, CSV/JSON export, restore script) built on the branch.
 - 2026-10-21: phase 2c merged as PR #9 (squash `36fb8a4`); phase 2d (double elimination, knock-out with plate) built on the branch.
 - 2026-10-21: phase 2d merged as PR #10 (squash `7a6d497`, formats migration); phase 2 complete.
+- 2026-10-21: phase 3 planned (3a/3b/3c); 3a (PWA, .ics, charts) built on the branch.

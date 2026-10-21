@@ -35,6 +35,10 @@ test('een volledige speelavond', async ({ page, browser }) => {
   const visitorContext = await browser.newContext();
   const visitor = await visitorContext.newPage();
   await visitor.goto('/');
+  // De volgende avond als afspraak in de agenda (.ics).
+  const [ics] = await Promise.all([visitor.waitForEvent('download'), visitor.getByRole('button', { name: 'In mijn agenda' }).click()]);
+  expect(ics.suggestedFilename()).toMatch(/^sanapolis-darts-\d{4}-\d{2}-\d{2}\.ics$/);
+  expect(readFileSync(await ics.path(), 'utf8')).toContain('BEGIN:VEVENT');
   await visitor.getByRole('link', { name: 'Schrijf je in' }).click();
   await visitor.getByRole('button', { name: 'Ik ben nieuw' }).click();
   await visitor.getByLabel('Je naam').fill(ONLINE);
@@ -143,6 +147,13 @@ test('een volledige speelavond', async ({ page, browser }) => {
   // Elo-klassement: alle 9 spelers hebben nu een rating.
   await page.goto('/ranking?klassement=elo');
   await expect(page.locator('tbody tr')).toHaveCount(9);
+
+  // Spelersprofiel: verloop in de ranking en van de Elo.
+  await page.goto('/ranking');
+  await page.locator('tbody a').first().click();
+  await expect(page.getByRole('img', { name: /Plaats in de ranking/ })).toBeVisible();
+  await page.getByRole('button', { name: 'Elo', exact: true }).click();
+  await expect(page.getByRole('img', { name: 'Elo na elke avond' })).toBeVisible();
 
   // Deelbare uitslag: een PNG van de avond.
   await page.goto('/');

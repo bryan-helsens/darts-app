@@ -1,5 +1,6 @@
 import { Link, NavLink } from 'react-router-dom';
 import { formatPlace } from '../../../engine';
+import { CalendarSubscribe } from '../../components/Calendar';
 import { Card, cx, PageTitle } from '../../components/ui';
 import { seasonSettings, useCurrentSeason } from '../../hooks';
 
@@ -82,6 +83,9 @@ export function NewcomersPage() {
         <p>
           Elke avond levert punten op voor de <Link to="/ranking" className="text-brand-700 underline">seizoensranking</Link>, ook als je maar af en toe komt.
         </p>
+      </Card>
+      <Card>
+        <CalendarSubscribe />
       </Card>
     </div>
   );
