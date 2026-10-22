@@ -91,6 +91,18 @@ export const DEFAULT_ELO: EloSettings = { start: 1500, k: 32, newcomerK: 48, new
 /** Waarop de loting de sterkste spelers spreidt. */
 export type SeedingSource = 'elo' | 'ranking' | 'random';
 
+/** Scores invoeren: "quick" = enkel legs, "visits" = 501 per beurt (gemiddelden, checkouts). */
+export type ScoringMode = 'quick' | 'visits';
+
+export interface ScoringSettings {
+  /** Standaard bij een nieuwe match (de schrijver kan altijd wisselen). */
+  defaultMode: ScoringMode;
+  /** Gemiddelde als tiebreaker in de poules (enkel als alle poulematchen per beurt gescoord werden). */
+  averageTiebreak: boolean;
+}
+
+export const DEFAULT_SCORING: ScoringSettings = { defaultMode: 'quick', averageTiebreak: true };
+
 export interface SeasonSettings {
   points: PointsSettings;
   bestOf: BestOfSettings;
@@ -109,6 +121,7 @@ export interface SeasonSettings {
   elo: EloSettings;
   /** Standaard seedingbron bij de loting (per avond aan te passen). */
   seeding: SeedingSource;
+  scoring: ScoringSettings;
 }
 
 export const DEFAULT_SEASON_SETTINGS: SeasonSettings = {
@@ -124,6 +137,7 @@ export const DEFAULT_SEASON_SETTINGS: SeasonSettings = {
   endLimit: '23:15',
   elo: DEFAULT_ELO,
   seeding: 'elo',
+  scoring: DEFAULT_SCORING,
 };
 
 /** Vult ontbrekende velden aan met de standaard (handig voor oudere seizoensinstellingen). */
@@ -142,6 +156,7 @@ export function withDefaults(partial: Partial<SeasonSettings> | null | undefined
     },
     timing: { ...DEFAULT_TIMING, ...p.timing },
     elo: { ...DEFAULT_ELO, ...p.elo },
+    scoring: { ...DEFAULT_SCORING, ...p.scoring },
   };
 }
 

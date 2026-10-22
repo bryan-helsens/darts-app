@@ -120,6 +120,27 @@ export interface MatchStatRow {
   count_180: number;
   highest_finish: number | null;
   highest_score: number | null;
+  /** Enkel bij een match die per beurt gescoord werd (ontbreekt in oudere caches). */
+  darts?: number | null;
+  points?: number | null;
+}
+
+/** Eén leg van een match die per beurt gescoord werd. */
+export interface MatchLegRow {
+  match_id: string;
+  event_id: string;
+  leg_no: number;
+  starter: 1 | 2;
+  /** Punten per beurt; null = bust. */
+  scores: (number | null)[];
+  checkout_darts: 1 | 2 | 3 | null;
+  winner: 1 | 2 | null;
+  darts1: number;
+  points1: number;
+  darts2: number;
+  points2: number;
+  session_id: string | null;
+  created_at: string;
 }
 
 export type EventLogType = 'boards' | 'assign' | 'hold' | 'release' | 'withdraw' | 'lot';

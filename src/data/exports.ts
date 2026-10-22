@@ -10,6 +10,7 @@ import type {
   EventLogRow,
   EventResultRow,
   EventRow,
+  MatchLegRow,
   MatchRow,
   MatchStatRow,
   PlayerContactRow,
@@ -110,6 +111,8 @@ export interface SeasonTables {
   pool_members: PoolMemberRow[];
   matches: MatchRow[];
   match_stats: MatchStatRow[];
+  /** Beurten van de matchen die per beurt gescoord werden (ontbreekt in oudere back-ups). */
+  match_legs: MatchLegRow[];
   event_log: EventLogRow[];
   event_results: EventResultRow[];
 }

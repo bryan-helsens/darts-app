@@ -24,6 +24,7 @@ async function exportSeason(db: PGlite, seasonId: string): Promise<SeasonBackup>
     pool_members: await json(db, `select * from pool_members where ${inSeason}`, [seasonId]),
     matches: await json(db, `select * from matches where ${inSeason} order by id`, [seasonId]),
     match_stats: await json(db, `select * from match_stats where ${inSeason}`, [seasonId]),
+    match_legs: await json(db, `select * from match_legs where ${inSeason} order by match_id, leg_no`, [seasonId]),
     event_log: await json(db, `select * from event_log where ${inSeason} order by id`, [seasonId]),
     event_results: await json(db, `select * from event_results where ${inSeason}`, [seasonId]),
   };
@@ -52,6 +53,7 @@ async function snapshot(db: PGlite) {
     members: await json(db, `select * from pool_members order by 1, 3`),
     matches: await json(db, `select id, code, player1_id, player2_id, legs1, legs2, winner_id, walkover, next_code, board, finished_at from matches order by id`),
     stats: await json(db, `select * from match_stats order by 1, 3`),
+    legs: await json(db, `select match_id, event_id, leg_no, starter, scores, checkout_darts, winner, darts1, points1, darts2, points2, session_id from match_legs order by 1, 3`),
     // Per avond in de oorspronkelijke volgorde (de id's zelf worden opnieuw uitgedeeld).
     log: await json(db, `select event_id, type, payload, created_at from event_log order by event_id, id`),
     results: await json(db, `select * from event_results order by 1, 2`),

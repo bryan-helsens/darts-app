@@ -68,7 +68,7 @@ describe('exports', () => {
   });
 
   it('back-up: enkel spelers van dit seizoen, contacten enkel als ze meegegeven zijn', () => {
-    const empty: SeasonTables = { events: [], registrations: [], pools: [], pool_members: [], matches: [], match_stats: [], event_log: [], event_results: [] };
+    const empty: SeasonTables = { events: [], registrations: [], pools: [], pool_members: [], matches: [], match_stats: [], match_legs: [], event_log: [], event_results: [] };
     const tables: SeasonTables = { ...empty, event_results: [result('e1', 'b', 1)], registrations: [{ event_id: 'e1', player_id: 'a' } as SeasonTables['registrations'][number]] };
     const players = ['a', 'b', 'c'].map((id) => ({ id, name: names[id] }) as PlayerRow);
     const contacts = ['a', 'c'].map((player_id) => ({ player_id, email: `${player_id}@x.be`, phone: null, updated_at: '' }));

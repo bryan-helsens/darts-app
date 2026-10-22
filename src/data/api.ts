@@ -11,6 +11,7 @@ import type {
   EventLogRow,
   EventResultRow,
   EventRow,
+  MatchLegRow,
   MatchRow,
   MatchStatRow,
   PlayerContactRow,
@@ -126,18 +127,19 @@ export async function fetchSeasonData(seasonId: string): Promise<{ events: Event
 export async function fetchSeasonTables(seasonId: string): Promise<SeasonTables> {
   const events = await must<EventRow[]>(supabase.from('events').select('*').eq('season_id', seasonId).order('event_date'));
   const ids = events.map((e) => e.id);
-  const empty: SeasonTables = { events, registrations: [], pools: [], pool_members: [], matches: [], match_stats: [], event_log: [], event_results: [] };
+  const empty: SeasonTables = { events, registrations: [], pools: [], pool_members: [], matches: [], match_stats: [], match_legs: [], event_log: [], event_results: [] };
   if (ids.length === 0) return empty;
-  const [registrations, pools, pool_members, matches, match_stats, event_log, event_results] = await Promise.all([
+  const [registrations, pools, pool_members, matches, match_stats, match_legs, event_log, event_results] = await Promise.all([
     fetchAll<RegistrationRow>((f, t) => supabase.from('registrations').select('*').in('event_id', ids).order('event_id').order('player_id').range(f, t)),
     fetchAll<PoolRow>((f, t) => supabase.from('pools').select('*').in('event_id', ids).order('event_id').order('id').range(f, t)),
     fetchAll<PoolMemberRow>((f, t) => supabase.from('pool_members').select('*').in('event_id', ids).order('event_id').order('player_id').range(f, t)),
     fetchAll<MatchRow>((f, t) => supabase.from('matches').select('*').in('event_id', ids).order('id').range(f, t)),
     fetchAll<MatchStatRow>((f, t) => supabase.from('match_stats').select('*').in('event_id', ids).order('match_id').order('player_id').range(f, t)),
+    fetchAll<MatchLegRow>((f, t) => supabase.from('match_legs').select('*').in('event_id', ids).order('match_id').order('leg_no').range(f, t)),
     fetchAll<EventLogRow>((f, t) => supabase.from('event_log').select('*').in('event_id', ids).order('id').range(f, t)),
     fetchAll<EventResultRow>((f, t) => supabase.from('event_results').select('*').in('event_id', ids).order('event_id').order('player_id').range(f, t)),
   ]);
-  return { events, registrations, pools, pool_members, matches, match_stats, event_log, event_results };
+  return { events, registrations, pools, pool_members, matches, match_stats, match_legs, event_log, event_results };
 }
 
 export const fetchProfiles = () => must<ProfileRow[]>(supabase.from('profiles').select('*').order('created_at'));

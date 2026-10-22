@@ -12,7 +12,7 @@
 -- Veilig om opnieuw uit te voeren: wat al bestaat (zelfde id) blijft
 -- ongemoeid. Een avond die al in de database staat, wordt overgeslagen; enkel
 -- ontbrekende avonden worden volledig teruggezet (met inschrijvingen, poules,
--- matchen, statistieken, logboek en eindstand). De pincode voor schrijvers zit
+-- matchen, statistieken, beurten, logboek en eindstand). De pincode voor schrijvers zit
 -- niet in de back-up: stel ze opnieuw in bij het openen van de avond.
 
 begin;
@@ -91,10 +91,16 @@ select m.id, m.event_id, m.code, m.stage, m.round, m.position, m.pool_id, m.play
 from jsonb_populate_recordset(null::public.matches, (select j -> 'matches' from restore_backup)) m
 where m.event_id in (select id from restore_events);
 
-insert into public.match_stats (match_id, event_id, player_id, count_180, highest_finish, highest_score)
-select s.match_id, s.event_id, s.player_id, coalesce(s.count_180, 0), s.highest_finish, s.highest_score
+insert into public.match_stats (match_id, event_id, player_id, count_180, highest_finish, highest_score, darts, points)
+select s.match_id, s.event_id, s.player_id, coalesce(s.count_180, 0), s.highest_finish, s.highest_score, s.darts, s.points
 from jsonb_populate_recordset(null::public.match_stats, (select j -> 'match_stats' from restore_backup)) s
 where s.event_id in (select id from restore_events);
+
+-- Beurten per leg (501 per beurt; ontbreekt in oudere back-ups). Winnaar, darts en punten volgen opnieuw uit de beurten.
+insert into public.match_legs (match_id, event_id, leg_no, starter, scores, checkout_darts, session_id, created_at)
+select l.match_id, l.event_id, l.leg_no, l.starter, l.scores, l.checkout_darts, l.session_id, coalesce(l.created_at, now())
+from jsonb_populate_recordset(null::public.match_legs, coalesce((select j -> 'match_legs' from restore_backup), '[]'::jsonb)) l
+where l.event_id in (select id from restore_events);
 
 -- Logboek van de avond in de oorspronkelijke volgorde (de bordplanning hangt ervan af).
 insert into public.event_log (event_id, type, payload, created_by, created_at)
