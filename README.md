@@ -35,6 +35,12 @@ Webapp voor het maandelijkse dartstoernooi in **Brasserie 't Oud Sanatorium** (S
 
 **TV-scherm:** open op de tv (of een laptop aan de tv) de browser op het adres van de site met `/tv` erachter, bv. `https://…netlify.app/tv`, en tik op **Volledig scherm**. Het scherm blijft aan en wisselt om de 15 seconden. Wil je één scherm vast tonen, gebruik dan bv. `/tv?toon=borden` (of `schema`, `highlights`, `ranking`, `volgende`, `winnaars`).
 
+**Als app op je gsm:** open de site en kies op Android **Installeren** (kaartje op het beheeroverzicht en op `/score`), of op een iPhone in Safari **Deel → Zet op beginscherm**. De app opent dan zonder adresbalk, start sneller en werkt ook met slechte wifi. Is er een nieuwe versie, dan verschijnt onderaan **Nieuwe versie beschikbaar → Vernieuwen**. Ze herlaadt nooit vanzelf midden in een scoreinvoer. Enkel het TV-scherm werkt zichzelf bij.
+
+**In de agenda:** bij de volgende speelavond staat **In mijn agenda** (een .ics-bestand voor Google, Apple of Outlook). Op de pagina **Nieuw? → Alle speelavonden in je agenda** kunnen spelers zich **abonneren**: nieuwe of verplaatste avonden komen dan vanzelf in hun agenda (adres `https://<jouw-site>/kalender.ics`).
+
+**Grafieken:** op het spelersprofiel staat het **verloop**: de plaats in de ranking na elke avond en de Elo.
+
 **Geen wifi?** Werk gewoon verder. Bovenaan staat dan bv. "2 wachten op verbinding". Zodra er weer netwerk is, wordt alles automatisch verstuurd. Sluit de app gerust tussendoor: er gaat niets verloren.
 
 ---
@@ -69,6 +75,7 @@ Je hebt drie gratis accounts nodig: **GitHub** (de code), **Supabase** (de datab
    - `VITE_SUPABASE_URL` = de Project URL van hierboven
    - `VITE_SUPABASE_ANON_KEY` = de anon/public key
 4. **Deploys → Trigger deploy**. Na een minuut staat de site op `https://<naam>.netlify.app`. Een eigen domein koppelen kan later via *Domain management*; in de code staat nergens een domein.
+5. De abonneerbare kalender (`/kalender.ics`) is een kleine Netlify-functie (`netlify/functions/kalender.mts`). Ze gebruikt dezelfde twee variabelen; je hoeft niets extra in te stellen. Na een wijziging aan de variabelen: opnieuw deployen.
 
 ### 2.3 Eerste account en admins
 

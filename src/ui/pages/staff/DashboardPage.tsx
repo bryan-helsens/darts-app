@@ -4,6 +4,7 @@ import { useProfiles, useRegistrationCounts } from '../../../data/queries';
 import { formatLongDate, shortTime } from '../../../lib/time';
 import { Badge, cx, DateTile, Empty, Icon, List, LiveBadge, PageTitle, rowClass, rowHover, SectionTitle, Spinner } from '../../components/ui';
 import { useUpcoming } from '../../hooks';
+import { InstallCard } from '../../pwa/InstallCard';
 import { DemoDataCard } from './DemoDataCard';
 
 export function DashboardPage() {
@@ -52,6 +53,8 @@ export function DashboardPage() {
           Geen geplande speelavond. <Link to="/beheer/seizoenen" className="underline">Plan er een in.</Link>
         </Empty>
       )}
+
+      <InstallCard className="mt-3" />
 
       <a
         href="/tv"

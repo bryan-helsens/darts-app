@@ -9,6 +9,15 @@
 [build.environment]
   NODE_VERSION = "22"
 
+[functions]
+  directory = "netlify/functions"
+
+# Abonneerbare kalender (moet vóór de regel hieronder staan: de eerste regel die past, wint).
+[[redirects]]
+  from = "/kalender.ics"
+  to = "/.netlify/functions/kalender"
+  status = 200
+
 # Alle adressen (bv. /ranking, /beheer/avond/...) tonen de app zelf.
 [[redirects]]
   from = "/*"

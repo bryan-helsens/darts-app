@@ -1,16 +1,18 @@
 import { useMemo, useState, type ReactNode } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
-import { eloChangeForEvent, formatPlace, isFinished, seasonLeaderboards, STAGE_NAMES } from '../../../engine';
+import { eloChangeForEvent, eloProgress, formatPlace, isFinished, placementPoints, rankingProgress, seasonLeaderboards, STAGE_NAMES } from '../../../engine';
 import { buildEventView, SCHEMA_STAGES } from '../../../data/eventView';
 import { matchFromRow } from '../../../data/mappers';
 import { useEventBundle, useEvents, usePlayerData, usePlayerDirectory, useRegistrationCounts, useSeasonData, useSeasons } from '../../../data/queries';
 import { onlineRegistrationOpen } from '../../../data/registration';
 import { matchesSearch } from '../../../lib/names';
 import { formatDate, formatLongDate, formatTime, shortTime } from '../../../lib/time';
+import { AddToCalendarButton } from '../../components/Calendar';
 import { BoardsOverview, Bracket, MatchTile, PlacementsTable, PoolTable, shortTitle, TileGrid } from '../../components/darts';
+import { LineChart } from '../../components/LineChart';
 import { displayName } from '../../components/players';
 import { ShareResultButton } from '../../share/ShareResult';
-import { Badge, Button, Card, cx, DateTile, Empty, ErrorBox, Icon, List, LiveBadge, PageTitle, rowClass, rowHover, SearchInput, SectionTitle, Select, Spinner, Tabs } from '../../components/ui';
+import { Badge, Button, Card, cx, DateTile, Empty, ErrorBox, Icon, List, LiveBadge, PageTitle, rowClass, rowHover, SearchInput, SectionTitle, Segmented, Select, Spinner, Tabs } from '../../components/ui';
 import { pickCurrentSeason, seasonSettings, useCurrentSeason, useElo, useNow, useSeasonRanking, useUpcoming } from '../../hooks';
 
 const time = (t: string) => formatTime(shortTime(t));
@@ -103,11 +105,14 @@ export function HomePage() {
                 Zo werkt het
               </Link>
             </span>
-            {onlineRegistrationOpen(next, now) && (
-              <Link to={`/inschrijven/${next.id}`} className="inline-flex h-8 items-center rounded-md bg-brand-600 px-3 text-[13px] font-medium text-white hover:bg-brand-700">
-                Schrijf je in
-              </Link>
-            )}
+            <span className="flex shrink-0 items-center gap-2">
+              <AddToCalendarButton event={next} dark />
+              {onlineRegistrationOpen(next, now) && (
+                <Link to={`/inschrijven/${next.id}`} className="inline-flex h-8 items-center rounded-md bg-brand-600 px-3 text-[13px] font-medium text-white hover:bg-brand-700">
+                  Schrijf je in
+                </Link>
+              )}
+            </span>
           </div>
         </div>
       ) : (
@@ -213,11 +218,14 @@ export function EventPublicPage() {
             Deze speelavond start om {time(event.start_time)}. Inschrijven kan online of ter plaatse tot {time(event.registration_closes)}. Het schema verschijnt hier
             zodra het toernooi begint.
           </p>
-          {onlineRegistrationOpen(event, now) && (
-            <Link to={`/inschrijven/${event.id}`} className="block">
-              <Button block>Schrijf je in</Button>
-            </Link>
-          )}
+          <div className="flex flex-wrap gap-2">
+            {onlineRegistrationOpen(event, now) && (
+              <Link to={`/inschrijven/${event.id}`} className="flex-1">
+                <Button block>Schrijf je in</Button>
+              </Link>
+            )}
+            <AddToCalendarButton event={event} className="h-9" />
+          </div>
         </Card>
       ) : (
         <>
@@ -545,9 +553,30 @@ export function PlayerPage() {
   const { data, isLoading, error } = usePlayerData(playerId);
   const { data: events } = useEvents();
   const { season } = useCurrentSeason();
-  const { rows } = useSeasonRanking(season);
+  const { rows, data: seasonData } = useSeasonRanking(season);
   const { elo } = useElo();
   const player = directory.byId.get(playerId ?? '');
+  const [chart, setChart] = useState<'ranking' | 'elo'>('ranking');
+  const progress = useMemo(() => {
+    if (!player || !season || !seasonData) return [];
+    const settings = seasonSettings(season);
+    return rankingProgress(
+      {
+        events: seasonData.events.filter((e) => e.status === 'afgelopen').map((e) => ({ id: e.id, date: e.event_date })),
+        results: seasonData.results.map((r) => ({
+          eventId: r.event_id,
+          playerId: r.player_id,
+          placeFrom: r.place_from,
+          placeTo: r.place_to,
+          points: placementPoints(r.place_from, settings.points.table) + settings.points.participation,
+        })),
+        matches: seasonData.matches.map((m) => ({ eventId: m.event_id, match: matchFromRow(m) })),
+        bestOf: settings.bestOf,
+        lotSeed: season.id,
+      },
+      player.id,
+    );
+  }, [player, season, seasonData]);
   if (isLoading || directory.isLoading) return <Spinner />;
   if (error) return <ErrorBox error={error} />;
   if (!player) return <ErrorBox>Speler niet gevonden.</ErrorBox>;
@@ -566,6 +595,7 @@ export function PlayerPage() {
   const rating = elo?.ratings.get(player.id);
   const lastChange = history.length > 0 ? eloChangeForEvent(history, history[history.length - 1].eventId) : null;
   const peak = history.length > 0 ? Math.max(...history.map((h) => h.after)) : null;
+  const eloPoints = eloProgress(history);
 
   const stat = (label: string, value: string | number, sub?: string) => (
     <div className="bg-white px-1.5 py-2 text-center">
@@ -602,6 +632,36 @@ export function PlayerPage() {
           lastChange !== null ? `${lastChange >= 0 ? '▲' : '▼'} ${Math.abs(Math.round(lastChange))} laatste avond` : undefined,
         )}
       </div>
+      {(progress.length > 0 || eloPoints.length > 0) && (
+        <>
+          <SectionTitle
+            actions={
+              <Segmented
+                value={chart}
+                onChange={setChart}
+                options={[
+                  { id: 'ranking', label: 'Ranking' },
+                  { id: 'elo', label: 'Elo' },
+                ]}
+              />
+            }
+          >
+            Verloop
+          </SectionTitle>
+          {chart === 'ranking' ? (
+            progress.length > 0 ? (
+              <LineChart points={progress} invert integer format={(v) => `#${Math.round(v)}`} label={`Plaats in de ranking ${season?.name ?? ''}`} />
+            ) : (
+              <Empty>Nog geen punten in dit seizoen.</Empty>
+            )
+          ) : eloPoints.length > 0 ? (
+            <LineChart points={eloPoints} label="Elo na elke avond" />
+          ) : (
+            <Empty>Nog geen Elo.</Empty>
+          )}
+        </>
+      )}
+
       <SectionTitle>Resultaten per avond</SectionTitle>
       {results.length === 0 ? (
         <Empty>Nog geen resultaten.</Empty>

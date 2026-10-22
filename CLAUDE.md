@@ -35,7 +35,8 @@ src/ui/       React-schermen (components/, layout/, pages/{public,staff,evening,
 src/lib/      Tijd (Europe/Brussels, dd/mm/jjjj, "19u00"), namen (dubbels zoeken), CSV (`toCsv`)
 src/demo/     Demo-dataset (gedeeld door de knop "Demo-data laden" en scripts/seed)
 supabase/     migrations/ (bron van waarheid), config.toml, setup.sql (gebundeld), seed.sql, demo-cleanup.sql, restore-backup.sql
-scripts/      seed-generator, migratiebundel, lokale Supabase-nabootsing (scripts/local)
+netlify/      functions/kalender.mts: abonneerbare kalender /kalender.ics (rewrite in netlify.toml, vóór de SPA-regel)
+scripts/      seed-generator, migratiebundel, lokale Supabase-nabootsing (scripts/local), generate-icons (PWA-iconen uit favicon.svg)
 tests/        engine-invarianten + matrix, PGlite-databasetests
 e2e/          Playwright
 ```
@@ -54,6 +55,7 @@ e2e/          Playwright
 - Planning van schema's: KO-prioriteit = langste resterende keten via `next` én `loserNext` (bij A/B gelijk aan "vroegste ronde eerst"). Wijzigingen aan de planner: `seed.sql` moet byte-identiek blijven (`npm run seed` + `git diff`).
 - `elo`: Elo afgeleid uit alle gespeelde matchen (niet opgeslagen), chronologisch; per match de Elo-instellingen van haar seizoen (`SeasonSettings.elo`); walk-overs tellen niet. `eloSeedRanks` voor de loting.
 - `leaderboards`: extra klassementen (180's, hoogste uitgooi, deelnames, beste nieuwkomer).
+- `progress`: verloop voor de spelersgrafieken (`rankingProgress` = plaats na elke avond via `seasonRanking` per prefix; `eloProgress` = Elo na elke avond).
 - `scorer`: schrijver-suggestie per bord, afgeleid (niet opgeslagen): verliezer van de vorige match op dat bord, anders wie het langst vrij is; nooit wie speelt of de volgende match op dat bord heeft.
 - Alle randomness via `createRng(seed)` / `lotValue(seed, …)`; de seed per avond is `events.rng_seed`.
 
@@ -90,11 +92,14 @@ e2e/          Playwright
 - Schema's tonen: `Bracket` (licht), `TvBracket`, `PrintBracket` gebruiken allemaal `bracketLayout(stage, matches)` (`src/ui/components/bracketLayout.ts`): plaatsen per ronde, ook voor het verliezersschema; lege kolommen vallen weg.
 - Indeling (`src/ui/layout/Layouts.tsx`): op gsm een tabbalk onderaan (zoals een app), vanaf `md` de navigatie in de kop. Matchen tonen als scorebord (`MatchLine`: twee regels, legs rechts) en in rasters van tegeltjes (`MatchTile` + `TileGrid`, 2 kolommen op gsm).
 - Scores invoeren: per speler het aantal gewonnen legs (`ScoreEntry`, rijen met `data-legs-row`). Het tabblad **Matchen** (`MatchesPanel`) laat de leider elke match achteraf invoeren of corrigeren.
+- PWA (`vite.config.ts`, `src/ui/pwa`): `registerType: 'prompt'` + `UpdateBanner` (nooit vanzelf herladen, behalve op `/tv`), `InstallCard` (`beforeinstallprompt` wordt vroeg opgevangen in `install.ts`, geïmporteerd in `main.tsx`; iOS-uitleg). PNG-iconen in `public/` (opnieuw maken: `npx tsx scripts/generate-icons.ts`). De service worker laat `/kalender.ics` met rust (`navigateFallbackDenylist`).
+- Agenda: `src/lib/ics.ts` (`buildCalendar`, UTC, escapen, vouwen op 75 bytes) + `src/data/calendar.ts` (`toCalendarEvents`, zonder Supabase-client: ook gebruikt door de Netlify-functie). Knop `AddToCalendarButton`, abonnement `CalendarSubscribe` (`webcal://`).
+- Grafieken: `LineChart` (SVG, geen bibliotheek) met de pure `chartGeometry`.
 - Exports: CSV met `;`, komma als decimaalteken, UTF-8 BOM en formule-bescherming (`src/lib/csv.ts`); downloaden via `downloadFile` (`src/ui/export`).
 - Hardcodeer nergens een domein; Supabase-URL en -sleutel komen uit `VITE_SUPABASE_URL` / `VITE_SUPABASE_ANON_KEY`.
 - Privacy: publiek enkel naam en bijnaam. Contactgegevens nooit in publieke queries of logs.
 
 ## Fasering
 - Fase 1 (klaar): alles hierboven.
-- Fase 2 (klaar op de branch, 2a–2c gemerged): online voorinschrijving (RPC met rem), TV-modus `/tv`, schrijver-suggestie, Elo (seedingbron), extra klassementen, deelbare uitslagafbeelding, double elimination en knock-out met plate, logboek, CSV/JSON-export.
-- Fase 3: 501-scorer per beurt, Masters, grafieken, .ics, volwaardige PWA.
+- Fase 2 (klaar, PR #7–#10): online voorinschrijving (RPC met rem), TV-modus `/tv`, schrijver-suggestie, Elo (seedingbron), extra klassementen, deelbare uitslagafbeelding, double elimination en knock-out met plate, logboek, CSV/JSON-export.
+- Fase 3: 3a (PWA, .ics, grafieken) klaar op de branch; 3b 501-scorer per beurt; 3c Masters. Plan: zie `.claude/memory/PROJECT_MEMORY.md`.

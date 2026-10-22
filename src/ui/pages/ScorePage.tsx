@@ -12,6 +12,7 @@ import { ScoreEntry } from '../components/ScoreEntry';
 import { SyncBadge } from '../components/SyncBadge';
 import { Badge, Button, Empty, ErrorBox, InfoBox, Modal, SectionTitle, Spinner } from '../components/ui';
 import { useNow, useUpcoming } from '../hooks';
+import { InstallCard } from '../pwa/InstallCard';
 
 const pinKey = (eventId: string) => `sanapolis-darts-pin-${eventId}`;
 
@@ -92,6 +93,7 @@ function PinPad({ eventId, onOk }: { eventId: string; onOk: (pin: string) => voi
         ))}
       </div>
       {error && <div className="mt-3"><ErrorBox>{error}</ErrorBox></div>}
+      <InstallCard className="mt-4 text-left" />
     </div>
   );
 }
@@ -178,6 +180,8 @@ function ScoreBoard({ eventId, pin, onForget }: { eventId: string; pin: string |
           </div>
         )}
       </div>
+
+      <InstallCard />
 
       {pin && (
         <button type="button" className="text-2xs text-zinc-500 underline" onClick={() => {
