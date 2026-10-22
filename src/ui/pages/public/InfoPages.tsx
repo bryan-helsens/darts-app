@@ -1,8 +1,9 @@
 import { Link, NavLink } from 'react-router-dom';
 import { formatPlace } from '../../../engine';
 import { CalendarSubscribe } from '../../components/Calendar';
-import { Card, cx, PageTitle } from '../../components/ui';
+import { Card, cx, Icon, PageTitle } from '../../components/ui';
 import { seasonSettings, useCurrentSeason } from '../../hooks';
+import { pushSupport } from '../../pwa/push';
 
 /** Wisselen tussen "Zo werkt het" en "Reglement" (op gsm delen ze één tab). */
 function InfoSwitch() {
@@ -84,6 +85,22 @@ export function NewcomersPage() {
           Elke avond levert punten op voor de <Link to="/ranking" className="text-brand-700 underline">seizoensranking</Link>, ook als je maar af en toe komt.
         </p>
       </Card>
+      {pushSupport() !== 'disabled' && (
+        <Card className="space-y-1 text-[13px] leading-relaxed text-zinc-700">
+          <h2 className="flex items-center gap-1.5 text-sm font-semibold text-zinc-950">
+            <Icon name="bell" className="h-4 w-4 text-brand-600" />
+            Meldingen op je gsm
+          </h2>
+          <p>
+            Wil je een melding als je match begint, als je moet schrijven of op de dag van een speelavond? Zoek je naam bij{' '}
+            <Link to="/spelers" className="text-brand-700 underline">
+              Spelers
+            </Link>{' '}
+            en tik op <b>Meldingen aanzetten</b>. Dat doe je één keer, daarna werkt het voor alle avonden.
+          </p>
+          <p className="text-xs text-zinc-500">Op een iPhone: zet eerst de app op je beginscherm (Safari → Deel → Zet op beginscherm) en open ze van daaruit.</p>
+        </Card>
+      )}
       <Card>
         <CalendarSubscribe />
       </Card>

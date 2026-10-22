@@ -24,6 +24,7 @@ import { AveragesTable, BoardsOverview, Bracket, MastersBadge, MatchTile, Placem
 import { HeadToHead } from '../../components/HeadToHead';
 import { LineChart } from '../../components/LineChart';
 import { displayName } from '../../components/players';
+import { PushCard } from '../../pwa/PushCard';
 import { ShareResultButton } from '../../share/ShareResult';
 import { Badge, Button, Card, cx, DateTile, Empty, ErrorBox, Icon, List, LiveBadge, PageTitle, rowClass, rowHover, SearchInput, SectionTitle, Segmented, Select, Spinner, Tabs } from '../../components/ui';
 import { pickCurrentSeason, seasonSettings, useCurrentSeason, useElo, useNow, useSeasonRanking, useSeasonX01, useUpcoming } from '../../hooks';
@@ -761,6 +762,7 @@ export function PlayerPage() {
           lastChange !== null ? `${lastChange >= 0 ? '▲' : '▼'} ${Math.abs(Math.round(lastChange))} laatste avond` : undefined,
         )}
       </div>
+      <PushCard player={player} name={directory.name} className="mt-3" />
       {(progress.length > 0 || eloPoints.length > 0 || averagePoints.length > 0) && (
         <>
           <SectionTitle

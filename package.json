@@ -13,6 +13,7 @@
     "test:watch": "vitest",
     "seed": "tsx scripts/generate-seed.ts",
     "db:bundle": "tsx scripts/bundle-migrations.ts",
+    "vapid": "tsx scripts/vapid.ts",
     "local:supabase": "tsx scripts/local-supabase.ts",
     "dev:local": "VITE_SUPABASE_URL=http://localhost:54321 VITE_SUPABASE_ANON_KEY=lokaal vite",
     "test:e2e": "playwright test"
@@ -26,7 +27,8 @@
     "idb-keyval": "^6.3.0",
     "react": "^19.3.1",
     "react-dom": "^19.3.1",
-    "react-router-dom": "^7.18.4"
+    "react-router-dom": "^7.18.4",
+    "web-push": "^3.6.7"
   },
   "devDependencies": {
     "@electric-sql/pglite": "^0.5.10",
@@ -36,6 +38,7 @@
     "@types/node": "^26.6.5",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
+    "@types/web-push": "^3.6.4",
     "@vitejs/plugin-react": "^6.1.2",
     "eslint": "^10.13.0",
     "eslint-plugin-react-hooks": "^7.1.1",

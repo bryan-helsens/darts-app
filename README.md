@@ -57,6 +57,8 @@ De gsm bewaart de lopende match zelf: herladen, de batterij of geen wifi kosten 
 
 **Onderlinge duels:** op elk spelersprofiel staat per tegenstander hoe vaak je won en verloor (en de legs). Tik op een tegenstander voor alle matchen tegen die speler.
 
+**Meldingen op je gsm:** een speler opent zijn eigen spelersprofiel (Spelers → naam) en tikt op **Meldingen aanzetten**. Dat is één keer, daarna werkt het voor alle avonden. Hij krijgt dan een melding als zijn match begint (met het bord), als zijn match eraan komt, als hij moet schrijven, en om 12u00 op de dag van een speelavond. Per soort kan hij ze aan- of uitvinken. Een gsm krijgt meldingen voor één speler. Op een iPhone moet de app eerst op het beginscherm staan (Safari → Deel → Zet op beginscherm) en vanaf daar geopend worden. Eenmalig in te stellen door de beheerder: zie 2.5.
+
 **501-statistieken per seizoen:** wie per beurt scoort, krijgt op het spelersprofiel een blok *501 per beurt* (gemiddelde, eerste 9, beste leg, hoogste uitgooi, 100+, 140+, 180's) en op de rankingpagina staat het klassement **Gemiddelde**.
 
 **Masters-tussenstand:** staat de Masters aan, dan toont de ranking (en de tv) een lijn onder de top 16: wie erboven staat, plaatst zich.
@@ -116,6 +118,19 @@ Een gratis Supabase-project wordt **gepauzeerd na 7 dagen zonder activiteit**. I
 
 Toch gepauzeerd? Log in op supabase.com en klik op **Restore project**. Je gegevens blijven bewaard.
 
+### 2.5 Pushmeldingen (optioneel)
+
+De meldingen verstuurt een kleine Netlify-functie (`netlify/functions/meldingen.mts`) die elke minuut kijkt wat er te melden is. Zolang de vier variabelen hieronder ontbreken, doet ze niets en verschijnt de knop **Meldingen aanzetten** niet in de app.
+
+1. Maak één keer een sleutelpaar: `npm run vapid` (of vraag het aan een technische helper). Je krijgt twee regels: `VITE_VAPID_PUBLIC_KEY=…` en `VAPID_PRIVATE_KEY=…`.
+2. Netlify → **Site configuration → Environment variables** → voeg toe:
+   - `VITE_VAPID_PUBLIC_KEY` = de publieke sleutel (die mag iedereen zien);
+   - `VAPID_PRIVATE_KEY` = de privésleutel: vink *Contains secret values* aan en kies als scope enkel **Functions**;
+   - `SUPABASE_SERVICE_ROLE_KEY` = dezelfde geheime sleutel als voor de back-up (Supabase → *Project Settings → API Keys*), ook als geheim en enkel voor **Functions**. Zet hem nooit in een variabele die met `VITE_` begint: die komen in de app terecht.
+3. **Deploys → Trigger deploy**. Onder *Logs → Functions → meldingen* zie je elke minuut een kort verslag.
+
+Maak geen nieuw sleutelpaar zonder reden: dan moet iedereen de meldingen opnieuw aanzetten. De functie draait enkel op de gepubliceerde site, niet op de voorbeeldversies van een pull request.
+
 ---
 
 ## 3. Beheer en onderhoud
@@ -131,7 +146,7 @@ Toch gepauzeerd? Log in op supabase.com en klik op **Restore project**. Je gegev
 - **Exporteren**: Beheer → Seizoenen → seizoen → *Exporteren*. **Ranking**, **Uitslagen per avond** en **Matchen** als CSV openen meteen in Excel (Belgische instellingen: `;` en komma's). Handig voor een prijsuitreiking of eigen statistieken.
 - **Automatische back-up (elke nacht)**: GitHub maakt elke nacht een volledige back-up van alle seizoenen, versleuteld met een wachtwoord, en bewaart die 90 dagen. Eén keer instellen: GitHub → *Settings → Secrets and variables → Actions → New repository secret*:
   - `SUPABASE_URL`: dezelfde als voor *Supabase wakker houden*;
-  - `SUPABASE_SERVICE_ROLE_KEY`: Supabase → *Project Settings → API Keys* → de geheime sleutel (*service_role* of *secret*). Deze sleutel geeft volledige toegang: zet hem **enkel** hier, nooit in Netlify of in de app;
+  - `SUPABASE_SERVICE_ROLE_KEY`: Supabase → *Project Settings → API Keys* → de geheime sleutel (*service_role* of *secret*). Deze sleutel geeft volledige toegang: zet hem enkel hier en (voor de pushmeldingen, 2.5) als geheim in Netlify, **nooit** in de app of in een `VITE_`-variabele;
   - `BACKUP_PASSWORD`: kies zelf een lang wachtwoord en bewaar het goed (bv. in een wachtwoordmanager). Zonder dat wachtwoord is de back-up onbruikbaar.
 
   Test het meteen via GitHub → *Actions → Nachtelijke back-up → Run workflow*. **Een back-up ophalen:** open de laatste run en download onder *Artifacts* het bestand *sanapolis-backup-jjjj-mm-dd*. Pak het zip-bestand uit en open het `.7z`-bestand met [7-Zip](https://www.7-zip.org) (Windows) of Keka (Mac), met het wachtwoord. Je krijgt per seizoen een JSON-bestand (terug te zetten zoals hieronder) en `alle-spelers.json`. De repository is publiek, maar zonder het wachtwoord kan niemand de back-up openen.
@@ -175,6 +190,8 @@ De lokale nabootsing (`scripts/local`) draait dezelfde migraties, RLS en functie
 | Een pouleuitslag was fout, maar de KO-schema's zijn al gemaakt | Zolang er nog geen KO-match gespeeld is: Poules → *KO-schema's weer verwijderen*, corrigeer en maak ze opnieuw. |
 | Alles is mislopen bij de start | Afsluiten → *Gevarenzone* → *Toernooi terugzetten* (de check-in blijft bewaard). |
 | De database reageert niet | Het Supabase-project staat waarschijnlijk op pauze: supabase.com → *Restore project*. |
+| Geen knop "Meldingen aanzetten" | `VITE_VAPID_PUBLIC_KEY` ontbreekt op Netlify (zie 2.5), of de browser kan geen meldingen. Op een iPhone: eerst de app op het beginscherm zetten en van daaruit openen. |
+| Meldingen aangezet, maar er komt niets | Netlify → *Logs → Functions → meldingen*: staat er "nog niet ingesteld", dan ontbreekt een van de variabelen uit 2.5. Kijk ook of meldingen voor de app/browser aanstaan in de instellingen van de gsm. |
 
 ---
 

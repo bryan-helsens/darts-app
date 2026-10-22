@@ -8,6 +8,7 @@ import type { PlayerRow } from '../../../data/rows';
 import { findSimilar, matchesSearch } from '../../../lib/names';
 import { formatLongDate, formatTime, shortTime } from '../../../lib/time';
 import { displayName } from '../../components/players';
+import { PushCard } from '../../pwa/PushCard';
 import { Button, Card, ConfirmModal, cx, DateTile, Empty, ErrorBox, Field, Icon, InfoBox, List, rowClass, rowHover, SearchInput, Spinner, TextInput } from '../../components/ui';
 import { seasonSettings, useCurrentSeason, useNow } from '../../hooks';
 
@@ -46,6 +47,8 @@ export function RegisterPage() {
   const now = useNow(30_000);
   const qc = useQueryClient();
   const [done, setDone] = useState<string | null>(() => remembered(eventId));
+  // Wie zich net inschreef (voor de meldingen; nieuwe spelers zijn pas na de check-in zichtbaar).
+  const [doneId, setDoneId] = useState<string | null>(null);
   const [mode, setMode] = useState<'search' | 'new'>('search');
   const [query, setQuery] = useState('');
   const [picked, setPicked] = useState<PlayerRow | null>(null);
@@ -68,6 +71,7 @@ export function RegisterPage() {
       if (res.status === 'ok' || res.status === 'already') {
         remember(eventId, label);
         setDone(label);
+        setDoneId(res.player_id ?? null);
         setPicked(null);
         await qc.invalidateQueries({ queryKey: keys.counts });
       }
@@ -102,6 +106,7 @@ export function RegisterPage() {
   );
 
   if (done) {
+    const known = doneId ? directory.byId.get(doneId) : undefined;
     return (
       <div className="mx-auto max-w-md">
         {header}
@@ -118,6 +123,7 @@ export function RegisterPage() {
             {settings.entryFee} te betalen. Om {formatTime(shortTime(event.start_time))} wordt er geloot.
           </p>
         </div>
+        {known && <PushCard player={known} name={directory.name} className="mt-3" />}
         <div className="mt-3 flex flex-wrap gap-2">
           <Link to="/">
             <Button variant="secondary" size="sm">
@@ -131,6 +137,7 @@ export function RegisterPage() {
               onClick={() => {
                 remember(eventId, null);
                 setDone(null);
+                setDoneId(null);
                 setMode('search');
                 setQuery('');
                 setName('');

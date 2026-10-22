@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { nextWeek, playAllBoards, signInAsOrganizer } from './helpers';
+import { ensureDemoData, nextWeek, playAllBoards, signInAsOrganizer } from './helpers';
 
 /**
  * Masters met de demo-data (25 spelers in de ranking): aanzetten in de
@@ -12,13 +12,7 @@ const DEMO_SEASON = 'de000000-0000-4000-8002-000000000001';
 
 test('Masters met een vervanger', async ({ page }) => {
   await signInAsOrganizer(page);
-  await expect(page.getByRole('button', { name: /^Demo-data (laden|verwijderen)$/ })).toBeVisible({ timeout: 15_000 });
-  const load = page.getByRole('button', { name: 'Demo-data laden' });
-  if (await load.isVisible()) {
-    await load.click();
-    await page.getByRole('dialog').getByRole('button', { name: 'Laden' }).click();
-    await expect(page.getByRole('button', { name: 'Demo-data verwijderen' })).toBeVisible({ timeout: 30_000 });
-  }
+  await ensureDemoData(page);
 
   // De ranking vóór de Masters.
   await page.goto(`/ranking/${DEMO_SEASON}`);

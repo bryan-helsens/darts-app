@@ -24,6 +24,7 @@ import { DashboardPage } from './pages/staff/DashboardPage';
 import { PlayersAdminPage } from './pages/staff/PlayersAdminPage';
 import { SeasonDetailPage, SeasonsPage } from './pages/staff/SeasonsPage';
 import { UsersPage } from './pages/staff/UsersPage';
+import { onPushNavigate } from './pwa/push';
 import { UpdateBanner } from './pwa/UpdateBanner';
 
 const queryClient = new QueryClient({
@@ -83,6 +84,9 @@ const router = createBrowserRouter([
   { path: '/tv', element: <TvPage /> },
   { path: '*', element: <Navigate to="/" replace /> },
 ]);
+
+// Tik op een pushmelding terwijl de app open is: naar die pagina gaan.
+onPushNavigate((path) => void router.navigate(path));
 
 /**
  * Na elke gesynchroniseerde wijziging: de cache meteen bijwerken (zodat het

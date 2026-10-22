@@ -54,3 +54,14 @@ export async function signInAsOrganizer(page: Page) {
   await page.locator('form').getByRole('button', { name: 'Account aanvragen' }).click();
   await expect(page).toHaveURL(/\/beheer$/, { timeout: 15_000 });
 }
+
+/** Demo-data laden (als organisator op /beheer), tenzij ze er al is. */
+export async function ensureDemoData(page: Page) {
+  await expect(page.getByRole('button', { name: /^Demo-data (laden|verwijderen)$/ })).toBeVisible({ timeout: 15_000 });
+  const load = page.getByRole('button', { name: 'Demo-data laden' });
+  if (await load.isVisible()) {
+    await load.click();
+    await page.getByRole('dialog').getByRole('button', { name: 'Laden' }).click();
+    await expect(page.getByRole('button', { name: 'Demo-data verwijderen' })).toBeVisible({ timeout: 30_000 });
+  }
+}
