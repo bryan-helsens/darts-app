@@ -12,6 +12,7 @@ import type {
   EventResultRow,
   EventRow,
   MatchLegRow,
+  MatchLegSummary,
   MatchRow,
   MatchStatRow,
   PlayerContactRow,
@@ -22,6 +23,7 @@ import type {
   RegistrationRow,
   Role,
   SeasonRow,
+  SubmitLegsResult,
   SubmitScoreResult,
 } from './rows';
 
@@ -88,21 +90,30 @@ export interface EventBundle {
   matches: MatchRow[];
   log: EventLogRow[];
   stats: MatchStatRow[];
+  /** Legs van matchen die per beurt gescoord worden (ontbreekt in oudere caches). */
+  legs?: MatchLegSummary[];
   results: EventResultRow[];
 }
 
 export async function fetchEventBundle(eventId: string): Promise<EventBundle> {
-  const [event, pools, members, matches, log, stats, results] = await Promise.all([
+  const [event, pools, members, matches, log, stats, legs, results] = await Promise.all([
     must<EventRow>(supabase.from('events').select('*').eq('id', eventId).single()),
     must<PoolRow[]>(supabase.from('pools').select('*').eq('event_id', eventId)),
     must<PoolMemberRow[]>(supabase.from('pool_members').select('*').eq('event_id', eventId)),
     must<MatchRow[]>(supabase.from('matches').select('*').eq('event_id', eventId)),
     must<EventLogRow[]>(supabase.from('event_log').select('*').eq('event_id', eventId).order('id')),
     must<MatchStatRow[]>(supabase.from('match_stats').select('*').eq('event_id', eventId)),
+    must<MatchLegSummary[]>(
+      supabase.from('match_legs').select('match_id,leg_no,winner,darts1,points1,darts2,points2').eq('event_id', eventId).order('match_id').order('leg_no'),
+    ),
     must<EventResultRow[]>(supabase.from('event_results').select('*').eq('event_id', eventId)),
   ]);
-  return { event, pools, members, matches, log, stats, results };
+  return { event, pools, members, matches, log, stats, legs, results };
 }
+
+/** Alle beurten van één match ("Beurten bekijken"). */
+export const fetchMatchLegs = (matchId: string) =>
+  must<MatchLegRow[]>(supabase.from('match_legs').select('*').eq('match_id', matchId).order('leg_no'));
 
 export const fetchRegistrations = (eventId: string) =>
   must<RegistrationRow[]>(supabase.from('registrations').select('*').eq('event_id', eventId));
@@ -255,6 +266,50 @@ export const submitScore = (s: ScoreSubmission) =>
     p_client_id: s.clientId,
     p_board: s.board,
   });
+
+/** Eén afgewerkte leg zoals submit_legs ze verwacht (null = bust). */
+export interface LegPayload {
+  leg_no: number;
+  starter: 1 | 2;
+  scores: (number | null)[];
+  checkout_darts: 1 | 2 | 3 | null;
+}
+
+/** Momentopname van een match die per beurt gescoord wordt: alle afgewerkte legs tot nu. */
+export interface LegSubmission {
+  eventId: string;
+  code: string;
+  pin: string | null;
+  player1: string;
+  player2: string;
+  legs: LegPayload[];
+  /** Legstand van deze momentopname (voor de weergave; de server rekent zelf). */
+  legs1: number;
+  legs2: number;
+  /** Laatste leg: zet ook de uitslag. */
+  final: boolean;
+  /** Toestel dat de match bijhoudt. */
+  session: string;
+  clientId: string;
+  board: number | null;
+}
+
+export const submitLegs = (s: LegSubmission) =>
+  rpc<SubmitLegsResult>('submit_legs', {
+    p_event_id: s.eventId,
+    p_code: s.code,
+    p_pin: s.pin ?? '',
+    p_player1: s.player1,
+    p_player2: s.player2,
+    p_legs: s.legs,
+    p_final: s.final,
+    p_session: s.session,
+    p_client_id: s.clientId,
+    p_board: s.board,
+  });
+
+/** Lopende beurten van een match wissen (wedstrijdleider; bv. een toestel dat uitviel). */
+export const clearMatchLegs = (matchId: string) => must(supabase.from('match_legs').delete().eq('match_id', matchId));
 
 /** Correctie door de wedstrijdleider (ook na het afsluiten van de avond). */
 export const correctScore = (eventId: string, code: string, legs1: number | null, legs2: number | null) =>

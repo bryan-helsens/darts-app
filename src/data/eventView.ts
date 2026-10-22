@@ -7,11 +7,14 @@
 import {
   formatPlacements,
   forecastLive,
+  poolAverages,
   poolPhaseStatus,
   replaySchedule,
   suggestScorers,
+  threeDartAverage,
   upcomingByBoard,
   type BracketPlacements,
+  type DartsTotals,
   type LiveForecast,
   type Match,
   type PlayerId,
@@ -85,7 +88,19 @@ export interface EventView {
   statsByMatch: Map<string, MatchStatRow[]>;
   /** Voorgestelde schrijver per bezet bord (enkel tijdens de avond). */
   scorers: Map<number, PlayerId | null>;
+  /** Legstand van lopende matchen die per beurt gescoord worden (matchcode → legs). */
+  liveLegs: Map<string, { legs1: number; legs2: number }>;
+  /** Darts en punten per gespeelde match en speler (enkel per beurt gescoord). */
+  dartsTotals: Map<string, Map<PlayerId, DartsTotals>>;
+  /** 3-dart gemiddelde per speler over de avond (enkel per beurt gescoorde matchen). */
+  averages: Map<PlayerId, PlayerAverage>;
   now: number;
+}
+
+export interface PlayerAverage extends DartsTotals {
+  average: number;
+  /** Aantal matchen dat meetelt. */
+  matches: number;
 }
 
 export function buildEventView(bundle: EventBundle, clientNow = Date.now()): EventView {
@@ -103,6 +118,7 @@ export function buildEventView(bundle: EventBundle, clientNow = Date.now()): Eve
   const scheduleLog = scheduleLogFromRows(bundle.log);
   const statsByMatch = new Map<string, MatchStatRow[]>();
   for (const s of bundle.stats) statsByMatch.set(s.match_id, [...(statsByMatch.get(s.match_id) ?? []), s]);
+  const { liveLegs, dartsTotals, averages } = x01Summary(bundle, matches);
 
   // "Nu" nooit vóór de laatst gekende servertijd (klokverschil tussen toestellen).
   const latest = Math.max(
@@ -131,6 +147,8 @@ export function buildEventView(bundle: EventBundle, clientNow = Date.now()): Eve
         lotSeed: event.rng_seed,
         withdrawn,
         acceptedLots,
+        // Enkel als dat bij de start zo ingesteld was: oudere avonden houden hun stand.
+        averages: config.scoring?.averageTiebreak ? poolAverages(matches, dartsTotals) : undefined,
       });
     }
     if (!pooled || event.knockout) placements = formatPlacements(format, matches, event.knockout);
@@ -180,6 +198,47 @@ export function buildEventView(bundle: EventBundle, clientNow = Date.now()): Eve
     activeBoards,
     statsByMatch,
     scorers,
+    liveLegs,
+    dartsTotals,
+    averages,
     now,
   };
+}
+
+/** Legstand van lopende matchen en darts/punten van gespeelde matchen (501 per beurt). */
+function x01Summary(bundle: EventBundle, matches: readonly Match[]) {
+  const codeById = new Map(bundle.matches.map((r) => [r.id, r.code]));
+  const byCode = new Map(matches.map((m) => [m.id, m]));
+
+  const liveLegs = new Map<string, { legs1: number; legs2: number }>();
+  for (const l of bundle.legs ?? []) {
+    const code = codeById.get(l.match_id);
+    const m = code ? byCode.get(code) : undefined;
+    if (!code || !m || m.winner !== null || l.winner === null) continue;
+    const cur = liveLegs.get(code) ?? { legs1: 0, legs2: 0 };
+    liveLegs.set(code, l.winner === 1 ? { ...cur, legs1: cur.legs1 + 1 } : { ...cur, legs2: cur.legs2 + 1 });
+  }
+
+  const dartsTotals = new Map<string, Map<PlayerId, DartsTotals>>();
+  for (const s of bundle.stats) {
+    const code = codeById.get(s.match_id);
+    if (!code || s.darts == null || s.points == null || !byCode.get(code)?.winner) continue;
+    const perPlayer = dartsTotals.get(code) ?? new Map<PlayerId, DartsTotals>();
+    perPlayer.set(s.player_id, { darts: s.darts, points: s.points });
+    dartsTotals.set(code, perPlayer);
+  }
+
+  const sums = new Map<PlayerId, DartsTotals & { matches: number }>();
+  for (const perPlayer of dartsTotals.values()) {
+    for (const [p, t] of perPlayer) {
+      const acc = sums.get(p) ?? { darts: 0, points: 0, matches: 0 };
+      sums.set(p, { darts: acc.darts + t.darts, points: acc.points + t.points, matches: acc.matches + 1 });
+    }
+  }
+  const averages = new Map<PlayerId, PlayerAverage>();
+  for (const [p, t] of sums) {
+    const average = threeDartAverage(t);
+    if (average !== null) averages.set(p, { ...t, average });
+  }
+  return { liveLegs, dartsTotals, averages };
 }

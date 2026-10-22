@@ -83,7 +83,7 @@ export function MatchModal({ view, match, board, name, onClose }: { view: EventV
       {mode === 'view' && (
         <div className="space-y-3">
           <div className="rounded-lg bg-zinc-50 px-3 py-2.5">
-            <MatchLine m={match} name={name} pending={pending ? { legs1: pending.data.legs1, legs2: pending.data.legs2 } : undefined} />
+            <MatchLine m={match} name={name} pending={pending} />
           </div>
           {pending && <InfoBox tone="amber">Deze uitslag wacht nog op verbinding en wordt automatisch verstuurd.</InfoBox>}
           {statsLine(view.statsByMatch.get(view.rowByCode.get(match.id)?.id ?? ''), name) && (

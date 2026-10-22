@@ -130,7 +130,7 @@ export function BoardsPanel({ view, name, onGoTo }: { view: EventView; name: Nam
                 </>
               }
               extra={pending.has(m.id) && <Badge tone="amber">sync…</Badge>}
-              pending={pending.get(m.id)?.data}
+              pending={pending.get(m.id)}
               onClick={() => open(m)}
             />
           ))}

@@ -107,6 +107,7 @@ export function useEventRealtime(eventId: string | undefined) {
     const channel = supabase
       .channel(`event-${eventId}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'matches', filter }, refresh)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'match_legs', filter }, refresh)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'event_log', filter }, refresh)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'pools', filter }, refresh)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'registrations', filter }, refresh)

@@ -143,6 +143,9 @@ export interface MatchLegRow {
   created_at: string;
 }
 
+/** Wat een avondscherm van een leg nodig heeft (zonder de beurten zelf). */
+export type MatchLegSummary = Pick<MatchLegRow, 'match_id' | 'leg_no' | 'winner' | 'darts1' | 'points1' | 'darts2' | 'points2'>;
+
 export type EventLogType = 'boards' | 'assign' | 'hold' | 'release' | 'withdraw' | 'lot';
 
 export interface EventLogRow {
@@ -182,4 +185,9 @@ export interface SubmitScoreResult {
   duplicate?: boolean;
   legs1?: number;
   legs2?: number;
+}
+
+/** Zoals SubmitScoreResult; `stale` = de spelers van de match zijn intussen veranderd. */
+export interface SubmitLegsResult extends Omit<SubmitScoreResult, 'status'> {
+  status: SubmitScoreResult['status'] | 'stale';
 }

@@ -104,7 +104,7 @@ function OutboxRefresher() {
               { event_id: eventId, player_id: item.data.playerId, preregistered: false, present: false, paid: false, withdrawn_at: null, created_at: now, updated_at: now, ...item.data.patch },
             ];
           });
-        } else {
+        } else if (item.kind === 'score' || item.data.final) {
           const { code, legs1, legs2 } = item.data;
           queryClient.setQueryData<EventBundle>(keys.event(eventId), (bundle) =>
             bundle

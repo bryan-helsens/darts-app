@@ -7,16 +7,19 @@ import {
   DEFAULT_LEGS,
   DEFAULT_TIMING,
   MINUTE,
+  type Leg,
   type LegsSettings,
   type Match,
   type Pool,
   type ScheduleConfig,
   type ScheduleLogEntry,
+  type ScoringSettings,
   type SeedingSource,
   type TimingSettings,
   type TournamentFormat,
 } from '../engine';
-import type { EventLogRow, EventRow, MatchRow, PoolMemberRow, PoolRow } from './rows';
+import type { LegPayload } from './api';
+import type { EventLogRow, EventRow, MatchLegRow, MatchRow, PoolMemberRow, PoolRow } from './rows';
 
 export const toMs = (iso: string | null): number | null => (iso === null ? null : Date.parse(iso));
 
@@ -113,6 +116,8 @@ export interface TournamentConfig {
   seeding?: SeedingSource;
   /** Seedingrangen bij de start (momentopname, 1 = sterkste); ook gebruikt bij gelijke stand voor de KO. */
   seedRanks?: Record<string, number>;
+  /** Scoremodus en gemiddelde als tiebreak bij de start (ontbreekt bij oudere avonden: snel, geen tiebreak). */
+  scoring?: ScoringSettings;
 }
 
 export function tournamentConfig(event: EventRow): TournamentConfig | null {
@@ -132,6 +137,7 @@ export function tournamentConfig(event: EventRow): TournamentConfig | null {
     holdFinal: t.holdFinal ?? true,
     seeding: t.seeding,
     seedRanks: t.seedRanks,
+    scoring: t.scoring,
   };
 }
 
@@ -145,3 +151,14 @@ export function scheduleConfig(event: EventRow, config: TournamentConfig): Sched
     transitionMs: config.timing.transitionMinutes * MINUTE,
   };
 }
+
+// ---------- 501 per beurt ----------
+
+export const legsToPayload = (legs: readonly Leg[]): LegPayload[] =>
+  legs.map((l, i) => ({ leg_no: i + 1, starter: l.starter, scores: l.visits.map((v) => (v.bust ? null : v.score)), checkout_darts: l.checkoutDarts }));
+
+export const legFromRow = (row: Pick<MatchLegRow, 'starter' | 'scores' | 'checkout_darts'>): Leg => ({
+  starter: row.starter,
+  visits: row.scores.map((score) => (score === null ? { score: 0, bust: true } : { score, bust: false })),
+  checkoutDarts: row.checkout_darts,
+});
