@@ -23,7 +23,7 @@ export default async function kalender(req: Request): Promise<Response> {
   };
   try {
     const [events, seasons] = await Promise.all([
-      get('events?select=id,season_id,event_date,start_time,registration_closes,notes&order=event_date'),
+      get('events?select=id,season_id,event_date,start_time,registration_closes,notes,kind&order=event_date'),
       get('seasons?select=id,settings'),
     ]);
     const site = new URL(req.url).origin;

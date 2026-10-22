@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { STAGE_NAMES } from '../../../engine';
 import { buildEventView, SCHEMA_STAGES } from '../../../data/eventView';
+import { isMasters } from '../../../data/masters';
 import { useEventBundle, usePlayerDirectory, useRegistrationCounts } from '../../../data/queries';
 import { onlineRegistrationOpen, registrationClosesAt } from '../../../data/registration';
 import { formatDate, formatLongDate, formatTime, shortTime } from '../../../lib/time';
@@ -78,7 +79,7 @@ export function TvPage() {
     const host = window.location.host;
     slides.push({
       id: 'volgende',
-      title: 'Volgende speelavond',
+      title: isMasters(next) ? 'Masters · eindejaarsfinale' : 'Volgende speelavond',
       body: (
         <div className="flex h-full flex-col items-center justify-center text-center">
           <div className="scale-[2.2]">
@@ -86,7 +87,9 @@ export function TvPage() {
           </div>
           <div className="mt-12 text-6xl font-semibold tracking-tight">{formatLongDate(next.event_date)}</div>
           <div className="mt-5 text-3xl text-zinc-300">
-            Start {formatTime(shortTime(next.start_time))} · inschrijven tot {formatTime(registrationClosesAt(next))} · inleg €{settings.entryFee}
+            {isMasters(next)
+              ? `Start ${formatTime(shortTime(next.start_time))} · de top ${settings.masters.size} van de ranking`
+              : `Start ${formatTime(shortTime(next.start_time))} · inschrijven tot ${formatTime(registrationClosesAt(next))} · inleg €${settings.entryFee}`}
           </div>
           {preregistered > 0 && <div className="mt-3 text-2xl text-zinc-400">{preregistered} spelers schreven zich al in</div>}
           {onlineRegistrationOpen(next, now) && (

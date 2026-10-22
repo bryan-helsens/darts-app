@@ -41,12 +41,16 @@ export interface SeasonRow {
   created_at: string;
 }
 
+export type EventKind = 'regulier' | 'masters';
+
 export interface EventRow {
   id: string;
   season_id: string;
   event_date: string;
   status: EventStatus;
   format: 'poules_ab' | 'double_elim' | 'single_elim_plate';
+  /** Gewone speelavond of Masters (ontbreekt in oudere caches = regulier). */
+  kind?: EventKind;
   boards: number;
   main_board: number;
   start_time: string;

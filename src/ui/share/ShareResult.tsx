@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import type { EventView } from '../../data/eventView';
+import { isMasters } from '../../data/masters';
 import { formatLongDate } from '../../lib/time';
 import { Button, ErrorBox, Icon, Modal, Spinner } from '../components/ui';
 import { canvasToFile, drawResultImage, resultImageData, type ResultImageData } from './resultImage';
@@ -23,7 +24,7 @@ export function ShareResultButton({
   const fileName = `sanapolis-darts-${view.event.event_date}.png`;
   const data = view.placements
     ? resultImageData({
-        date: formatLongDate(view.event.event_date),
+        date: `${isMasters(view.event) ? 'Masters · ' : ''}${formatLongDate(view.event.event_date)}`,
         placements: view.placements.placements,
         points,
         stats: [...view.statsByMatch.values()].flat(),

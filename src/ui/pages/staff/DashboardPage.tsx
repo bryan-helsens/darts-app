@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../../data/auth';
+import { isMasters } from '../../../data/masters';
 import { useProfiles, useRegistrationCounts } from '../../../data/queries';
 import { formatLongDate, shortTime } from '../../../lib/time';
 import { Badge, cx, DateTile, Empty, Icon, List, LiveBadge, PageTitle, rowClass, rowHover, SectionTitle, Spinner } from '../../components/ui';
@@ -31,7 +32,7 @@ export function DashboardPage() {
           <div className="flex gap-3 p-3">
             <DateTile date={focus.event_date} tone="dark" />
             <div className="min-w-0 flex-1">
-              <div className="mb-0.5">{live ? <LiveBadge>Nu bezig</LiveBadge> : <span className="text-2xs font-semibold tracking-wider text-accent-500 uppercase">Volgende speelavond</span>}</div>
+              <div className="mb-0.5">{live ? <LiveBadge>Nu bezig</LiveBadge> : <span className="text-2xs font-semibold tracking-wider text-accent-500 uppercase">{isMasters(focus) ? 'Masters' : 'Volgende speelavond'}</span>}</div>
               <div className="truncate text-base leading-tight font-semibold">{formatLongDate(focus.event_date)}</div>
               <div className="mt-1 flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-zinc-400">
                 <span className="inline-flex items-center gap-1">

@@ -6,7 +6,7 @@ Webapp voor het maandelijkse dartstoernooi in **Brasserie 't Oud Sanatorium** (S
 - **Voor de tv in de zaal** (`/tv`): schermvullend en donker; wisselt automatisch tussen de borden, het schema, de highlights en de ranking.
 - **Voor de wedstrijdleider** (op de gsm): check-in en betalingen, toernooi starten met een geschatte eindtijd, borden en wachtrij, scores, A- en B-schema, avond afsluiten.
 - **Voor de schrijvers aan het bord**: scores invoeren met een pincode, ook als de wifi even wegvalt: snel (enkel de legs) of **501 per beurt** met gemiddelden en uitgooi-suggesties.
-- **Voor de admins**: spelers, seizoenen (puntentabel, beste X van Y, legs per ronde), speelavonden en gebruikers.
+- **Voor de admins**: spelers, seizoenen (puntentabel, beste X van Y, legs per ronde), speelavonden, de **Masters** (eindejaarsfinale) en gebruikers.
 
 > Deze README is geschreven voor een opvolger zonder technische achtergrond. Technische details staan in [CLAUDE.md](CLAUDE.md).
 
@@ -32,6 +32,12 @@ Webapp voor het maandelijkse dartstoernooi in **Brasserie 't Oud Sanatorium** (S
 - maakt een vergissing in de lopende leg ongedaan met ↶. Een afgesloten leg corrigeer je achteraf als wedstrijdleider (*Uitslag corrigeren*; de beurten van die match verdwijnen dan).
 
 De gsm bewaart de lopende match zelf: herladen, de batterij of geen wifi kosten niets (*Verder: …* bovenaan `/score`). Na elke leg gaat de stand naar de server (live te zien in rood bij de borden en op de tv), bij de laatste leg ook de uitslag met de gemiddelden, 180's en hoogste uitgooi. Wordt een match al op een ander toestel per beurt gescoord, dan krijgt een tweede toestel een melding; valt een toestel uit, dan kies je als wedstrijdleider bij die match **Lopende beurten wissen**. De standaard (snel of 501 per beurt) en of het **gemiddelde als tiebreak** in de poules telt, stel je in bij de seizoensinstellingen. De schrijver kan per match altijd zelf kiezen. Als wedstrijdleider kom je via een match op **Per beurt scoren (501)** in hetzelfde scherm.
+
+**Masters (eindejaarsfinale, optioneel):** zet in de seizoensinstellingen **Masters** aan en kies het aantal spelers (standaard 16). Bij de speelavonden verschijnt dan **+ Masters** (hoogstens één per seizoen). Een Masters:
+- is voor de **top van de seizoensranking**. Online inschrijven kan niet. Bij de **check-in** zie je de ranking: de geplaatsten bovenaan, de reserves eronder. Zet aanwezig wie er is. Is een geplaatste speler er niet, zet dan de eerstvolgende reserve aanwezig: de app vult het veld aan volgens de ranking (*vervanger*) en toont "8 van 8 plaatsen ingevuld";
+- start standaard in **double elimination** met seeding op de ranking (beide kan je wijzigen);
+- sluit je af met **Masters afsluiten**: de eindplaatsen worden bewaard, maar er zijn **geen seizoenspunten**. De Masters telt niet mee voor de ranking, de klassementen of de exports, **wel voor Elo** (het zijn echte matchen);
+- krijgt overal het label *Masters* (kalender, uitslagen, tv, agenda) en de winnaar een titel *Masters-winnaar* op het spelersprofiel.
 
 **Een score achteraf invoeren?** Het tabblad **Matchen** toont alle matchen van de avond (te spelen, gespeeld of alle), met een zoekveld. Tik op een match om de uitslag in te voeren, bv. als een match op papier gespeeld werd of vergeten was.
 
@@ -109,6 +115,7 @@ Toch gepauzeerd? Log in op supabase.com en klik op **Restore project**. Je gegev
 ## 3. Beheer en onderhoud
 
 - **Puntentabel of beste X van Y aanpassen**: Beheer → Seizoenen → seizoen → *Instellingen*. Dit geldt meteen voor de hele seizoensranking.
+- **Masters**: in dezelfde instellingen zet je de eindejaarsfinale aan en kies je het aantal spelers (4 tot 32).
 - **Scores invoeren**: in dezelfde instellingen kies je de standaard voor de schrijvers (*Snel* of *501 per beurt*) en of het gemiddelde een gelijke poulestand beslist. Dat wordt bij de start van een avond vastgelegd.
 - **Elo en loting**: in dezelfde instellingen kies je de standaard-seeding (Elo, seizoensranking of willekeurig) en de Elo-instellingen (startwaarde, K-factor, hogere K voor nieuwe spelers). Elo wordt telkens opnieuw berekend uit alle gespeelde matchen; je hoeft niets bij te houden.
 - **Klassementen**: de rankingpagina heeft tabbladen voor punten, Elo, 180's, hoogste uitgooi, deelnames en beste nieuwkomer.

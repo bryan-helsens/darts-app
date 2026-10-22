@@ -103,6 +103,17 @@ export interface ScoringSettings {
 
 export const DEFAULT_SCORING: ScoringSettings = { defaultMode: 'quick', averageTiebreak: true };
 
+/** Masters (eindejaarsfinale): telt niet voor de ranking of de klassementen, wel voor Elo. */
+export interface MastersSettings {
+  enabled: boolean;
+  /** Aantal spelers (de top van de ranking). */
+  size: number;
+}
+
+export const DEFAULT_MASTERS: MastersSettings = { enabled: false, size: 16 };
+export const MASTERS_SIZE_MIN = 4;
+export const MASTERS_SIZE_MAX = 32;
+
 export interface SeasonSettings {
   points: PointsSettings;
   bestOf: BestOfSettings;
@@ -122,6 +133,7 @@ export interface SeasonSettings {
   /** Standaard seedingbron bij de loting (per avond aan te passen). */
   seeding: SeedingSource;
   scoring: ScoringSettings;
+  masters: MastersSettings;
 }
 
 export const DEFAULT_SEASON_SETTINGS: SeasonSettings = {
@@ -138,6 +150,7 @@ export const DEFAULT_SEASON_SETTINGS: SeasonSettings = {
   elo: DEFAULT_ELO,
   seeding: 'elo',
   scoring: DEFAULT_SCORING,
+  masters: DEFAULT_MASTERS,
 };
 
 /** Vult ontbrekende velden aan met de standaard (handig voor oudere seizoensinstellingen). */
@@ -157,6 +170,7 @@ export function withDefaults(partial: Partial<SeasonSettings> | null | undefined
     timing: { ...DEFAULT_TIMING, ...p.timing },
     elo: { ...DEFAULT_ELO, ...p.elo },
     scoring: { ...DEFAULT_SCORING, ...p.scoring },
+    masters: { ...DEFAULT_MASTERS, ...p.masters },
   };
 }
 

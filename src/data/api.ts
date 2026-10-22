@@ -8,6 +8,7 @@ import type { SeasonTables } from './exports';
 import { supabase } from './supabase';
 import type {
   AuditLogRow,
+  EventKind,
   EventLogRow,
   EventResultRow,
   EventRow,
@@ -213,6 +214,7 @@ export async function createEvent(input: {
   start_time: string;
   registration_closes: string;
   notes?: string | null;
+  kind?: EventKind;
 }) {
   const event = await must<EventRow>(supabase.from('events').insert(input).select('*').single());
   await must(supabase.from('event_secrets').insert({ event_id: event.id, scorer_pin: randomPin() }));
