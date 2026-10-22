@@ -1,7 +1,7 @@
 # Project memory: Sanapolis Darts
 
 > Claude's working memory for this project. **Read this first** after a context compaction or in a new session. Then read `CLAUDE.md` (architecture and conventions) and, if needed, `README.md` (user manual and installation).
-> Keep it current: update it at every milestone or decision, and when the status changes. Last updated: 2026-10-20.
+> Keep it current: update it at every milestone or decision, and when the status changes. Last updated: 2026-10-22.
 
 ## 1. Who and what
 
@@ -99,11 +99,18 @@
   - automatic backup: **nightly, encrypted** (7-Zip with password) as a GitHub Actions artifact, kept 90 days; the repo is **public**, so never upload unencrypted contacts. Secrets: `SUPABASE_SERVICE_ROLE_KEY` + `BACKUP_PASSWORD` (+ existing `SUPABASE_URL`);
   - push notifications: all four kinds: "jouw match begint" (board), "jouw match komt eraan" (next on a board), "jij schrijft" (scorer suggestion), and a reminder on the day of an evening; a **player subscribes on their own phone, once, for all evenings** (iPhone: installed app only);
   - not doing: own domain name.
-  - **4a built on the branch** (commit `56d5b5d`): `headToHead`, `x01PlayerStats`, ranking tab "Gemiddelde", Masters cut-off line (ranking + TV), profile "501 per beurt" + "Onderlinge duels", CI actions v5.
-  - **4b built on the branch**: `.github/workflows/backup.yml` (nightly 02:23 UTC + manual; skips cleanly without the 3 secrets), `scripts/backup.ts` + `scripts/backup/collect.ts` (`collectBackups(reader)`, `restReader` with `Authorization` only for JWT keys, not for `sb_secret_…`), tested in `tests/scripts/backup.test.ts` (PGlite reader as owner, restore round-trip). 7z with `-mhe=on`; plaintext only in `$RUNNER_TEMP`.
-  - **4c built on the branch** (push notifications): migration `20261024090000_push.sql` (`push_subscriptions` endpoint-unique, `kinds` subset; `push_sent (event_id, key)` dedupe; both RLS without policies; RPCs `subscribe_push`/`unsubscribe_push`/`push_status` for anon; trigger `players_drop_push` on anonymize), pure `src/data/push.ts` + `pushJob.ts` (tested with fake deps), `netlify/functions/meldingen.mts` (scheduled every minute, `web-push`, skips without env; tested in `tests/functions/meldingen.test.ts`), `public/push-sw.js` via `workbox.importScripts`, client `src/ui/pwa/push.ts` + `PushCard` (player profile + after online registration of an existing player) + hint on `/nieuw`, `npm run vapid`. Local emulator now passes primitive arrays to RPCs as-is (text[]). `e2e/push.spec.ts` stubs `serviceWorker.ready`/`pushManager`/`Notification`.
-    - User to-do for 4c: Netlify env `VITE_VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY` (secret, Functions scope), `SUPABASE_SERVICE_ROLE_KEY` (secret, Functions scope); then redeploy. A key pair was generated into the session scratchpad (never committed). Scheduled functions run only on the published site, so the first real test is after the merge.
+  - **4a, 4b and 4c merged together as PR #15** (squash `83613ff`; migration `20261024090000_push.sql` deploys to production on merge). Details per sub-phase:
+  - **4a**: `headToHead`, `x01PlayerStats`, ranking tab "Gemiddelde", Masters cut-off line (ranking + TV), profile "501 per beurt" + "Onderlinge duels", CI actions v5.
+  - **4b**: `.github/workflows/backup.yml` (nightly 02:23 UTC + manual; skips cleanly without the 3 secrets), `scripts/backup.ts` + `scripts/backup/collect.ts` (`collectBackups(reader)`, `restReader` with `Authorization` only for JWT keys, not for `sb_secret_…`), tested in `tests/scripts/backup.test.ts` (PGlite reader as owner, restore round-trip). 7z with `-mhe=on`; plaintext only in `$RUNNER_TEMP`.
+  - **4c** (push notifications): migration `20261024090000_push.sql` (`push_subscriptions` endpoint-unique, `kinds` subset; `push_sent (event_id, key)` dedupe; both RLS without policies; RPCs `subscribe_push`/`unsubscribe_push`/`push_status` for anon; trigger `players_drop_push` on anonymize), pure `src/data/push.ts` + `pushJob.ts` (tested with fake deps), `netlify/functions/meldingen.mts` (scheduled every minute, `web-push`, skips without env; tested in `tests/functions/meldingen.test.ts`), `public/push-sw.js` via `workbox.importScripts`, client `src/ui/pwa/push.ts` + `PushCard` (player profile + after online registration of an existing player) + hint on `/nieuw`, `npm run vapid`. Local emulator now passes primitive arrays to RPCs as-is (text[]). `e2e/push.spec.ts` stubs `serviceWorker.ready`/`pushManager`/`Notification`.
+    - Scheduled functions run only on the published site; real delivery was not tested before the merge (e2e stubs the push service).
   - Sub-phases, one PR each: **4a** head-to-head on the player profile, Masters cut-off in the ranking, season 501 stats (average, first 9, 100+/140+/180, best leg), CI actions v5 (no migration); **4b** nightly encrypted backup; **4c** push notifications (migration + Netlify scheduled function + service-worker push handler).
+
+- **Phase 4 is complete** (PR #15). Open user to-dos (Bryan):
+  - GitHub Actions secrets for the backup: `SUPABASE_SERVICE_ROLE_KEY`, `BACKUP_PASSWORD` (`SUPABASE_URL` and `SUPABASE_ANON_KEY` for keepalive should already exist); then run *Nachtelijke back-up* by hand once.
+  - Netlify env for push: `VITE_VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY` (secret, Functions scope), `SUPABASE_SERVICE_ROLE_KEY` (secret, Functions scope); then trigger a deploy and check *Logs → Functions → meldingen*. A key pair was generated into the session scratchpad (never committed); `npm run vapid` makes a new one (everyone must then re-enable notifications).
+  - Still open from phase 3: verify `/kalender.ics` on the live site.
+  - First real push test: enable notifications on a phone on the live site and wait for the 12u00 reminder on an evening day (or start a test evening).
 
 ## 4. Phase backlog
 
@@ -119,6 +126,8 @@
   - audit-log screen (triggers already exist);
   - CSV and JSON export / backup.
 - **Phase 3:** full 501 scorer per visit (averages, checkout suggestions, average as pool tiebreaker), Masters (top 16, optional), charts (ranking/Elo evolution), .ics "Toevoegen aan agenda", full installable PWA.
+- **Phase 4:** head-to-head, Masters cut-off line, season 501 stats, CI v5, nightly encrypted backup, push notifications. Explicitly **not** doing: own domain name.
+- **No further phase planned.** Ideas if Bryan asks: push for leaders (e.g. "all boards free"), endpoint host allow-list for `push_subscriptions` if spam appears, Masters seeding by Elo.
 
 ## 5. Architecture in one breath (details in CLAUDE.md)
 
@@ -164,3 +173,4 @@
 - 2026-10-22: phase 3a merged as PR #11 (squash `b2adeaa`); phase 3b (501 scorer per visit, averages, checkout suggestions) built on the branch.
 - 2026-10-22: phase 3b merged as PR #12 (squash `dc510cb`); phase 3c (Masters) built on the branch.
 - 2026-10-22: phase 3c merged as PR #13 (squash `9bfbca0`); phase 3 complete.
+- 2026-10-22: phase 4 decided (all next steps except an own domain) and built in three commits (4a, 4b, 4c); merged as PR #15 (squash `83613ff`, push migration); phase 4 complete.
