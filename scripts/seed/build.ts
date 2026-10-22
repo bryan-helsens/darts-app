@@ -13,6 +13,8 @@ const q = (v: unknown): string => {
   if (v === null || v === undefined) return 'null';
   if (typeof v === 'number') return String(v);
   if (typeof v === 'boolean') return v ? 'true' : 'false';
+  // Enkel de beurten (smallint[]) zijn een lijst; null = bust.
+  if (Array.isArray(v)) return `'{${v.map((x) => (x === null ? 'NULL' : String(x))).join(',')}}'`;
   if (typeof v === 'object') return `${q(JSON.stringify(v))}::jsonb`;
   return `'${String(v).replaceAll("'", "''")}'`;
 };
@@ -29,6 +31,7 @@ export const DEMO_TABLES = [
   'pool_members',
   'matches',
   'match_stats',
+  'match_legs',
   'event_log',
   'event_results',
 ] as const satisfies ReadonlyArray<keyof DemoDataset>;

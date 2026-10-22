@@ -1,7 +1,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { DEFAULT_SEASON_SETTINGS, validatePointsTable, type BracketLegs, type PointsRule, type SeasonSettings, type SeedingSource } from '../../../engine';
+import { DEFAULT_SEASON_SETTINGS, validatePointsTable, type BracketLegs, type PointsRule, type ScoringMode, type SeasonSettings, type SeedingSource } from '../../../engine';
 import { createEvent, createSeason, deleteEvent, updateEvent, updateSeason } from '../../../data/api';
 import { useAuth } from '../../../data/auth';
 import { keys, useEvents, useSeasons } from '../../../data/queries';
@@ -436,6 +436,30 @@ function SeasonSettingsForm({ season }: { season: SeasonRow }) {
           <p className="mt-1.5 text-2xs text-zinc-500">
             De Elo-instellingen gelden voor de matchen van dit seizoen. Een hogere K laat de rating sneller bewegen; nieuwe spelers krijgen een hogere K zodat ze snel op hun niveau
             komen.
+          </p>
+        </div>
+
+        <div>
+          <h3 className="mb-1.5 text-[13px] font-semibold text-zinc-950">Scores invoeren</h3>
+          <div className="max-w-xs">
+            <Field label="Standaard bij de schrijver" hint="De schrijver kan per match altijd zelf kiezen.">
+              <Select value={s.scoring.defaultMode} onChange={(e) => setS((x) => ({ ...x, scoring: { ...x.scoring, defaultMode: e.target.value as ScoringMode } }))}>
+                <option value="quick">Snel (enkel de legs)</option>
+                <option value="visits">501 per beurt</option>
+              </Select>
+            </Field>
+          </div>
+          <label className="mt-2.5 flex items-center gap-2 text-[13px]">
+            <input
+              type="checkbox"
+              className="h-4 w-4 accent-brand-600"
+              checked={s.scoring.averageTiebreak}
+              onChange={(e) => setS((x) => ({ ...x, scoring: { ...x.scoring, averageTiebreak: e.target.checked } }))}
+            />
+            Gemiddelde als tiebreaker in de poules
+          </label>
+          <p className="mt-1.5 text-2xs text-zinc-500">
+            Na het onderling resultaat en vóór een barrage of loting. Enkel als alle poulematchen van de gelijk staande spelers per beurt gescoord werden.
           </p>
         </div>
 

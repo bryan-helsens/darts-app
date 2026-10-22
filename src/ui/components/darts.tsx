@@ -1,9 +1,22 @@
 /** Darts-specifieke weergaves: poulestanden, schema's, borden, uitslagen. */
 
-import { formatPlace, roundName, STAGE_NAMES, stageRoundName, type BracketStage, type Match, type Placement, type PoolStanding } from '../../engine';
+import {
+  formatPlace,
+  roundName,
+  STAGE_NAMES,
+  stageRoundName,
+  threeDartAverage,
+  type BracketStage,
+  type DartsTotals,
+  type Match,
+  type Placement,
+  type PlayerId,
+  type PoolStanding,
+} from '../../engine';
 import type { ReactNode } from 'react';
-import type { EventView } from '../../data/eventView';
+import type { EventView, PlayerAverage } from '../../data/eventView';
 import type { MatchStatRow } from '../../data/rows';
+import { formatDecimal } from '../../lib/format';
 import { formatTime } from '../../lib/time';
 import { bracketLayout } from './bracketLayout';
 import { Badge, cx, Empty, type Tone } from './ui';
@@ -36,10 +49,24 @@ export function shortTitle(m: Match, view: Pick<EventView, 'pools' | 'matches'>)
  * Een match als scorebord: twee regels (speler + gewonnen legs), de winnaar in
  * het vet. Zo past ook een lange naam op een smalle gsm.
  */
-export function MatchLine({ m, name, compact, pending }: { m: Match; name: NameFn; compact?: boolean; pending?: { legs1: number; legs2: number } }) {
+export function MatchLine({
+  m,
+  name,
+  compact,
+  pending,
+  live,
+}: {
+  m: Match;
+  name: NameFn;
+  compact?: boolean;
+  pending?: { legs1: number; legs2: number };
+  /** Legstand van een lopende match (501 per beurt), in rood. */
+  live?: { legs1: number; legs2: number };
+}) {
   const done = m.winner !== null;
-  const legs = [pending?.legs1 ?? m.legs1, pending?.legs2 ?? m.legs2];
-  const showLegs = done || Boolean(pending);
+  const running = !done && !pending ? live : undefined;
+  const legs = [pending?.legs1 ?? running?.legs1 ?? m.legs1, pending?.legs2 ?? running?.legs2 ?? m.legs2];
+  const showLegs = done || Boolean(pending) || Boolean(running);
   return (
     <div className={cx('grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3', compact ? 'text-[13px] leading-[18px]' : 'text-sm leading-5')}>
       {[m.player1, m.player2].map((p, i) => {
@@ -54,7 +81,7 @@ export function MatchLine({ m, name, compact, pending }: { m: Match; name: NameF
             <span
               className={cx(
                 'min-w-4 text-right font-semibold tabular-nums',
-                pending ? 'text-amber-600' : won ? 'text-zinc-950' : 'text-zinc-400',
+                pending ? 'text-amber-600' : running ? 'text-accent-600' : won ? 'text-zinc-950' : 'text-zinc-400',
               )}
             >
               {showLegs ? legs[i] : ''}
@@ -73,6 +100,7 @@ export function MatchTile({
   title,
   extra,
   pending,
+  live,
   dashed,
   onClick,
 }: {
@@ -81,6 +109,7 @@ export function MatchTile({
   title?: ReactNode;
   extra?: ReactNode;
   pending?: { legs1: number; legs2: number };
+  live?: { legs1: number; legs2: number };
   dashed?: boolean;
   onClick?: () => void;
 }) {
@@ -101,7 +130,7 @@ export function MatchTile({
           {extra}
         </span>
       )}
-      <MatchLine m={m} name={name} compact pending={pending} />
+      <MatchLine m={m} name={name} compact pending={pending} live={live} />
     </button>
   );
 }
@@ -112,7 +141,21 @@ export function TileGrid({ children }: { children: ReactNode }) {
 }
 
 /** Alle plaatsen van een ronde; null waar een bye zit (zo blijft de boom uitgelijnd). */
-export function PoolTable({ standing, label, advance, name }: { standing: PoolStanding; label: string; advance: number; name: NameFn }) {
+export function PoolTable({
+  standing,
+  label,
+  advance,
+  name,
+  averages,
+}: {
+  standing: PoolStanding;
+  label: string;
+  advance: number;
+  name: NameFn;
+  /** 3-dart gemiddelde in de poule (enkel per beurt gescoorde matchen). */
+  averages?: ReadonlyMap<PlayerId, number>;
+}) {
+  const showAvg = Boolean(averages && standing.rows.some((r) => averages.has(r.playerId)));
   return (
     <div className="overflow-hidden rounded-lg border border-zinc-200/80 bg-white shadow-xs">
       <div className="flex items-center justify-between bg-ink px-2.5 py-1 text-white">
@@ -128,6 +171,11 @@ export function PoolTable({ standing, label, advance, name }: { standing: PoolSt
             <th className="w-7 text-center font-medium" title="Gewonnen">W</th>
             <th className="w-12 text-center font-medium" title="Legs voor–tegen">Legs</th>
             <th className="w-9 text-center font-medium" title="Legsaldo">+/−</th>
+            {showAvg && (
+              <th className="w-12 pr-1.5 text-right font-medium" title="3-dart gemiddelde (matchen per beurt gescoord)">
+                Gem.
+              </th>
+            )}
           </tr>
         </thead>
         <tbody>
@@ -151,6 +199,7 @@ export function PoolTable({ standing, label, advance, name }: { standing: PoolSt
                   {r.legsFor}–{r.legsAgainst}
                 </td>
                 <td className="text-center text-zinc-500 tabular-nums">{r.legDiff > 0 ? `+${r.legDiff}` : r.legDiff}</td>
+                {showAvg && <td className="pr-1.5 text-right text-zinc-500 tabular-nums">{averages?.has(r.playerId) ? formatDecimal(averages.get(r.playerId)) : ''}</td>}
               </tr>
             );
           })}
@@ -327,7 +376,7 @@ export function BoardsOverview({
                 {!b.active && <Badge tone="amber">eruit</Badge>}
                 {b.since && m && <span className="shrink-0 text-2xs text-zinc-400 tabular-nums">{formatTime(b.since)}</span>}
               </div>
-              {m && <MatchLine m={m} name={name} compact={!big} />}
+              {m && <MatchLine m={m} name={name} compact={!big} live={view.liveLegs.get(m.id)} />}
               {(scorer || nextMatch) && (
                 <div className="mt-1.5 space-y-px border-t border-zinc-100 pt-1 text-2xs text-zinc-500">
                   {scorer && (
@@ -357,4 +406,41 @@ export function statsLine(stats: MatchStatRow[] | undefined, name: NameFn): stri
     if (s.highest_finish) parts.push(`${name(s.player_id)}: finish ${s.highest_finish}`);
   }
   return parts.length ? parts.join(' · ') : null;
+}
+
+/** "Gem. Jan 98,40 · Piet 76,12" voor een match die per beurt gescoord werd. */
+export function averageLine(totals: ReadonlyMap<PlayerId, DartsTotals> | undefined, players: Array<string | null>, name: NameFn): string | null {
+  if (!totals || totals.size === 0) return null;
+  const parts = players.filter((p): p is string => Boolean(p && totals.has(p))).map((p) => `${name(p)} ${formatDecimal(threeDartAverage(totals.get(p)))}`);
+  return parts.length ? `Gem. ${parts.join(' · ')}` : null;
+}
+
+/** Gemiddelden van de avond (enkel matchen die per beurt gescoord werden). */
+export function AveragesTable({ averages, name, limit = 10 }: { averages: ReadonlyMap<PlayerId, PlayerAverage>; name: NameFn; limit?: number }) {
+  const rows = [...averages.entries()].sort((a, b) => b[1].average - a[1].average).slice(0, limit);
+  if (rows.length === 0) return null;
+  return (
+    <div className="overflow-hidden rounded-lg border border-zinc-200/80 bg-white shadow-xs" data-averages>
+      <table className="w-full text-[13px]">
+        <thead className="text-2xs text-zinc-400">
+          <tr className="border-b border-zinc-100">
+            <th className="w-7 py-1 text-center font-medium">#</th>
+            <th className="py-1 text-left font-medium">Speler</th>
+            <th className="w-16 text-center font-medium" title="Matchen per beurt gescoord">Matchen</th>
+            <th className="w-16 pr-2.5 text-right font-medium">Gem.</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map(([p, a], i) => (
+            <tr key={p} className="border-t border-zinc-100 first:border-t-0">
+              <td className="py-1 text-center font-semibold text-zinc-400">{i + 1}</td>
+              <td className="max-w-0 truncate py-1">{name(p)}</td>
+              <td className="text-center text-zinc-500 tabular-nums">{a.matches}</td>
+              <td className="pr-2.5 text-right font-semibold tabular-nums">{formatDecimal(a.average)}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
 }

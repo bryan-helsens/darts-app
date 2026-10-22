@@ -1,16 +1,18 @@
-import { useMemo, useState } from 'react';
-import { useParams } from 'react-router-dom';
-import type { Match } from '../../engine';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useParams, useSearchParams } from 'react-router-dom';
+import type { Match, ScoringMode } from '../../engine';
 import { checkScorerPin, isNetworkError } from '../../data/api';
 import { useAuth } from '../../data/auth';
 import { buildEventView } from '../../data/eventView';
 import { outbox, usePendingScores } from '../../data/outbox';
 import { useEventBundle, usePlayerDirectory } from '../../data/queries';
+import { deleteSession, listSessions, type X01Session } from '../../data/x01Sessions';
 import { formatDate } from '../../lib/time';
 import { MatchLine, matchTitle, shortTitle, TileGrid } from '../components/darts';
 import { ScoreEntry } from '../components/ScoreEntry';
 import { SyncBadge } from '../components/SyncBadge';
-import { Badge, Button, Empty, ErrorBox, InfoBox, Modal, SectionTitle, Spinner } from '../components/ui';
+import { Badge, Button, Empty, ErrorBox, InfoBox, Modal, SectionTitle, Segmented, Spinner } from '../components/ui';
+import { X01Scorer, X01Start } from '../components/X01Scorer';
 import { useNow, useUpcoming } from '../hooks';
 import { InstallCard } from '../pwa/InstallCard';
 
@@ -105,8 +107,47 @@ function ScoreBoard({ eventId, pin, onForget }: { eventId: string; pin: string |
   const pending = usePendingScores(eventId);
   const view = useMemo(() => (bundle.data ? buildEventView(bundle.data, now) : null), [bundle.data, now]);
   const [selected, setSelected] = useState<{ match: Match; board?: number } | null>(null);
+  const [x01, setX01] = useState<{ match: Match; board?: number } | null>(null);
+  const [mode, setMode] = useState<ScoringMode | null>(null);
   const [showAll, setShowAll] = useState(false);
+  // null = nog niet geladen.
+  const [sessions, setSessions] = useState<Map<string, X01Session> | null>(null);
+  const [params, setParams] = useSearchParams();
   const name = directory.name;
+
+  // Lopende 501-matchen op dit toestel.
+  const reloadSessions = useCallback(() => {
+    void listSessions(eventId).then((list) => setSessions(new Map(list.map((s) => [s.code, s]))));
+  }, [eventId]);
+  useEffect(reloadSessions, [reloadSessions]);
+
+  // Een match met een uitslag heeft geen lopende 501-sessie meer nodig.
+  useEffect(() => {
+    if (!sessions || !view) return;
+    const done = [...sessions.values()].filter((s) => view.byCode.get(s.code)?.winner);
+    if (done.length === 0) return;
+    void Promise.all(done.map((s) => deleteSession(eventId, s.code))).then(reloadSessions);
+  }, [sessions, view, eventId, reloadSessions]);
+
+  const choose = useCallback(
+    (match: Match, board?: number) => {
+      if (sessions?.has(match.id)) setX01({ match, board });
+      else {
+        setMode(null);
+        setSelected({ match, board });
+      }
+    },
+    [sessions],
+  );
+
+  // ?match=CODE: rechtstreeks naar die match (bv. vanuit het avondscherm van de leider).
+  const wanted = params.get('match');
+  useEffect(() => {
+    const m = wanted ? view?.byCode.get(wanted) : undefined;
+    if (!wanted || !view || !sessions) return;
+    setParams({}, { replace: true });
+    if (m && !m.winner && m.player1 && m.player2) choose(m, view.replay?.boards.find((b) => b.matchId === m.id)?.board);
+  }, [wanted, view, sessions, choose, setParams]);
 
   if (bundle.isLoading) return <Spinner />;
   if (!view) return <ErrorBox error={bundle.error ?? 'Speelavond niet gevonden.'} />;
@@ -116,6 +157,12 @@ function ScoreBoard({ eventId, pin, onForget }: { eventId: string; pin: string |
 
   const onBoards = (view.replay?.boards ?? []).filter((b) => b.matchId).map((b) => ({ board: b.board, match: view.byCode.get(b.matchId as string) as Match }));
   const open = view.matches.filter((m) => !m.winner && m.player1 && m.player2 && !onBoards.some((b) => b.match.id === m.id));
+  const defaultMode: ScoringMode = view.config?.scoring?.defaultMode ?? 'quick';
+  const resumable = [...(sessions?.values() ?? [])].filter((s) => {
+    const m = view.byCode.get(s.code);
+    return m && !m.winner;
+  });
+  const titleOf = (m: Match, board?: number) => (board !== undefined ? `Bord ${board} · ${shortTitle(m, view)}` : matchTitle(m, view));
 
   const submit = (match: Match, board: number | undefined, legs1: number, legs2: number, stats: Parameters<typeof outbox.addScore>[0]['stats']) => {
     void outbox.addScore(
@@ -132,7 +179,7 @@ function ScoreBoard({ eventId, pin, onForget }: { eventId: string; pin: string |
         key={m.id}
         type="button"
         disabled={Boolean(p)}
-        onClick={() => setSelected({ match: m, board })}
+        onClick={() => choose(m, board)}
         className="flex min-w-0 flex-col rounded-lg border border-zinc-200/80 bg-white p-2 text-left shadow-xs transition-colors hover:border-brand-500 active:bg-zinc-50 disabled:opacity-70"
       >
         <span className="mb-1 flex min-w-0 items-center gap-1.5">
@@ -141,7 +188,7 @@ function ScoreBoard({ eventId, pin, onForget }: { eventId: string; pin: string |
             {shortTitle(m, view)} · bo{m.bestOf}
           </span>
         </span>
-        <MatchLine m={m} name={name} compact pending={p} />
+        <MatchLine m={m} name={name} compact pending={p} live={view.liveLegs.get(m.id)} />
         {board !== undefined && view.scorers.get(board) && (
           <span className="mt-1 truncate border-t border-zinc-100 pt-1 text-2xs text-zinc-500">
             <span className="font-medium text-zinc-700">Schrijver</span> {name(view.scorers.get(board))}
@@ -150,6 +197,11 @@ function ScoreBoard({ eventId, pin, onForget }: { eventId: string; pin: string |
         {p && (
           <span className="mt-1">
             <Badge tone="amber">wordt verstuurd</Badge>
+          </span>
+        )}
+        {!p && sessions?.has(m.id) && (
+          <span className="mt-1">
+            <Badge tone="red">501 bezig op dit toestel</Badge>
           </span>
         )}
       </button>
@@ -165,6 +217,22 @@ function ScoreBoard({ eventId, pin, onForget }: { eventId: string; pin: string |
         </div>
         <SyncBadge onLight />
       </div>
+
+      {resumable.length > 0 && (
+        <InfoBox>
+          <div className="space-y-1.5">
+            <p>Lopende 501-match op dit toestel:</p>
+            {resumable.map((s) => {
+              const m = view.byCode.get(s.code) as Match;
+              return (
+                <Button key={s.code} size="sm" block onClick={() => setX01({ match: m, board: s.board ?? undefined })}>
+                  Verder: {name(s.player1)} – {name(s.player2)}
+                </Button>
+              );
+            })}
+          </div>
+        </InfoBox>
+      )}
 
       <SectionTitle>Nu aan het spelen</SectionTitle>
       {onBoards.length === 0 ? <Empty>Er wordt nu op geen enkel bord gespeeld.</Empty> : <TileGrid>{onBoards.map((b) => card(b.match, b.board))}</TileGrid>}
@@ -198,14 +266,59 @@ function ScoreBoard({ eventId, pin, onForget }: { eventId: string; pin: string |
 
       {selected && (
         <Modal open onClose={() => setSelected(null)} title={selected.board !== undefined ? `Bord ${selected.board}` : 'Uitslag'}>
-          <ScoreEntry
-            match={selected.match}
-            name={name}
-            title={matchTitle(selected.match, view)}
-            onSubmit={(input) => submit(selected.match, selected.board, input.legs1, input.legs2, input.stats)}
-            onCancel={() => setSelected(null)}
-          />
+          <div className="mb-3">
+            <Segmented
+              block
+              value={mode ?? defaultMode}
+              onChange={setMode}
+              options={[
+                { id: 'quick', label: 'Snel (legs)' },
+                { id: 'visits', label: '501 per beurt' },
+              ]}
+            />
+          </div>
+          {(mode ?? defaultMode) === 'quick' ? (
+            <ScoreEntry
+              match={selected.match}
+              name={name}
+              title={matchTitle(selected.match, view)}
+              onSubmit={(input) => submit(selected.match, selected.board, input.legs1, input.legs2, input.stats)}
+              onCancel={() => setSelected(null)}
+            />
+          ) : (
+            <X01Start
+              eventId={eventId}
+              match={selected.match}
+              board={selected.board ?? null}
+              name={name}
+              onStarted={(s) => {
+                setSessions((map) => new Map(map ?? []).set(s.code, s));
+                setX01(selected);
+                setSelected(null);
+              }}
+            />
+          )}
         </Modal>
+      )}
+
+      {x01 && (
+        <X01Scorer
+          eventId={eventId}
+          match={x01.match}
+          title={titleOf(x01.match, x01.board)}
+          pin={pin}
+          name={name}
+          onExit={() => {
+            setX01(null);
+            reloadSessions();
+          }}
+          onQuick={() => {
+            setMode('quick');
+            setSelected(x01);
+            setX01(null);
+            reloadSessions();
+          }}
+        />
       )}
     </div>
   );

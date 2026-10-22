@@ -1,14 +1,25 @@
 import { useMemo, useState, type ReactNode } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
-import { eloChangeForEvent, eloProgress, formatPlace, isFinished, placementPoints, rankingProgress, seasonLeaderboards, STAGE_NAMES } from '../../../engine';
-import { buildEventView, SCHEMA_STAGES } from '../../../data/eventView';
+import {
+  averageProgress,
+  eloChangeForEvent,
+  eloProgress,
+  formatPlace,
+  isFinished,
+  placementPoints,
+  rankingProgress,
+  seasonLeaderboards,
+  STAGE_NAMES,
+} from '../../../engine';
+import { averagesFor, buildEventView, SCHEMA_STAGES } from '../../../data/eventView';
 import { matchFromRow } from '../../../data/mappers';
 import { useEventBundle, useEvents, usePlayerData, usePlayerDirectory, useRegistrationCounts, useSeasonData, useSeasons } from '../../../data/queries';
 import { onlineRegistrationOpen } from '../../../data/registration';
+import { formatDecimal } from '../../../lib/format';
 import { matchesSearch } from '../../../lib/names';
 import { formatDate, formatLongDate, formatTime, shortTime } from '../../../lib/time';
 import { AddToCalendarButton } from '../../components/Calendar';
-import { BoardsOverview, Bracket, MatchTile, PlacementsTable, PoolTable, shortTitle, TileGrid } from '../../components/darts';
+import { AveragesTable, BoardsOverview, Bracket, MatchTile, PlacementsTable, PoolTable, shortTitle, TileGrid } from '../../components/darts';
 import { LineChart } from '../../components/LineChart';
 import { displayName } from '../../components/players';
 import { ShareResultButton } from '../../share/ShareResult';
@@ -194,6 +205,7 @@ export function EventPublicPage() {
   const active = tab && tabs.some((t) => t.id === tab) ? tab : tabs[0].id;
   const name = directory.name;
   const points = new Map((bundle.data?.results ?? []).map((r) => [r.player_id, r.points]));
+  const poolAverages = averagesFor(view, (m) => m.stage === 'pool');
   const recent = view.matches
     .filter((m) => m.finishedAt !== null && !m.walkover)
     .sort((a, b) => (b.finishedAt as number) - (a.finishedAt as number))
@@ -239,6 +251,12 @@ export function EventPublicPage() {
                 </div>
               )}
               <PlacementsTable placements={view.placements.placements} name={name} points={points} />
+              {view.averages.size > 0 && (
+                <>
+                  <SectionTitle>Gemiddelden van de avond</SectionTitle>
+                  <AveragesTable averages={view.averages} name={name} />
+                </>
+              )}
             </>
           )}
           {active === 'schema' &&
@@ -255,17 +273,32 @@ export function EventPublicPage() {
           {active === 'poules' && view.poolStatus && (
             <div className="grid gap-2 md:grid-cols-2">
               {view.poolStatus.standings.map((s) => (
-                <PoolTable key={s.poolId} standing={s} label={view.pools.find((p) => p.id === s.poolId)?.label ?? s.poolId} advance={view.config?.advance ?? 2} name={name} />
+                <PoolTable
+                  key={s.poolId}
+                  standing={s}
+                  label={view.pools.find((p) => p.id === s.poolId)?.label ?? s.poolId}
+                  advance={view.config?.advance ?? 2}
+                  name={name}
+                  averages={poolAverages}
+                />
               ))}
             </div>
           )}
           {active === 'uitslagen' &&
             (recent.length > 0 ? (
-              <TileGrid>
-                {recent.map((m) => (
-                  <MatchTile key={m.id} m={m} name={name} title={shortTitle(m, view)} />
-                ))}
-              </TileGrid>
+              <>
+                <TileGrid>
+                  {recent.map((m) => (
+                    <MatchTile key={m.id} m={m} name={name} title={shortTitle(m, view)} />
+                  ))}
+                </TileGrid>
+                {view.averages.size > 0 && (
+                  <>
+                    <SectionTitle>Gemiddelden van de avond</SectionTitle>
+                    <AveragesTable averages={view.averages} name={name} />
+                  </>
+                )}
+              </>
             ) : (
               <Empty>Nog geen uitslagen.</Empty>
             ))}
@@ -556,7 +589,7 @@ export function PlayerPage() {
   const { rows, data: seasonData } = useSeasonRanking(season);
   const { elo } = useElo();
   const player = directory.byId.get(playerId ?? '');
-  const [chart, setChart] = useState<'ranking' | 'elo'>('ranking');
+  const [chart, setChart] = useState<'ranking' | 'elo' | 'average'>('ranking');
   const progress = useMemo(() => {
     if (!player || !season || !seasonData) return [];
     const settings = seasonSettings(season);
@@ -596,6 +629,13 @@ export function PlayerPage() {
   const lastChange = history.length > 0 ? eloChangeForEvent(history, history[history.length - 1].eventId) : null;
   const peak = history.length > 0 ? Math.max(...history.map((h) => h.after)) : null;
   const eloPoints = eloProgress(history);
+  // Gemiddelde per avond (enkel matchen die per beurt gescoord werden).
+  const averagePoints = averageProgress(
+    (data?.stats ?? [])
+      .filter((s) => s.darts != null && s.points != null)
+      .map((s) => ({ eventId: s.event_id, date: eventById.get(s.event_id)?.event_date ?? '', darts: s.darts as number, points: s.points as number })),
+  );
+  const averageByEvent = new Map(averagePoints.map((p) => [p.eventId, p.value]));
 
   const stat = (label: string, value: string | number, sub?: string) => (
     <div className="bg-white px-1.5 py-2 text-center">
@@ -632,7 +672,7 @@ export function PlayerPage() {
           lastChange !== null ? `${lastChange >= 0 ? '▲' : '▼'} ${Math.abs(Math.round(lastChange))} laatste avond` : undefined,
         )}
       </div>
-      {(progress.length > 0 || eloPoints.length > 0) && (
+      {(progress.length > 0 || eloPoints.length > 0 || averagePoints.length > 0) && (
         <>
           <SectionTitle
             actions={
@@ -642,6 +682,7 @@ export function PlayerPage() {
                 options={[
                   { id: 'ranking', label: 'Ranking' },
                   { id: 'elo', label: 'Elo' },
+                  ...(averagePoints.length > 0 ? [{ id: 'average' as const, label: 'Gemiddelde' }] : []),
                 ]}
               />
             }
@@ -654,6 +695,8 @@ export function PlayerPage() {
             ) : (
               <Empty>Nog geen punten in dit seizoen.</Empty>
             )
+          ) : chart === 'average' && averagePoints.length > 0 ? (
+            <LineChart points={averagePoints} format={(v) => formatDecimal(v)} label="3-dart gemiddelde per avond" />
           ) : eloPoints.length > 0 ? (
             <LineChart points={eloPoints} label="Elo na elke avond" />
           ) : (
@@ -673,6 +716,7 @@ export function PlayerPage() {
                 <th className="py-1.5 pl-3 text-left font-medium">Datum</th>
                 <th className="text-center font-medium">Plaats</th>
                 <th className="text-center font-medium">Punten</th>
+                {averageByEvent.size > 0 && <th className="pr-3 text-right font-medium">Gem.</th>}
               </tr>
             </thead>
             <tbody>
@@ -685,6 +729,9 @@ export function PlayerPage() {
                   </td>
                   <td className="text-center text-zinc-600 tabular-nums">{formatPlace(r.place_from, r.place_to)}</td>
                   <td className="text-center font-semibold tabular-nums">{r.points}</td>
+                  {averageByEvent.size > 0 && (
+                    <td className="pr-3 text-right text-zinc-600 tabular-nums">{averageByEvent.has(r.event_id) ? formatDecimal(averageByEvent.get(r.event_id)) : ''}</td>
+                  )}
                 </tr>
               ))}
             </tbody>

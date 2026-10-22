@@ -11,7 +11,7 @@ import {
   type SeasonSettings,
 } from '../../../engine';
 import { addBarrages, addLogEntry, finalizeEvent, generateKnockout, resetTournament, undoKnockout, updateEvent, withdrawPlayer } from '../../../data/api';
-import { SCHEMA_STAGES, type EventView } from '../../../data/eventView';
+import { averagesFor, SCHEMA_STAGES, type EventView } from '../../../data/eventView';
 import { matchToInsert } from '../../../data/mappers';
 import { usePendingScores } from '../../../data/outbox';
 import { keys } from '../../../data/queries';
@@ -131,6 +131,7 @@ export function BoardsPanel({ view, name, onGoTo }: { view: EventView; name: Nam
               }
               extra={pending.has(m.id) && <Badge tone="amber">sync…</Badge>}
               pending={pending.get(m.id)}
+              live={view.liveLegs.get(m.id)}
               onClick={() => open(m)}
             />
           ))}
@@ -286,6 +287,7 @@ export function PoolsPanel({ view, name, seedRanks }: { view: EventView; name: N
 
   if (!status || !config) return <Empty>De poules zijn nog niet geloot.</Empty>;
   const preview = status.readyForKnockout ? splitQualifiers(status.standings, { advance: config.advance, lotSeed: view.event.rng_seed, seedRanks }) : null;
+  const averages = averagesFor(view, (m) => m.stage === 'pool');
   const barrages = view.matches.filter((m) => m.stage === 'barrage');
   const koPlayed = view.matches.some((m) => (m.stage === 'A' || m.stage === 'B') && m.winner && !m.walkover);
 
@@ -350,7 +352,7 @@ export function PoolsPanel({ view, name, seedRanks }: { view: EventView; name: N
           const ms = view.matches.filter((m) => m.stage === 'pool' && m.poolId === s.poolId).sort((a, b) => a.round - b.round || a.position - b.position);
           return (
             <div key={s.poolId} className="space-y-2">
-              <PoolTable standing={s} label={pool?.label ?? s.poolId} advance={config.advance} name={name} />
+              <PoolTable standing={s} label={pool?.label ?? s.poolId} advance={config.advance} name={name} averages={averages} />
               <details className="group">
                 <summary className="cursor-pointer list-none px-1 text-xs font-medium text-zinc-500 hover:text-zinc-900">
                   <span className="group-open:hidden">▸</span>
@@ -358,7 +360,7 @@ export function PoolsPanel({ view, name, seedRanks }: { view: EventView; name: N
                 </summary>
                 <div className="mt-1.5 grid grid-cols-2 gap-1.5">
                   {ms.map((m) => (
-                    <MatchTile key={m.id} m={m} name={name} title={`Ronde ${m.round}`} onClick={() => open(m)} />
+                    <MatchTile key={m.id} m={m} name={name} title={`Ronde ${m.round}`} live={view.liveLegs.get(m.id)} onClick={() => open(m)} />
                   ))}
                 </div>
               </details>

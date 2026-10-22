@@ -1,9 +1,11 @@
 /**
  * Verloop van een speler voor de grafieken op het spelersprofiel: de plaats
- * in de seizoensranking na elke avond en de Elo na elke avond. Puur.
+ * in de seizoensranking na elke avond, de Elo na elke avond en het 3-dart
+ * gemiddelde per avond. Puur.
  */
 
 import type { EloPoint } from './elo';
+import { threeDartAverage, type DartsTotals } from './x01';
 import { seasonRanking, type EventResultRow } from './ranking';
 import type { BestOfSettings } from './settings';
 import type { Match, PlayerId } from './types';
@@ -54,4 +56,20 @@ export function eloProgress(history: readonly EloPoint[] | undefined): ProgressP
     else out.push({ eventId: point.eventId, date: point.date, value: point.after });
   }
   return out;
+}
+
+/**
+ * 3-dart gemiddelde per avond (enkel matchen die per beurt gescoord werden),
+ * in volgorde van de datum.
+ */
+export function averageProgress(stats: ReadonlyArray<DartsTotals & { eventId: string; date: string }>): ProgressPoint[] {
+  const perEvent = new Map<string, { date: string; darts: number; points: number }>();
+  for (const s of stats) {
+    if (s.darts <= 0) continue;
+    const acc = perEvent.get(s.eventId) ?? { date: s.date, darts: 0, points: 0 };
+    perEvent.set(s.eventId, { date: acc.date, darts: acc.darts + s.darts, points: acc.points + s.points });
+  }
+  return [...perEvent.entries()]
+    .map(([eventId, t]) => ({ eventId, date: t.date, value: threeDartAverage(t) as number }))
+    .sort((a, b) => a.date.localeCompare(b.date) || a.eventId.localeCompare(b.eventId));
 }

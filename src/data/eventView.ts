@@ -205,6 +205,25 @@ export function buildEventView(bundle: EventBundle, clientNow = Date.now()): Eve
   };
 }
 
+/** 3-dart gemiddelde per speler over een deel van de matchen (bv. enkel de poules). */
+export function averagesFor(view: Pick<EventView, 'dartsTotals' | 'byCode'>, include: (m: Match) => boolean): Map<PlayerId, number> {
+  const sums = new Map<PlayerId, DartsTotals>();
+  for (const [code, perPlayer] of view.dartsTotals) {
+    const m = view.byCode.get(code);
+    if (!m || !include(m)) continue;
+    for (const [p, t] of perPlayer) {
+      const acc = sums.get(p) ?? { darts: 0, points: 0 };
+      sums.set(p, { darts: acc.darts + t.darts, points: acc.points + t.points });
+    }
+  }
+  const out = new Map<PlayerId, number>();
+  for (const [p, t] of sums) {
+    const avg = threeDartAverage(t);
+    if (avg !== null) out.set(p, avg);
+  }
+  return out;
+}
+
 /** Legstand van lopende matchen en darts/punten van gespeelde matchen (501 per beurt). */
 function x01Summary(bundle: EventBundle, matches: readonly Match[]) {
   const codeById = new Map(bundle.matches.map((r) => [r.id, r.code]));

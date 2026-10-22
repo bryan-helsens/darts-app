@@ -39,6 +39,21 @@ describe('demo-data vanuit de app', () => {
     // De database leidt de winnaars af uit de legs.
     const winners = await rows<{ n: number }>(db, `select count(*)::int as n from matches where winner_id is null`);
     expect(winners[0].n).toBe(0);
+    // De laatste avond werd per beurt gescoord: de legs passen bij de uitslag, de stats bij de legs.
+    const mismatches = await rows(
+      db,
+      `select m.code from matches m
+       join (select match_id, count(*) filter (where winner = 1) as w1, count(*) filter (where winner = 2) as w2,
+                    sum(darts1) as d1, sum(points1) as p1, sum(darts2) as d2, sum(points2) as p2
+             from match_legs group by match_id) l on l.match_id = m.id
+       left join match_stats s1 on s1.match_id = m.id and s1.player_id = m.player1_id
+       left join match_stats s2 on s2.match_id = m.id and s2.player_id = m.player2_id
+       where (l.w1, l.w2) <> (m.legs1, m.legs2) or (l.d1, l.p1, l.d2, l.p2) is distinct from (s1.darts, s1.points, s2.darts, s2.points)`,
+    );
+    expect(mismatches).toEqual([]);
+    const perVisit = await rows<{ event_id: string; n: number }>(db, `select event_id, count(distinct match_id)::int as n from match_legs group by event_id`);
+    expect(perVisit.map((r) => r.event_id)).toEqual([data.events[5].id]);
+    expect(perVisit[0].n).toBe(data.matches.filter((m) => m.event_id === data.events[5].id && !m.walkover && m.legs1 !== null).length);
     // Geen audit-sporen per rij, enkel één notitie.
     expect((await rows(db, `select * from audit_log`)).length).toBe(auditBefore + 1);
     await expect(as(db, user(admin), () => rpc(db, 'load_demo_data', { p_data: data }))).rejects.toThrow(/al geladen/);

@@ -58,12 +58,15 @@ describe('exports', () => {
     const csv = matchesCsv({
       events: [event('e1', '2027-01-16')],
       matches: [open, m],
-      stats: [{ match_id: 'm1', event_id: 'e1', player_id: 'b', count_180: 2, highest_finish: 121, highest_score: 180 }],
+      stats: [
+        { match_id: 'm1', event_id: 'e1', player_id: 'a', count_180: 0, highest_finish: null, highest_score: 100, darts: 44, points: 750 },
+        { match_id: 'm1', event_id: 'e1', player_id: 'b', count_180: 2, highest_finish: 121, highest_score: 180 },
+      ],
       name,
     });
     expect(lines(csv)).toEqual([
-      "Datum;Code;Fase;Ronde;Bord;Speler 1;Speler 2;Legs 1;Legs 2;Winnaar;Walk-over;180's speler 1;180's speler 2;Hoogste uitgooi speler 1;Hoogste uitgooi speler 2;Einde",
-      '16/01/2027;P1-R1-1;Poule;1;3;Arne;Bram;2;1;Arne;nee;;2;;121;16/01/2027 20u42',
+      "Datum;Code;Fase;Ronde;Bord;Speler 1;Speler 2;Legs 1;Legs 2;Winnaar;Walk-over;180's speler 1;180's speler 2;Hoogste uitgooi speler 1;Hoogste uitgooi speler 2;Gemiddelde speler 1;Gemiddelde speler 2;Einde",
+      '16/01/2027;P1-R1-1;Poule;1;3;Arne;Bram;2;1;Arne;nee;0;2;;121;51,14;;16/01/2027 20u42',
     ]);
   });
 

@@ -6,6 +6,7 @@
 import { formatPlace, upcomingByBoard, type BracketStage, type Match, type PoolStanding, type RankingRow } from '../../../engine';
 import type { EventView } from '../../../data/eventView';
 import type { EventResultRow, MatchStatRow } from '../../../data/rows';
+import { formatDecimal } from '../../../lib/format';
 import { bracketLayout } from '../../components/bracketLayout';
 import { shortTitle } from '../../components/darts';
 import { cx } from '../../components/ui';
@@ -15,8 +16,9 @@ type NameFn = (id: string | null | undefined) => string;
 const MEDAL = ['bg-amber-400 text-amber-950', 'bg-zinc-300 text-zinc-900', 'bg-orange-300 text-orange-950'];
 
 /** Twee regels: speler + legs, winnaar wit en vet. */
-export function TvMatch({ m, name, size = 'md' }: { m: Match; name: NameFn; size?: 'md' | 'lg' }) {
+export function TvMatch({ m, name, size = 'md', live }: { m: Match; name: NameFn; size?: 'md' | 'lg'; live?: { legs1: number; legs2: number } }) {
   const done = m.winner !== null;
+  const running = done ? undefined : live;
   return (
     <div className={cx('grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-4', size === 'lg' ? 'text-[1.6rem] leading-9' : 'text-xl leading-8')}>
       {[m.player1, m.player2].map((p, i) => {
@@ -24,7 +26,9 @@ export function TvMatch({ m, name, size = 'md' }: { m: Match; name: NameFn; size
         return (
           <div key={i} className="contents">
             <span className={cx('truncate', won ? 'font-semibold text-white' : done ? 'text-zinc-500' : 'text-zinc-100')}>{p ? name(p) : '…'}</span>
-            <span className={cx('text-right font-semibold tabular-nums', won ? 'text-white' : 'text-zinc-500')}>{done ? (i === 0 ? m.legs1 : m.legs2) : ''}</span>
+            <span className={cx('text-right font-semibold tabular-nums', won ? 'text-white' : running ? 'text-accent-500' : 'text-zinc-500')}>
+              {done ? (i === 0 ? m.legs1 : m.legs2) : running ? (i === 0 ? running.legs1 : running.legs2) : ''}
+            </span>
           </div>
         );
       })}
@@ -53,7 +57,7 @@ export function TvBoards({ view, name }: { view: EventView; name: NameFn }) {
               </span>
               <span className="truncate text-lg text-zinc-400">{m ? `${shortTitle(m, view)} · bo${m.bestOf}` : 'Vrij'}</span>
             </div>
-            {m ? <TvMatch m={m} name={name} size="lg" /> : <div className="text-xl text-zinc-500">Wacht op de volgende match</div>}
+            {m ? <TvMatch m={m} name={name} size="lg" live={view.liveLegs.get(m.id)} /> : <div className="text-xl text-zinc-500">Wacht op de volgende match</div>}
             <div className="mt-auto space-y-1 pt-4 text-base text-zinc-400">
               {scorer && (
                 <div className="truncate">
@@ -175,9 +179,21 @@ export function TvHighlights({ view, stats, name }: { view: EventView; stats: Ma
     .filter((m) => m.finishedAt !== null && !m.walkover)
     .sort((a, b) => (b.finishedAt as number) - (a.finishedAt as number))
     .slice(0, 6);
+  const averages = [...view.averages.entries()].sort((a, b) => b[1].average - a[1].average).slice(0, 6);
   const panel = 'rounded-2xl border border-white/10 bg-white/[0.06] p-5';
   return (
-    <div className="grid grid-cols-3 gap-6">
+    <div className={cx('grid gap-6', averages.length > 0 ? 'grid-cols-4' : 'grid-cols-3')}>
+      {averages.length > 0 && (
+        <div className={panel}>
+          <h3 className="mb-3 text-xl font-semibold text-accent-500">Hoogste gemiddelde</h3>
+          {averages.map(([p, a]) => (
+            <div key={p} className="flex justify-between gap-3 py-1 text-2xl">
+              <span className="truncate">{name(p)}</span>
+              <span className="font-semibold tabular-nums">{formatDecimal(a.average)}</span>
+            </div>
+          ))}
+        </div>
+      )}
       <div className={panel}>
         <h3 className="mb-3 text-xl font-semibold text-accent-500">180’s</h3>
         {tons.length === 0 ? (

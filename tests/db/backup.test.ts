@@ -83,6 +83,8 @@ describe('back-up terugzetten (supabase/restore-backup.sql)', () => {
     expect(backup.players).toHaveLength(25);
     expect(backup.players.some((p) => p.name === 'Buiten het seizoen')).toBe(false);
     expect(backup.player_contacts?.length).toBe(data.player_contacts.length);
+    expect(backup.match_legs.length).toBe(data.match_legs.length);
+    expect(backup.match_legs.length).toBeGreaterThan(0);
   });
 
   it('zet alles terug in een lege database, identiek aan het origineel', async () => {

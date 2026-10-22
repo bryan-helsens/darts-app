@@ -3,7 +3,7 @@
  * matchen) en een volledige JSON-back-up. Puur: de gegevens komen van buitenaf.
  */
 
-import { formatPlace, placementPoints, type RankingRow, type SeasonSettings } from '../engine';
+import { formatPlace, placementPoints, threeDartAverage, type RankingRow, type SeasonSettings } from '../engine';
 import { toCsv } from '../lib/csv';
 import { formatDate, formatTime } from '../lib/time';
 import type {
@@ -67,11 +67,12 @@ const STAGE_LABEL: Record<MatchRow['stage'], string> = {
 };
 const STAGE_ORDER: Record<MatchRow['stage'], number> = { pool: 0, barrage: 1, A: 2, B: 3, W: 4, L: 5, GF: 6, M: 7, P: 8 };
 
-/** Alle gespeelde matchen, met 180's en hoogste uitgooi per speler. */
+/** Alle gespeelde matchen, met 180's, hoogste uitgooi en (per beurt gescoord) het gemiddelde per speler. */
 export function matchesCsv(input: { events: readonly EventRow[]; matches: readonly MatchRow[]; stats: readonly MatchStatRow[]; name: NameFn }): string {
   const date = new Map(input.events.map((e) => [e.id, e.event_date]));
   const stat = new Map(input.stats.map((s) => [`${s.match_id}:${s.player_id}`, s]));
   const of = (m: MatchRow, player: string | null) => (player ? stat.get(`${m.id}:${player}`) : undefined);
+  const avg = (s: MatchStatRow | undefined) => (s?.darts != null && s.points != null ? threeDartAverage({ darts: s.darts, points: s.points }) : null);
   const rows = input.matches
     .filter((m) => m.winner_id !== null && date.has(m.event_id))
     .sort(
@@ -96,6 +97,8 @@ export function matchesCsv(input: { events: readonly EventRow[]; matches: readon
     { header: "180's speler 2", value: (m) => of(m, m.player2_id)?.count_180 },
     { header: 'Hoogste uitgooi speler 1', value: (m) => of(m, m.player1_id)?.highest_finish },
     { header: 'Hoogste uitgooi speler 2', value: (m) => of(m, m.player2_id)?.highest_finish },
+    { header: 'Gemiddelde speler 1', value: (m) => avg(of(m, m.player1_id)) },
+    { header: 'Gemiddelde speler 2', value: (m) => avg(of(m, m.player2_id)) },
     { header: 'Einde', value: (m) => (m.finished_at ? `${formatDate(Date.parse(m.finished_at))} ${formatTime(Date.parse(m.finished_at))}` : null) },
   ]);
 }

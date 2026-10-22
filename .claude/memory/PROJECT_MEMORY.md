@@ -85,9 +85,15 @@
   - Agenda: download per evening, plus a subscription feed via a Netlify function.
   - PWA: installable with an update prompt; **no** push notifications for now.
   - Sub-phases: **3a** PWA + .ics + charts (no migration); **3b** 501 scorer (migration `…_x01_scorer.sql`); **3c** Masters (migration `…_masters.sql`).
-  - **3a done on the branch:** PNG icons via `scripts/generate-icons.ts`, `UpdateBanner`/`InstallCard` (`src/ui/pwa`), `src/lib/ics.ts` + `src/data/calendar.ts` + `netlify/functions/kalender.mts` (rewrite `/kalender.ics` before the SPA rule), `src/engine/progress.ts` + `LineChart`/`chartGeometry` on the player page.
-  - To check after the merge: open `https://<site>/kalender.ics` on the deploy preview or live site; the function cannot run locally.
-- **Next:** PR for 3a, then 3b.
+  - **3a merged as PR #11** (squash `b2adeaa`, no migration): PNG icons via `scripts/generate-icons.ts`, `UpdateBanner`/`InstallCard` (`src/ui/pwa`), `src/lib/ics.ts` + `src/data/calendar.ts` + `netlify/functions/kalender.mts` (rewrite `/kalender.ics` before the SPA rule), `src/engine/progress.ts` + `LineChart`/`chartGeometry` on the player page.
+  - To check after the merge: open `https://<site>/kalender.ics` on the live site; the function cannot run locally and the deploy-preview host is blocked from the container.
+  - **3b built on the branch** (3 commits: engine, data layer, UI):
+    - engine: `checkout.ts` (exhaustive route search: fewest darts, then preference D16/D20/D8 and T20/T19; bogeys 159/162/163/165/166/168/169), `x01.ts` (`applyVisit` with auto busts, `needs-darts` when the checkout darts are ambiguous, manual bust only at rest ≤ 181, `legState`/`matchStats`/`threeDartAverage`/`poolAverages` all-or-nothing), `x01Sim.ts` (`simulateLeg`), `SeasonSettings.scoring` (default `quick`, `averageTiebreak: true`), `averageProgress`;
+    - DB: migration `20261022090000_x01_scorer.sql`: `match_legs` (scores smallint[], null = bust; trigger validates like the engine and derives winner/darts/points), `match_stats.darts/points`, `submit_legs` (cumulative snapshot, PIN gate shared with submit_score's counter, `stale`/`conflict` via SQLSTATE `SD409` for another session, final sets the result and stats in one transaction with `app.legs_submit`), `matches_clear_leg_detail` (legs exist only while they fit the result; skipped under `app.skip_advance`), `load_demo_data` replaced (+ legs), realtime; `tests/db/x01.test.ts` incl. SQL/engine parity of `checkout_min_darts`;
+    - data: `submitLegs`, bundle `legs` (summary columns only, optional for old caches), outbox kind `legs` (newer snapshot of the same match+session replaces older ones, also superseded ones after a failed send), `x01Sessions.ts` (IndexedDB `sanapolis-darts-x01`, session id = device id), eventView `liveLegs`/`dartsTotals`/`averages` + `averagesFor`, `TournamentConfig.scoring` snapshot (old events: no average tiebreak);
+    - UI: `X01Start` (bull-off) + full-screen `X01Scorer` (quick buttons, keypad, undo, bust, "Uit", darts question, leg end, confirm with stats, current-leg visits, switch to Snel), ScorePage mode Segmented + resume + `?match=`, MatchModal (link to 501, averages, `LegsDetail`, "Lopende beurten wissen"), live leg score in red (`MatchLine live`), pool "Gem." column, public "Gemiddelden van de avond", TV "Hoogste gemiddelde", player chart + per-evening average, matches CSV averages, season settings;
+    - seed: the last demo evening is scored per visit (deliberate seed diff: match_stats gains darts/points columns, new match_legs block; all rng draws of the other evenings unchanged); `e2e/x01.spec.ts`.
+- **Next:** PR for 3b, then 3c (Masters).
 
 ## 4. Phase backlog
 
@@ -110,7 +116,7 @@
 - **`src/engine`:** pure, tested tournament logic.
   - Board planning is a **deterministic replay** of `matches.finished_at` + `event_log` (boards/assign/hold/release); it is never stored. `buildEventView` uses now = max(clock, latest server timestamp incl. `started_at`).
   - Match ids are codes (`P1-R2-1`, `A-R1-3`, `P2-BAR-1`), stored as `matches.code`, unique per event.
-- **DB (`supabase/migrations`, 4 files, bundled into `supabase/setup.sql` via `npm run db:bundle`):**
+- **DB (`supabase/migrations`, bundled into `supabase/setup.sql` via `npm run db:bundle`):**
   - triggers derive the winner from legs, advance players and apply walk-overs for withdrawn players;
   - RLS on all tables; private helpers live in schema `private`;
   - `submit_score` is the PIN RPC: idempotent via `result_client_id`;
@@ -122,7 +128,7 @@
 ## 6. Gotchas and environment notes
 
 - **Environment:** Node 22. The container has no Docker daemon (no real local Supabase) and cannot reach supabase.com. Use Chromium at `/opt/pw-browsers/chromium`; Playwright picks it up via `playwright.config.ts`. Never run `playwright install` here.
-- **Test runtimes:** `npm test` ≈ 65 s (1282 tests incl. 2 format-matrix files: 4 matrix files + PGlite DB tests). `npm run test:e2e` ≈ 30 s on a **Pixel 7 viewport** (one full evening, including an offline scorer, a correction, the logbook and the CSV/JSON export; plus a double-elimination evening in `e2e/formats.spec.ts`). E2e selectors: check-in rows via `[data-player-row]`, legs buttons via `[data-legs-row="1"] button`, pin via `[data-pin]`, sync badge via its accessible name.
+- **Test runtimes:** `npm test` ≈ 70 s (1321 tests incl. 4 matrix files + PGlite DB tests). `npm run test:e2e` ≈ 60 s on a **Pixel 7 viewport** (one full evening, including an offline scorer, a correction, the logbook and the CSV/JSON export; a double-elimination evening in `e2e/formats.spec.ts`; the 501 scorer with reload and offline final leg in `e2e/x01.spec.ts`). E2e selectors: check-in rows via `[data-player-row]`, legs buttons via `[data-legs-row="1"] button`, pin via `[data-pin]`, sync badge via its accessible name, 501 via `[data-x01-*]`.
 - **Generated files are checked by tests.** After changing migrations, run `npm run db:bundle`. After changing the seed schema or engine output, run `npm run seed`.
 - **PGlite:** pass `parsers` per query (DATE/TIME as text, TIMESTAMPTZ → ISO, INT8 → number). Script imports from the scratchpad need absolute paths; use `.mjs`/`.mts` for top-level await.
 - **E2e lesson:** never `page.goto` right after a click that fires a request; wait for the resulting URL or state (CI is slower).
@@ -145,3 +151,4 @@
 - 2026-10-21: phase 2c merged as PR #9 (squash `36fb8a4`); phase 2d (double elimination, knock-out with plate) built on the branch.
 - 2026-10-21: phase 2d merged as PR #10 (squash `7a6d497`, formats migration); phase 2 complete.
 - 2026-10-21: phase 3 planned (3a/3b/3c); 3a (PWA, .ics, charts) built on the branch.
+- 2026-10-22: phase 3a merged as PR #11 (squash `b2adeaa`); phase 3b (501 scorer per visit, averages, checkout suggestions) built on the branch.

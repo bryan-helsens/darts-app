@@ -5,7 +5,7 @@
  */
 
 import { createStore, del, entries, get, set } from 'idb-keyval';
-import type { Leg, Slot } from '../engine';
+import { newLeg, type Leg, type Match, type Slot } from '../engine';
 
 export interface X01Session {
   /** Toestel-sessie: de server weigert beurten van een tweede toestel. */
@@ -23,6 +23,24 @@ export interface X01Session {
   current: Leg;
   board: number | null;
   updatedAt: number;
+}
+
+const DEVICE_KEY = 'sanapolis-darts-device';
+let device: string | null = null;
+
+/** Vaste id van dit toestel (de server herkent zo wie een match bijhoudt). */
+export function deviceId(): string {
+  if (device) return device;
+  try {
+    device = localStorage.getItem(DEVICE_KEY);
+    if (!device) {
+      device = crypto.randomUUID();
+      localStorage.setItem(DEVICE_KEY, device);
+    }
+  } catch {
+    device = crypto.randomUUID();
+  }
+  return device;
 }
 
 // Eigen database: idb-keyval maakt per database één store.
@@ -71,4 +89,23 @@ export async function listSessions(eventId: string): Promise<X01Session[]> {
     // enkel wat in het geheugen zit
   }
   return [...found.values()].sort((a, b) => b.updatedAt - a.updatedAt);
+}
+
+/** Nieuwe 501-match op dit toestel (na de bull-off). */
+export async function startSession(eventId: string, match: Match, first: Slot, board: number | null): Promise<X01Session> {
+  const session: X01Session = {
+    id: deviceId(),
+    eventId,
+    code: match.id,
+    player1: match.player1 as string,
+    player2: match.player2 as string,
+    bestOf: match.bestOf,
+    first,
+    legs: [],
+    current: newLeg(first),
+    board,
+    updatedAt: Date.now(),
+  };
+  await saveSession(session);
+  return session;
 }

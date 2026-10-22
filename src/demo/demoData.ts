@@ -1,7 +1,7 @@
 /**
  * Fictieve demo-data: een seizoen met 25 spelers, gespeelde avonden
- * (gesimuleerd met de echte engine) en één geplande oefenavond met
- * voorinschrijvingen. Gebruikt door de knop "Demo-data laden" (admin) en door
+ * (gesimuleerd met de echte engine; de laatste per beurt gescoord) en één
+ * geplande oefenavond met voorinschrijvingen. Gebruikt door de knop "Demo-data laden" (admin) en door
  * de seed-generator (supabase/seed.sql).
  *
  * Alle id's beginnen met "de000000-", zodat de demo-data in één keer te
@@ -16,12 +16,19 @@ import {
   DEFAULT_TIMING,
   defaultAdvance,
   eventPoints,
+  legStarter,
+  matchStats,
+  other,
   seasonRanking,
   simulateEvening,
+  simulateLeg,
   standardSizes,
   type EventResultRow,
+  type Leg,
   type Match,
+  type Rng,
   type SimDisruption,
+  type Slot,
 } from '../engine';
 import { brusselsToUtc, thirdSaturday } from '../lib/time';
 
@@ -107,7 +114,18 @@ export interface DemoDataset {
     created_at: string;
     finished_at: string | null;
   }>;
-  match_stats: Array<{ match_id: string; event_id: string; player_id: string; count_180: number; highest_finish: number | null; highest_score: number | null }>;
+  match_stats: Array<{
+    match_id: string;
+    event_id: string;
+    player_id: string;
+    count_180: number;
+    highest_finish: number | null;
+    highest_score: number | null;
+    darts: number | null;
+    points: number | null;
+  }>;
+  /** Beurten per leg (enkel de laatste gespeelde avond); winnaar, darts en punten rekent de database. */
+  match_legs: Array<{ match_id: string; event_id: string; leg_no: number; starter: Slot; scores: Array<number | null>; checkout_darts: number | null }>;
   event_log: Array<{ event_id: string; type: string; payload: Record<string, unknown>; created_at: string }>;
   event_results: Array<{
     event_id: string;
@@ -160,6 +178,7 @@ export function buildDemoDataset(opts: DemoOptions): DemoDataset {
     pool_members: [],
     matches: [],
     match_stats: [],
+    match_legs: [],
     event_log: [],
     event_results: [],
   };
@@ -168,8 +187,11 @@ export function buildDemoDataset(opts: DemoOptions): DemoDataset {
   const allMatches: Match[] = [];
   const boardsPerEvent = [5, 6, 6, 6, 6, 7];
 
-  opts.playedDates.slice(0, 6).forEach((date, e) => {
+  const played = opts.playedDates.slice(0, 6);
+  played.forEach((date, e) => {
     const eventId = demoUuid(3, e + 1);
+    // De laatste gespeelde avond werd per beurt gescoord (501).
+    const perVisit = e === played.length - 1;
     const start = brusselsToUtc(date, '19:00');
     const ranking = seasonRanking(results, allMatches, DEFAULT_BEST_OF, seasonId);
     const rankOf = new Map(ranking.map((r) => [r.playerId, r.position]));
@@ -263,6 +285,7 @@ export function buildDemoDataset(opts: DemoOptions): DemoDataset {
     for (const m of sim.matches) {
       if (m.walkover) continue;
       for (const p of [m.player1, m.player2] as string[]) {
+        // Ook bij de avond per beurt: dezelfde trekkingen, zodat de andere avonden niet verschuiven.
         const n180 = rng.next() < 0.12 ? (rng.next() < 0.2 ? 2 : 1) : 0;
         let finish: number | null = null;
         if (m.winner === p && rng.next() < 0.12) {
@@ -270,15 +293,49 @@ export function buildDemoDataset(opts: DemoOptions): DemoDataset {
           while (BOGEY.has(finish)) finish--;
         }
         if (n180 > 0 || finish !== null) {
+          const highest = n180 > 0 ? 180 : 100 + rng.int(80);
+          if (perVisit) continue;
           data.match_stats.push({
             match_id: codeToUuid.get(m.id) as string,
             event_id: eventId,
             player_id: p,
             count_180: n180,
             highest_finish: finish,
-            highest_score: n180 > 0 ? 180 : 100 + rng.int(80),
+            highest_score: highest,
+            darts: null,
+            points: null,
           });
         }
+      }
+    }
+    if (perVisit) {
+      const legRng = createRng(`${eventId}-beurten`);
+      for (const m of sim.matches) {
+        if (m.walkover || m.winner === null) continue;
+        const matchId = codeToUuid.get(m.id) as string;
+        const legs = simulateMatchLegs(legRng, m);
+        legs.forEach((leg, i) =>
+          data.match_legs.push({
+            match_id: matchId,
+            event_id: eventId,
+            leg_no: i + 1,
+            starter: leg.starter,
+            scores: leg.visits.map((v) => (v.bust ? null : v.score)),
+            checkout_darts: leg.checkoutDarts,
+          }),
+        );
+        matchStats(legs).forEach((s, k) =>
+          data.match_stats.push({
+            match_id: matchId,
+            event_id: eventId,
+            player_id: (k === 0 ? m.player1 : m.player2) as string,
+            count_180: s.count180,
+            highest_finish: s.highestFinish,
+            highest_score: s.highestScore,
+            darts: s.darts,
+            points: s.points,
+          }),
+        );
       }
     }
     for (const d of disruptions) {
@@ -327,6 +384,16 @@ export function buildDemoDataset(opts: DemoOptions): DemoDataset {
     data.registrations.push({ event_id: practice, player_id: p.id, preregistered: true, present: false, paid: false, withdrawn_at: null });
   }
   return data;
+}
+
+/** Legs die passen bij de uitslag van een gesimuleerde match: de winnaar pakt de laatste leg. */
+function simulateMatchLegs(rng: Rng, m: Match): Leg[] {
+  const winner: Slot = m.winner === m.player1 ? 1 : 2;
+  const won = [m.legs1 ?? 0, m.legs2 ?? 0];
+  const order = rng.shuffle([...Array<Slot>(won[winner - 1] - 1).fill(winner), ...Array<Slot>(won[other(winner) - 1]).fill(other(winner))]);
+  order.push(winner);
+  const first: Slot = rng.next() < 0.5 ? 1 : 2;
+  return order.map((w, i) => simulateLeg(rng, legStarter(first, i), w));
 }
 
 /** De laatste 6 derde zaterdagen vóór `today`, oudste eerst. */
