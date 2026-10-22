@@ -99,6 +99,8 @@
   - automatic backup: **nightly, encrypted** (7-Zip with password) as a GitHub Actions artifact, kept 90 days; the repo is **public**, so never upload unencrypted contacts. Secrets: `SUPABASE_SERVICE_ROLE_KEY` + `BACKUP_PASSWORD` (+ existing `SUPABASE_URL`);
   - push notifications: all four kinds: "jouw match begint" (board), "jouw match komt eraan" (next on a board), "jij schrijft" (scorer suggestion), and a reminder on the day of an evening; a **player subscribes on their own phone, once, for all evenings** (iPhone: installed app only);
   - not doing: own domain name.
+  - **4a built on the branch** (commit `56d5b5d`): `headToHead`, `x01PlayerStats`, ranking tab "Gemiddelde", Masters cut-off line (ranking + TV), profile "501 per beurt" + "Onderlinge duels", CI actions v5.
+  - **4b built on the branch**: `.github/workflows/backup.yml` (nightly 02:23 UTC + manual; skips cleanly without the 3 secrets), `scripts/backup.ts` + `scripts/backup/collect.ts` (`collectBackups(reader)`, `restReader` with `Authorization` only for JWT keys, not for `sb_secret_…`), tested in `tests/scripts/backup.test.ts` (PGlite reader as owner, restore round-trip). 7z with `-mhe=on`; plaintext only in `$RUNNER_TEMP`.
   - Sub-phases, one PR each: **4a** head-to-head on the player profile, Masters cut-off in the ranking, season 501 stats (average, first 9, 100+/140+/180, best leg), CI actions v5 (no migration); **4b** nightly encrypted backup; **4c** push notifications (migration + Netlify scheduled function + service-worker push handler).
 
 ## 4. Phase backlog

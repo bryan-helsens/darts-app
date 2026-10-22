@@ -36,7 +36,7 @@ src/lib/      Tijd (Europe/Brussels, dd/mm/jjjj, "19u00"), namen (dubbels zoeken
 src/demo/     Demo-dataset (gedeeld door de knop "Demo-data laden" en scripts/seed)
 supabase/     migrations/ (bron van waarheid), config.toml, setup.sql (gebundeld), seed.sql, demo-cleanup.sql, restore-backup.sql
 netlify/      functions/kalender.mts: abonneerbare kalender /kalender.ics (rewrite in netlify.toml, vóór de SPA-regel)
-scripts/      seed-generator, migratiebundel, lokale Supabase-nabootsing (scripts/local), generate-icons (PWA-iconen uit favicon.svg)
+scripts/      seed-generator, migratiebundel, lokale Supabase-nabootsing (scripts/local), generate-icons (PWA-iconen uit favicon.svg), backup (nachtelijke back-up)
 tests/        engine-invarianten + matrix, PGlite-databasetests
 e2e/          Playwright
 ```
@@ -69,6 +69,7 @@ e2e/          Playwright
 - 501 per beurt: `match_legs` (beurten als `smallint[]`, null = bust; de trigger controleert de leg en leidt winnaar, darts en punten af). `submit_legs(…, p_player1, p_player2, p_legs, p_final, p_session, p_client_id, p_board)` krijgt telkens alle afgewerkte legs (momentopname); `stale` als de spelers veranderden, `conflict` voor een ander toestel (staff mag overnemen); `p_final` zet in dezelfde transactie de uitslag en `match_stats` (darts, punten, 180's, hoogste score, uitgooi ≥ 100). Regel: **beurten bestaan enkel als ze bij de uitslag passen** (`matches_clear_leg_detail` wist ze bij een andere wijziging van uitslag of spelers, behalve onder `app.skip_advance`).
 - Eerste account wordt automatisch admin (`private.handle_new_user`); volgende accounts zijn `aanvraag` tot een admin ze goedkeurt.
 - Audit-log via triggers; `app.skip_audit` / `app.skip_advance` (transactie-lokaal) voor bulkbewerkingen (seed, samenvoegen, anonimiseren). `app.actor` labelt wie zonder account schreef (`score-pin`, `online-inschrijving`).
+- Nachtelijke back-up: `.github/workflows/backup.yml` + `scripts/backup.ts` (`scripts/backup/collect.ts`: per seizoen `buildSeasonBackup` + `alle-spelers.json`, via de REST-API met de service-sleutel, per 1000 rijen). Versleuteld met 7-Zip (`BACKUP_PASSWORD`, ook de bestandsnamen) en enkel zo als artifact bewaard: de repository is **publiek**.
 - Back-up terugzetten: `supabase/restore-backup.sql` (SQL Editor; enkel ontbrekende avonden, idempotent; getest in `tests/db/backup.test.ts`).
 - Matchcodes (`P1-R2-1`, `A-R1-3`, `P2-BAR-1`, `W-R2-1`, `L-R3-2`, `GF-R1-1`, `M-R1-4`, `P-R2-1`) zijn de engine-id's; `src/data/mappers.ts` zet rijen om.
 - Formats: `events.format` (CHECK) wordt gezet door `start_tournament` uit `p_config.format`; per format enkel de juiste stages (`matches_stage_check`). `add_barrages`/`generate_knockout`/`undo_knockout` enkel bij `poules_ab` (`private.require_format`); `reset_tournament` zet `poules_ab` terug.

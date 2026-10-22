@@ -1,0 +1,75 @@
+# Nachtelijke back-up van alle seizoenen (zelfde formaat als "Volledige
+# back-up (JSON)" in de app), versleuteld met 7-Zip: AES-256, ook de
+# bestandsnamen. De repository is publiek: zonder het wachtwoord kan niemand
+# de back-up openen. Bewaard als artifact van de workflow (90 dagen).
+#
+# Nodig (GitHub > Settings > Secrets and variables > Actions):
+#   SUPABASE_URL               (zelfde als voor "Supabase wakker houden")
+#   SUPABASE_SERVICE_ROLE_KEY  (Supabase > Project Settings > API Keys: service_role / secret)
+#   BACKUP_PASSWORD            (zelf gekozen; bewaar het goed, anders is de back-up onbruikbaar)
+name: Nachtelijke back-up
+
+on:
+  schedule:
+    - cron: '23 2 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Geheimen nakijken
+        id: check
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          BACKUP_PASSWORD: ${{ secrets.BACKUP_PASSWORD }}
+        run: |
+          if [ -z "$SUPABASE_URL" ] || [ -z "$SUPABASE_SERVICE_ROLE_KEY" ] || [ -z "$BACKUP_PASSWORD" ]; then
+            echo "Secrets SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY en BACKUP_PASSWORD zijn nodig; geen back-up gemaakt."
+            echo "ok=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "ok=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: actions/checkout@v5
+        if: steps.check.outputs.ok == 'true'
+      - uses: actions/setup-node@v5
+        if: steps.check.outputs.ok == 'true'
+        with:
+          node-version: 22
+          cache: npm
+      - if: steps.check.outputs.ok == 'true'
+        run: npm ci
+
+      # Onversleuteld enkel in de tijdelijke map van de runner, nooit in de workspace.
+      - name: Gegevens ophalen
+        if: steps.check.outputs.ok == 'true'
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: npx tsx scripts/backup.ts "$RUNNER_TEMP/backup"
+
+      - name: Versleutelen
+        if: steps.check.outputs.ok == 'true'
+        env:
+          BACKUP_PASSWORD: ${{ secrets.BACKUP_PASSWORD }}
+        run: |
+          command -v 7z > /dev/null || sudo apt-get install -y p7zip-full
+          stamp=$(TZ=Europe/Brussels date +%Y-%m-%d)
+          mkdir -p versleuteld
+          7z a -t7z -mhe=on -p"$BACKUP_PASSWORD" "versleuteld/sanapolis-backup-$stamp.7z" "$RUNNER_TEMP/backup/"* > /dev/null
+          rm -rf "$RUNNER_TEMP/backup"
+          echo "STAMP=$stamp" >> "$GITHUB_ENV"
+
+      - uses: actions/upload-artifact@v4
+        if: steps.check.outputs.ok == 'true'
+        with:
+          name: sanapolis-backup-${{ env.STAMP }}
+          path: versleuteld/*.7z
+          retention-days: 90
+          if-no-files-found: error
