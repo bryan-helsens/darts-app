@@ -161,6 +161,7 @@ export function StartPanel({
         holdFinal,
         seeding: source,
         seedRanks: snapshot,
+        scoring: settings.scoring,
       };
       if (!pooled) {
         const built = startBracket({ format, players, legs, rng: createRng(event.rng_seed), createdAt: 0 });

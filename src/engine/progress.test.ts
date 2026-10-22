@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { EloPoint } from './elo';
-import { eloProgress, rankingProgress } from './progress';
+import { averageProgress, eloProgress, rankingProgress } from './progress';
 import type { EventResultRow } from './ranking';
 
 const r = (eventId: string, playerId: string, placeFrom: number, points: number): EventResultRow => ({ eventId, playerId, placeFrom, placeTo: placeFrom, points });
@@ -41,5 +41,18 @@ describe('verloop voor de grafieken', () => {
       { eventId: 'e2', date: '2027-02-20', value: 1530 },
     ]);
     expect(eloProgress(undefined)).toEqual([]);
+  });
+
+  it('gemiddelde per avond, op datum', () => {
+    const points = averageProgress([
+      { eventId: 'e2', date: '2026-02-20', darts: 30, points: 600 },
+      { eventId: 'e1', date: '2026-01-16', darts: 27, points: 501 },
+      { eventId: 'e2', date: '2026-02-20', darts: 30, points: 400 },
+      { eventId: 'e3', date: '2026-03-20', darts: 0, points: 0 },
+    ]);
+    expect(points).toEqual([
+      { eventId: 'e1', date: '2026-01-16', value: 55.67 },
+      { eventId: 'e2', date: '2026-02-20', value: 50 },
+    ]);
   });
 });

@@ -58,17 +58,20 @@ describe('exports', () => {
     const csv = matchesCsv({
       events: [event('e1', '2027-01-16')],
       matches: [open, m],
-      stats: [{ match_id: 'm1', event_id: 'e1', player_id: 'b', count_180: 2, highest_finish: 121, highest_score: 180 }],
+      stats: [
+        { match_id: 'm1', event_id: 'e1', player_id: 'a', count_180: 0, highest_finish: null, highest_score: 100, darts: 44, points: 750 },
+        { match_id: 'm1', event_id: 'e1', player_id: 'b', count_180: 2, highest_finish: 121, highest_score: 180 },
+      ],
       name,
     });
     expect(lines(csv)).toEqual([
-      "Datum;Code;Fase;Ronde;Bord;Speler 1;Speler 2;Legs 1;Legs 2;Winnaar;Walk-over;180's speler 1;180's speler 2;Hoogste uitgooi speler 1;Hoogste uitgooi speler 2;Einde",
-      '16/01/2027;P1-R1-1;Poule;1;3;Arne;Bram;2;1;Arne;nee;;2;;121;16/01/2027 20u42',
+      "Datum;Code;Fase;Ronde;Bord;Speler 1;Speler 2;Legs 1;Legs 2;Winnaar;Walk-over;180's speler 1;180's speler 2;Hoogste uitgooi speler 1;Hoogste uitgooi speler 2;Gemiddelde speler 1;Gemiddelde speler 2;Einde",
+      '16/01/2027;P1-R1-1;Poule;1;3;Arne;Bram;2;1;Arne;nee;0;2;;121;51,14;;16/01/2027 20u42',
     ]);
   });
 
   it('back-up: enkel spelers van dit seizoen, contacten enkel als ze meegegeven zijn', () => {
-    const empty: SeasonTables = { events: [], registrations: [], pools: [], pool_members: [], matches: [], match_stats: [], event_log: [], event_results: [] };
+    const empty: SeasonTables = { events: [], registrations: [], pools: [], pool_members: [], matches: [], match_stats: [], match_legs: [], event_log: [], event_results: [] };
     const tables: SeasonTables = { ...empty, event_results: [result('e1', 'b', 1)], registrations: [{ event_id: 'e1', player_id: 'a' } as SeasonTables['registrations'][number]] };
     const players = ['a', 'b', 'c'].map((id) => ({ id, name: names[id] }) as PlayerRow);
     const contacts = ['a', 'c'].map((player_id) => ({ player_id, email: `${player_id}@x.be`, phone: null, updated_at: '' }));

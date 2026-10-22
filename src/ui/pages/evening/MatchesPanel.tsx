@@ -99,7 +99,8 @@ export function MatchesPanel({ view, name }: { view: EventView; name: NameFn }) 
                     m={m}
                     name={name}
                     title={label}
-                    pending={p?.data}
+                    pending={p}
+                    live={view.liveLegs.get(m.id)}
                     extra={p ? <Badge tone="amber">sync…</Badge> : board !== undefined ? <LiveBadge>bord {board}</LiveBadge> : !m.player1 || !m.player2 ? <Badge>wacht</Badge> : null}
                     onClick={() => setSelected(m.id)}
                   />

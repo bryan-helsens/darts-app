@@ -5,7 +5,7 @@ Webapp voor het maandelijkse dartstoernooi in **Brasserie 't Oud Sanatorium** (S
 - **Voor iedereen** (geen login): kalender met de volgende speelavond, **vooraf online inschrijven**, live schema tijdens de avond, uitslagen, seizoensranking, spelersprofielen, reglement en "Nieuw? Zo werkt het".
 - **Voor de tv in de zaal** (`/tv`): schermvullend en donker; wisselt automatisch tussen de borden, het schema, de highlights en de ranking.
 - **Voor de wedstrijdleider** (op de gsm): check-in en betalingen, toernooi starten met een geschatte eindtijd, borden en wachtrij, scores, A- en B-schema, avond afsluiten.
-- **Voor de schrijvers aan het bord**: scores invoeren met een pincode, ook als de wifi even wegvalt.
+- **Voor de schrijvers aan het bord**: scores invoeren met een pincode, ook als de wifi even wegvalt: snel (enkel de legs) of **501 per beurt** met gemiddelden en uitgooi-suggesties.
 - **Voor de admins**: spelers, seizoenen (puntentabel, beste X van Y, legs per ronde), speelavonden en gebruikers.
 
 > Deze README is geschreven voor een opvolger zonder technische achtergrond. Technische details staan in [CLAUDE.md](CLAUDE.md).
@@ -25,6 +25,14 @@ Webapp voor het maandelijkse dartstoernooi in **Brasserie 't Oud Sanatorium** (S
 9. Als de poules gespeeld zijn: ga naar **Poules**. Bij een volledig gelijke stand op de grens A/B kies je **Barrage spelen** of **Loting**. Tik dan op **A- en B-schema maken**.
 10. Als alles gespeeld is: **Afsluiten → Avond afsluiten**. De eindplaatsen en punten gaan naar de ranking.
 
+**501 per beurt (optioneel):** in plaats van enkel de legs kan de schrijver elke beurt intikken. Na het tikken op het bord kiest hij bovenaan **501 per beurt** en wie begint (na de bull-off). Dan tikt hij per beurt de gegooide punten in (snelknoppen 26 tot 180, of het cijferklavier en **OK**). De app:
+- telt af, wisselt de spelers en toont bij 170 of minder een **uitgooi-suggestie** (bv. *T20 · T19 · D12*);
+- herkent een **bust** vanzelf (te veel, 1 over); de knop **Bust** is voor wie het meteen wil noteren;
+- vraagt bij een uitgooi **in hoeveel darts** (enkel als dat niet vastligt), en toont na elke leg de stand met het gemiddelde;
+- maakt een vergissing in de lopende leg ongedaan met ↶. Een afgesloten leg corrigeer je achteraf als wedstrijdleider (*Uitslag corrigeren*; de beurten van die match verdwijnen dan).
+
+De gsm bewaart de lopende match zelf: herladen, de batterij of geen wifi kosten niets (*Verder: …* bovenaan `/score`). Na elke leg gaat de stand naar de server (live te zien in rood bij de borden en op de tv), bij de laatste leg ook de uitslag met de gemiddelden, 180's en hoogste uitgooi. Wordt een match al op een ander toestel per beurt gescoord, dan krijgt een tweede toestel een melding; valt een toestel uit, dan kies je als wedstrijdleider bij die match **Lopende beurten wissen**. De standaard (snel of 501 per beurt) en of het **gemiddelde als tiebreak** in de poules telt, stel je in bij de seizoensinstellingen. De schrijver kan per match altijd zelf kiezen. Als wedstrijdleider kom je via een match op **Per beurt scoren (501)** in hetzelfde scherm.
+
 **Een score achteraf invoeren?** Het tabblad **Matchen** toont alle matchen van de avond (te spelen, gespeeld of alle), met een zoekveld. Tik op een match om de uitslag in te voeren, bv. als een match op papier gespeeld werd of vergeten was.
 
 **Na de avond:** op de publieke uitslag (en bij *Correcties*) staat **Deel de uitslag**: een afbeelding van 1080×1080 met het podium en de opvallendste prestaties, klaar voor Facebook, Instagram of WhatsApp. Op een gsm deel je ze rechtstreeks, anders download je ze.
@@ -39,7 +47,9 @@ Webapp voor het maandelijkse dartstoernooi in **Brasserie 't Oud Sanatorium** (S
 
 **In de agenda:** bij de volgende speelavond staat **In mijn agenda** (een .ics-bestand voor Google, Apple of Outlook). Op de pagina **Nieuw? → Alle speelavonden in je agenda** kunnen spelers zich **abonneren**: nieuwe of verplaatste avonden komen dan vanzelf in hun agenda (adres `https://<jouw-site>/kalender.ics`).
 
-**Grafieken:** op het spelersprofiel staat het **verloop**: de plaats in de ranking na elke avond en de Elo.
+**Grafieken:** op het spelersprofiel staat het **verloop**: de plaats in de ranking na elke avond, de Elo en (als er per beurt gescoord werd) het gemiddelde per avond.
+
+**Gemiddelden:** bij matchen die per beurt gescoord werden, toont de app het 3-dart gemiddelde (punten per drie darts): in de poulestand (kolom *Gem.*), bij de match (met **Beurten bekijken**), op de publieke uitslag (*Gemiddelden van de avond*), op de tv en in de matchen-CSV.
 
 **Geen wifi?** Werk gewoon verder. Bovenaan staat dan bv. "2 wachten op verbinding". Zodra er weer netwerk is, wordt alles automatisch verstuurd. Sluit de app gerust tussendoor: er gaat niets verloren.
 
@@ -99,6 +109,7 @@ Toch gepauzeerd? Log in op supabase.com en klik op **Restore project**. Je gegev
 ## 3. Beheer en onderhoud
 
 - **Puntentabel of beste X van Y aanpassen**: Beheer → Seizoenen → seizoen → *Instellingen*. Dit geldt meteen voor de hele seizoensranking.
+- **Scores invoeren**: in dezelfde instellingen kies je de standaard voor de schrijvers (*Snel* of *501 per beurt*) en of het gemiddelde een gelijke poulestand beslist. Dat wordt bij de start van een avond vastgelegd.
 - **Elo en loting**: in dezelfde instellingen kies je de standaard-seeding (Elo, seizoensranking of willekeurig) en de Elo-instellingen (startwaarde, K-factor, hogere K voor nieuwe spelers). Elo wordt telkens opnieuw berekend uit alle gespeelde matchen; je hoeft niets bij te houden.
 - **Klassementen**: de rankingpagina heeft tabbladen voor punten, Elo, 180's, hoogste uitgooi, deelnames en beste nieuwkomer.
 - **Dubbele speler**: Beheer → Spelers → speler → *Samenvoegen* (enkel admin).
@@ -151,7 +162,7 @@ De lokale nabootsing (`scripts/local`) draait dezelfde migraties, RLS en functie
 ## 6. Wedstrijdregels in de app
 
 - **Poules** van bij voorkeur 4 spelers, anders 5, en 3 enkel als het niet anders kan (6, 7 en 11 spelers). De wedstrijdleider kan ook kiezen voor minder, grotere poules.
-- **Poulerangschikking**: gewonnen matchen → legsaldo → gewonnen legs → onderling resultaat → (gemiddelde, later) → barrage of loting. Wie opgeeft, staat onderaan de poule en verliest de resterende matchen met walk-over (maximale legs voor de tegenstander).
+- **Poulerangschikking**: gewonnen matchen → legsaldo → gewonnen legs → onderling resultaat → 3-dart gemiddelde (instelbaar; enkel als alle poulematchen van de gelijk staande spelers per beurt gescoord werden) → barrage of loting. Wie opgeeft, staat onderaan de poule en verliest de resterende matchen met walk-over (maximale legs voor de tegenstander).
 - **Doorstroming**: top 2 per poule naar A (instelbaar; bij één poule de top 4), de rest naar B. Byes gaan naar de beste poulewinnaars. Poulegenoten komen elkaar niet tegen in de eerste KO-ronde en zitten in verschillende helften van het A-schema. Poules van verschillende grootte worden vergeleken op winstpercentage, legsaldo per match en gewonnen legs per match.
 - **Eindplaatsen**: A-schema eerst (gedeelde plaatsen per ronde: 3–4, 5–8, …), dan het B-schema. Bij een gedeelde plaats krijg je de punten van de hoogste plaats in dat bereik.
 - **Ranking**: beste X van Y avonden (op het totaal per avond, deelnamepunten inbegrepen). Bij gelijke stand: aantal overwinningen → beste resultaat → onderling resultaat → gewonnen legs → loting.

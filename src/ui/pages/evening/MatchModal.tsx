@@ -1,13 +1,15 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import type { Match } from '../../../engine';
-import { addLogEntry, correctScore } from '../../../data/api';
+import { addLogEntry, clearMatchLegs, correctScore } from '../../../data/api';
 import type { EventView } from '../../../data/eventView';
 import { outbox, usePendingScores } from '../../../data/outbox';
 import { keys } from '../../../data/queries';
-import { MatchLine, matchTitle, statsLine } from '../../components/darts';
+import { averageLine, MatchLine, matchTitle, statsLine } from '../../components/darts';
+import { LegsDetail } from '../../components/LegsDetail';
 import { ScoreEntry, type ScoreInput } from '../../components/ScoreEntry';
-import { Button, ErrorBox, InfoBox, Modal, Select } from '../../components/ui';
+import { Button, ConfirmModal, ErrorBox, InfoBox, Modal, Select } from '../../components/ui';
 
 type NameFn = (id: string | null | undefined) => string;
 
@@ -24,12 +26,24 @@ export function MatchModal({ view, match, board, name, onClose }: { view: EventV
   const live = view.replay?.boards.find((b) => b.matchId === match.id);
   const held = view.replay?.held.includes(match.id);
   const known = Boolean(match.player1 && match.player2);
+  const rowId = view.rowByCode.get(match.id)?.id ?? '';
+  const liveLegs = view.liveLegs.get(match.id);
+  const totals = view.dartsTotals.get(match.id);
+  const [showLegs, setShowLegs] = useState(false);
+  const [confirmClear, setConfirmClear] = useState(false);
 
   const correct = useMutation({
     mutationFn: (input: ScoreInput) => correctScore(view.event.id, match.id, input.legs1, input.legs2),
     onSuccess: async () => {
       await refresh();
       onClose();
+    },
+  });
+  const clear = useMutation({
+    mutationFn: () => clearMatchLegs(rowId),
+    onSuccess: async () => {
+      setConfirmClear(false);
+      await refresh();
     },
   });
   const log = useMutation({
@@ -60,7 +74,26 @@ export function MatchModal({ view, match, board, name, onClose }: { view: EventV
   return (
     <Modal open onClose={onClose} title={matchTitle(match, view)}>
       {mode === 'score' && known && (
-        <ScoreEntry match={match} name={name} title={live ? `Bord ${live.board}` : undefined} onSubmit={submit} onCancel={() => (match.winner ? setMode('view') : onClose())} />
+        <>
+          {liveLegs && (
+            <div className="mb-3">
+              <InfoBox tone="amber">
+                Deze match wordt per beurt gescoord op een toestel (nu {liveLegs.legs1}–{liveLegs.legs2}). Snel invoeren wist die beurten.
+              </InfoBox>
+            </div>
+          )}
+          <ScoreEntry match={match} name={name} title={live ? `Bord ${live.board}` : undefined} onSubmit={submit} onCancel={() => (match.winner ? setMode('view') : onClose())} />
+          {view.event.status === 'bezig' && !match.winner && !liveLegs && (
+            <Link to={`/score/${view.event.id}?match=${encodeURIComponent(match.id)}`} className="mt-2 block text-center text-xs font-medium text-brand-700 hover:underline">
+              Per beurt scoren (501) →
+            </Link>
+          )}
+          {liveLegs && (
+            <Button variant="ghost" size="sm" block className="mt-2" onClick={() => setConfirmClear(true)}>
+              Lopende beurten wissen
+            </Button>
+          )}
+        </>
       )}
       {mode === 'correct' && (
         <>
@@ -83,11 +116,22 @@ export function MatchModal({ view, match, board, name, onClose }: { view: EventV
       {mode === 'view' && (
         <div className="space-y-3">
           <div className="rounded-lg bg-zinc-50 px-3 py-2.5">
-            <MatchLine m={match} name={name} pending={pending ? { legs1: pending.data.legs1, legs2: pending.data.legs2 } : undefined} />
+            <MatchLine m={match} name={name} pending={pending} />
           </div>
           {pending && <InfoBox tone="amber">Deze uitslag wacht nog op verbinding en wordt automatisch verstuurd.</InfoBox>}
-          {statsLine(view.statsByMatch.get(view.rowByCode.get(match.id)?.id ?? ''), name) && (
-            <p className="text-xs text-zinc-600">{statsLine(view.statsByMatch.get(view.rowByCode.get(match.id)?.id ?? ''), name)}</p>
+          {statsLine(view.statsByMatch.get(rowId), name) && <p className="text-xs text-zinc-600">{statsLine(view.statsByMatch.get(rowId), name)}</p>}
+          {averageLine(totals, [match.player1, match.player2], name) && (
+            <p className="text-xs text-zinc-600" data-match-averages>
+              {averageLine(totals, [match.player1, match.player2], name)}
+            </p>
+          )}
+          {totals && (
+            <>
+              <Button variant="ghost" size="sm" block onClick={() => setShowLegs((s) => !s)}>
+                {showLegs ? 'Beurten verbergen' : 'Beurten bekijken'}
+              </Button>
+              {showLegs && <LegsDetail matchId={rowId} players={[match.player1, match.player2]} name={name} />}
+            </>
           )}
           {match.winner && !pending && (
             <Button variant="secondary" block onClick={() => setMode('correct')}>
@@ -97,6 +141,19 @@ export function MatchModal({ view, match, board, name, onClose }: { view: EventV
         </div>
       )}
       {!known && <p className="text-[13px] text-zinc-600">De spelers van deze match zijn nog niet gekend.</p>}
+
+      <ConfirmModal
+        open={confirmClear}
+        title="Lopende beurten wissen?"
+        confirmLabel="Wissen"
+        danger
+        busy={clear.isPending}
+        onConfirm={() => clear.mutate()}
+        onClose={() => setConfirmClear(false)}
+      >
+        De beurten van deze match worden gewist, bv. omdat het toestel van de schrijver uitviel. Daarna kan de match opnieuw gescoord worden, snel of per beurt.
+        {clear.error && <ErrorBox error={clear.error} />}
+      </ConfirmModal>
 
       {!match.winner && !pending && known && view.event.status === 'bezig' && (
         <div className="mt-4 space-y-2 border-t border-zinc-100 pt-3">

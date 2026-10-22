@@ -56,6 +56,7 @@ e2e/          Playwright
 - `elo`: Elo afgeleid uit alle gespeelde matchen (niet opgeslagen), chronologisch; per match de Elo-instellingen van haar seizoen (`SeasonSettings.elo`); walk-overs tellen niet. `eloSeedRanks` voor de loting.
 - `leaderboards`: extra klassementen (180's, hoogste uitgooi, deelnames, beste nieuwkomer).
 - `progress`: verloop voor de spelersgrafieken (`rankingProgress` = plaats na elke avond via `seasonRanking` per prefix; `eloProgress` = Elo na elke avond).
+- `checkout` / `x01` / `x01Sim`: 501 double out per beurt. `checkoutSuggestion` zoekt alle routes (minste darts, dan voorkeur D16/D20/D8 en T20/T19); `applyVisit` herkent busts zelf en vraagt het aantal darts bij een uitgooi als dat niet vastligt (`needs-darts`); een bust = 0 punten en 3 darts; gemiddelde = punten / darts × 3 (`threeDartAverage`). `poolAverages` geeft enkel een gemiddelde als *alle* poulematchen van die speler per beurt gescoord werden. De database volgt dezelfde regels (`private.leg_totals`, `private.checkout_min_darts`; pariteit getest).
 - `scorer`: schrijver-suggestie per bord, afgeleid (niet opgeslagen): verliezer van de vorige match op dat bord, anders wie het langst vrij is; nooit wie speelt of de volgende match op dat bord heeft.
 - Alle randomness via `createRng(seed)` / `lotValue(seed, …)`; de seed per avond is `events.rng_seed`.
 
@@ -63,6 +64,7 @@ e2e/          Playwright
 - De engine draait in de browser; de database bewaakt invarianten: `matches_before_write` leidt de winnaar af uit de legs en valideert; `matches_after_update` schuift spelers door (`private.place_player`) en past walk-overs toe voor opgegeven spelers.
 - Rechten: RLS op alle tabellen. Publiek leest spelers (naam/bijnaam), avonden, poules, matchen, uitslagen. `player_contacts`, `registrations`, `event_secrets` alleen staff (`is_staff()` = admin of leider). Interne functies in schema `private` (niet via de API bereikbaar).
 - Schrijvers zonder account: `submit_score(p_event_id, p_code, p_pin, …, p_client_id)`. Idempotent via `result_client_id`; conflict bij een andere bestaande uitslag; rem na 20 foute pins per 10 minuten.
+- 501 per beurt: `match_legs` (beurten als `smallint[]`, null = bust; de trigger controleert de leg en leidt winnaar, darts en punten af). `submit_legs(…, p_player1, p_player2, p_legs, p_final, p_session, p_client_id, p_board)` krijgt telkens alle afgewerkte legs (momentopname); `stale` als de spelers veranderden, `conflict` voor een ander toestel (staff mag overnemen); `p_final` zet in dezelfde transactie de uitslag en `match_stats` (darts, punten, 180's, hoogste score, uitgooi ≥ 100). Regel: **beurten bestaan enkel als ze bij de uitslag passen** (`matches_clear_leg_detail` wist ze bij een andere wijziging van uitslag of spelers, behalve onder `app.skip_advance`).
 - Eerste account wordt automatisch admin (`private.handle_new_user`); volgende accounts zijn `aanvraag` tot een admin ze goedkeurt.
 - Audit-log via triggers; `app.skip_audit` / `app.skip_advance` (transactie-lokaal) voor bulkbewerkingen (seed, samenvoegen, anonimiseren). `app.actor` labelt wie zonder account schreef (`score-pin`, `online-inschrijving`).
 - Back-up terugzetten: `supabase/restore-backup.sql` (SQL Editor; enkel ontbrekende avonden, idempotent; getest in `tests/db/backup.test.ts`).
@@ -77,7 +79,8 @@ e2e/          Playwright
 - `audit`: `describeAudit(row, ctx)` maakt van een audit-rij een Vlaamse zin (logboek `/beheer/logboek`, admin). `fetchAuditLog` pagineert met een cursor op `id` (niet `changed_at`: dat is per transactie gelijk); filters per tabel via `AUDIT_TABLES`.
 - `exports`: `rankingCsv`, `resultsCsv`, `matchesCsv` en `buildSeasonBackup` (JSON, contacten enkel voor admins). Seizoenstabellen haal je op met `fetchAll` (per 1000 rijen, met vaste volgorde): PostgREST geeft nooit meer dan 1000 rijen per verzoek.
 - Elo: `fetchEloMatches` haalt alle gespeelde matchen op (via `fetchAll`); `useElo()` (src/ui/hooks.ts) rekent ze om. Bij de start bewaart `TournamentConfig` de gekozen seedingbron en een momentopname `seedRanks` (ook gebruikt voor de KO). "Nu" = max(klok, laatste servertijdstip).
-- `outbox`: scores en check-in gaan via IndexedDB en worden met retry gesynchroniseerd. `SyncBadge` toont de status. Na een sync werkt `App.tsx` de cache meteen bij.
+- `outbox`: scores, legs (501) en check-in gaan via IndexedDB en worden met retry gesynchroniseerd. Een nieuwere legs-momentopname van dezelfde match en hetzelfde toestel vervangt een oudere. `SyncBadge` toont de status. Na een sync werkt `App.tsx` de cache meteen bij.
+- `x01Sessions`: de lopende 501-match per toestel in IndexedDB (`sanapolis-darts-x01`); sessie-id = toestel-id. `eventView` geeft `liveLegs` (legstand van lopende matchen), `dartsTotals`, `averages` en `averagesFor(view, filter)`; het gemiddelde telt als poule-tiebreak enkel als `TournamentConfig.scoring.averageTiebreak` bij de start zo vastgelegd werd.
 - Query-cache wordt bewaard in localStorage (offline tonen); `staleTime: 0`, zodat online altijd ververst wordt.
 - Realtime: `useEventRealtime` + polling elke 30 s als vangnet.
 
@@ -91,7 +94,8 @@ e2e/          Playwright
 - TV-modus (`src/ui/pages/tv`): eigen donkere componenten; `TvPage` schaalt de rem mee met de schermbreedte en houdt het scherm wakker. `?toon=<scherm>` zet één scherm vast.
 - Schema's tonen: `Bracket` (licht), `TvBracket`, `PrintBracket` gebruiken allemaal `bracketLayout(stage, matches)` (`src/ui/components/bracketLayout.ts`): plaatsen per ronde, ook voor het verliezersschema; lege kolommen vallen weg.
 - Indeling (`src/ui/layout/Layouts.tsx`): op gsm een tabbalk onderaan (zoals een app), vanaf `md` de navigatie in de kop. Matchen tonen als scorebord (`MatchLine`: twee regels, legs rechts) en in rasters van tegeltjes (`MatchTile` + `TileGrid`, 2 kolommen op gsm).
-- Scores invoeren: per speler het aantal gewonnen legs (`ScoreEntry`, rijen met `data-legs-row`). Het tabblad **Matchen** (`MatchesPanel`) laat de leider elke match achteraf invoeren of corrigeren.
+- Scores invoeren: per speler het aantal gewonnen legs (`ScoreEntry`, rijen met `data-legs-row`), of per beurt (`X01Start` + `X01Scorer`, volledig scherm, `data-x01-*`; standaard volgens `SeasonSettings.scoring.defaultMode`). `/score/:eventId?match=CODE` opent een match rechtstreeks. Het tabblad **Matchen** (`MatchesPanel`) laat de leider elke match achteraf invoeren of corrigeren; `MatchModal` toont gemiddelden en `LegsDetail` ("Beurten bekijken").
+- Getallen met decimalen via `formatDecimal` (`src/lib/format.ts`, komma).
 - PWA (`vite.config.ts`, `src/ui/pwa`): `registerType: 'prompt'` + `UpdateBanner` (nooit vanzelf herladen, behalve op `/tv`), `InstallCard` (`beforeinstallprompt` wordt vroeg opgevangen in `install.ts`, geïmporteerd in `main.tsx`; iOS-uitleg). PNG-iconen in `public/` (opnieuw maken: `npx tsx scripts/generate-icons.ts`). De service worker laat `/kalender.ics` met rust (`navigateFallbackDenylist`).
 - Agenda: `src/lib/ics.ts` (`buildCalendar`, UTC, escapen, vouwen op 75 bytes) + `src/data/calendar.ts` (`toCalendarEvents`, zonder Supabase-client: ook gebruikt door de Netlify-functie). Knop `AddToCalendarButton`, abonnement `CalendarSubscribe` (`webcal://`).
 - Grafieken: `LineChart` (SVG, geen bibliotheek) met de pure `chartGeometry`.
@@ -102,4 +106,4 @@ e2e/          Playwright
 ## Fasering
 - Fase 1 (klaar): alles hierboven.
 - Fase 2 (klaar, PR #7–#10): online voorinschrijving (RPC met rem), TV-modus `/tv`, schrijver-suggestie, Elo (seedingbron), extra klassementen, deelbare uitslagafbeelding, double elimination en knock-out met plate, logboek, CSV/JSON-export.
-- Fase 3: 3a (PWA, .ics, grafieken) klaar op de branch; 3b 501-scorer per beurt; 3c Masters. Plan: zie `.claude/memory/PROJECT_MEMORY.md`.
+- Fase 3: 3a (PWA, .ics, grafieken) klaar (PR #11); 3b 501-scorer per beurt klaar op de branch; 3c Masters. Plan: zie `.claude/memory/PROJECT_MEMORY.md`.

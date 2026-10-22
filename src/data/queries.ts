@@ -12,6 +12,7 @@ import {
   fetchEloMatches,
   fetchEventBundle,
   fetchEvents,
+  fetchMatchLegs,
   fetchPlayerData,
   fetchPlayers,
   fetchProfiles,
@@ -40,6 +41,7 @@ export const keys = {
   player: (id: string) => ['player', id] as const,
   demo: ['demo'] as const,
   elo: ['elo'] as const,
+  matchLegs: (matchId: string) => ['match-legs', matchId] as const,
 };
 
 export const useSeasons = () => useQuery({ queryKey: keys.seasons, queryFn: fetchSeasons });
@@ -57,6 +59,10 @@ export const useAuditLog = (filter: string, tables: readonly string[] | undefine
     getNextPageParam: (last) => (last.length < AUDIT_PAGE ? undefined : last[last.length - 1].id),
     enabled,
   });
+
+/** Alle beurten van één match ("Beurten bekijken"). */
+export const useMatchLegs = (matchId: string | undefined) =>
+  useQuery({ queryKey: keys.matchLegs(matchId ?? ''), queryFn: () => fetchMatchLegs(matchId as string), enabled: Boolean(matchId) });
 
 export const useEloMatches = () => useQuery({ queryKey: keys.elo, queryFn: fetchEloMatches });
 
@@ -107,6 +113,7 @@ export function useEventRealtime(eventId: string | undefined) {
     const channel = supabase
       .channel(`event-${eventId}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'matches', filter }, refresh)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'match_legs', filter }, refresh)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'event_log', filter }, refresh)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'pools', filter }, refresh)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'registrations', filter }, refresh)
