@@ -2,9 +2,7 @@
 
 import {
   formatPlace,
-  roundName,
   STAGE_NAMES,
-  stageRoundName,
   threeDartAverage,
   type BracketStage,
   type DartsTotals,
@@ -15,6 +13,7 @@ import {
 } from '../../engine';
 import type { ReactNode } from 'react';
 import type { EventView, PlayerAverage } from '../../data/eventView';
+import { matchTitle, shortTitle, stageLabel } from '../../data/titles';
 import type { MatchStatRow } from '../../data/rows';
 import { formatDecimal } from '../../lib/format';
 import { formatTime } from '../../lib/time';
@@ -23,27 +22,7 @@ import { Badge, cx, Empty, Icon, type Tone } from './ui';
 
 type NameFn = (id: string | null | undefined) => string;
 
-export function stageLabel(m: Match, view?: Pick<EventView, 'pools'>): string {
-  if (m.stage === 'pool') return view?.pools.find((p) => p.id === m.poolId)?.label ?? 'Poule';
-  if (m.stage === 'barrage') return 'Barrage';
-  return STAGE_NAMES[m.stage];
-}
-
-const roundsOf = (m: Match, matches: readonly Match[]) => Math.max(...matches.filter((x) => x.stage === m.stage).map((x) => x.round));
-
-export function matchTitle(m: Match, view: Pick<EventView, 'pools' | 'matches'>): string {
-  if (m.stage === 'A' || m.stage === 'B' || m.stage === 'M') return `${STAGE_NAMES[m.stage]} · ${roundName(m.round, roundsOf(m, view.matches))}`;
-  if (m.stage === 'pool' || m.stage === 'barrage') return stageLabel(m, view);
-  // "Winnaars ronde 2", "Verliezersfinale", "Plate halve finale", "Grote finale"
-  return stageRoundName(m.stage, m.round, roundsOf(m, view.matches));
-}
-
-/** Korte titel voor kleine kaarten: "Poule 2", "A · Halve finale", "Verliezers ronde 3". */
-export function shortTitle(m: Match, view: Pick<EventView, 'pools' | 'matches'>): string {
-  if (m.stage === 'A' || m.stage === 'B') return `${m.stage} · ${roundName(m.round, roundsOf(m, view.matches))}`;
-  if (m.stage === 'pool' || m.stage === 'barrage') return stageLabel(m, view);
-  return stageRoundName(m.stage, m.round, roundsOf(m, view.matches));
-}
+export { matchTitle, shortTitle, stageLabel };
 
 /**
  * Een match als scorebord: twee regels (speler + gewonnen legs), de winnaar in

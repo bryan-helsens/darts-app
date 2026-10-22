@@ -23,3 +23,5 @@ export * from './checkout';
 export * from './x01';
 export * from './x01Sim';
 export * from './masters';
+export * from './headToHead';
+export * from './x01Stats';

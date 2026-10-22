@@ -5,6 +5,7 @@
 
 import type { PostgrestError } from '@supabase/supabase-js';
 import type { SeasonTables } from './exports';
+import type { PushKind } from './push';
 import { supabase } from './supabase';
 import type {
   AuditLogRow,
@@ -12,6 +13,7 @@ import type {
   EventLogRow,
   EventResultRow,
   EventRow,
+  MatchLegDetail,
   MatchLegRow,
   MatchLegSummary,
   MatchRow,
@@ -110,6 +112,14 @@ export async function fetchEventBundle(eventId: string): Promise<EventBundle> {
     must<EventResultRow[]>(supabase.from('event_results').select('*').eq('event_id', eventId)),
   ]);
   return { event, pools, members, matches, log, stats, legs, results };
+}
+
+/** Alle beurten van een reeks avonden (501-statistieken van een seizoen). */
+export async function fetchLegsForEvents(eventIds: readonly string[]): Promise<MatchLegDetail[]> {
+  if (eventIds.length === 0) return [];
+  return fetchAll<MatchLegDetail>((f, t) =>
+    supabase.from('match_legs').select('match_id,event_id,leg_no,starter,scores,checkout_darts').in('event_id', [...eventIds]).order('match_id').order('leg_no').range(f, t),
+  );
 }
 
 /** Alle beurten van één match ("Beurten bekijken"). */
@@ -345,6 +355,29 @@ export const preregister = (input: { eventId: string; playerId?: string | null; 
     p_email: input.email ?? null,
     p_phone: input.phone ?? null,
   });
+
+// ---------- Pushmeldingen (publiek, zonder account; per toestel) ----------
+
+export interface SubscribePushResult {
+  status: 'ok' | 'invalid';
+  message?: string;
+}
+
+export interface PushStatus {
+  player_id: string;
+  kinds: PushKind[];
+}
+
+export const subscribePush = (input: { playerId: string; endpoint: string; p256dh: string; auth: string; kinds: readonly PushKind[] }) =>
+  rpc<SubscribePushResult>('subscribe_push', {
+    p_player_id: input.playerId,
+    p_endpoint: input.endpoint,
+    p_p256dh: input.p256dh,
+    p_auth: input.auth,
+    p_kinds: [...input.kinds],
+  });
+export const unsubscribePush = (endpoint: string) => rpc('unsubscribe_push', { p_endpoint: endpoint });
+export const fetchPushStatus = (endpoint: string) => rpc<PushStatus | null>('push_status', { p_endpoint: endpoint });
 
 export async function fetchPlayerData(playerId: string): Promise<{ results: EventResultRow[]; matches: MatchRow[]; stats: MatchStatRow[] }> {
   const [results, matches, stats] = await Promise.all([

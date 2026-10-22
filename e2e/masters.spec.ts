@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { nextWeek, playAllBoards, signInAsOrganizer } from './helpers';
+import { ensureDemoData, nextWeek, playAllBoards, signInAsOrganizer } from './helpers';
 
 /**
  * Masters met de demo-data (25 spelers in de ranking): aanzetten in de
@@ -12,19 +12,19 @@ const DEMO_SEASON = 'de000000-0000-4000-8002-000000000001';
 
 test('Masters met een vervanger', async ({ page }) => {
   await signInAsOrganizer(page);
-  await expect(page.getByRole('button', { name: /^Demo-data (laden|verwijderen)$/ })).toBeVisible({ timeout: 15_000 });
-  const load = page.getByRole('button', { name: 'Demo-data laden' });
-  if (await load.isVisible()) {
-    await load.click();
-    await page.getByRole('dialog').getByRole('button', { name: 'Laden' }).click();
-    await expect(page.getByRole('button', { name: 'Demo-data verwijderen' })).toBeVisible({ timeout: 30_000 });
-  }
+  await ensureDemoData(page);
 
   // De ranking vóór de Masters.
   await page.goto(`/ranking/${DEMO_SEASON}`);
-  const rankingRows = page.locator('tbody tr');
+  // Enkel de spelers, niet de Masters-grens (die verschijnt pas als de Masters aanstaat).
+  const rankingRows = page.locator('tbody tr:not([data-masters-cut])');
   await expect(rankingRows.first()).toBeVisible();
   const rankingBefore = await rankingRows.allInnerTexts();
+  await expect(page.locator('[data-masters-cut]')).toHaveCount(0);
+
+  // De laatste demo-avond werd per beurt gescoord: klassement "Gemiddelde".
+  await page.getByRole('button', { name: 'Gemiddelde', exact: true }).click();
+  await expect(page.locator('tbody tr').first()).toBeVisible();
 
   // Masters aanzetten (8 spelers) en aanmaken.
   await page.goto(`/beheer/seizoenen/${DEMO_SEASON}`);
@@ -75,6 +75,14 @@ test('Masters met een vervanger', async ({ page }) => {
   await page.goto(`/ranking/${DEMO_SEASON}`);
   await expect(rankingRows.first()).toBeVisible();
   expect(await rankingRows.allInnerTexts()).toEqual(rankingBefore);
+  // Nu de Masters aanstaat: de grens na de top 8.
+  await expect(page.locator('[data-masters-cut]')).toContainText('top 8 voor de Masters');
+  await expect(page.locator('tbody tr').nth(8)).toHaveAttribute('data-masters-cut');
   await page.getByRole('link', { name: winner, exact: true }).first().click();
   await expect(page.locator('[data-masters-winner]')).toContainText('Masters-winnaar');
+  // Onderlinge duels: openklappen toont de matchen.
+  const duels = page.locator('[data-head-to-head]');
+  await expect(duels).toBeVisible();
+  await duels.locator('tbody tr').first().click();
+  await expect(duels.locator('li').first()).toBeVisible();
 });

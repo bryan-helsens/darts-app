@@ -30,7 +30,12 @@ export default defineConfig({
     },
     {
       command: `npx vite --port ${APP_PORT} --strictPort`,
-      env: { VITE_SUPABASE_URL: `http://localhost:${SUPABASE_PORT}`, VITE_SUPABASE_ANON_KEY: 'lokaal' },
+      env: {
+        VITE_SUPABASE_URL: `http://localhost:${SUPABASE_PORT}`,
+        VITE_SUPABASE_ANON_KEY: 'lokaal',
+        // Een voorbeeldsleutel (publiek): de e2e bootst de pushdienst na (e2e/push.spec.ts).
+        VITE_VAPID_PUBLIC_KEY: 'BEl62iUYgUivxIkv69yViEuiBIa-Ib9-SkvMeAtA3LFgDzkrxZJjSgSnfckjBJuBkr3qBUYIHBQFLXYp5Nksh8U',
+      },
       port: APP_PORT,
       reuseExistingServer: false,
     },

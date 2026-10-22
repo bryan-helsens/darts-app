@@ -41,6 +41,8 @@ export default defineConfig({
         navigateFallbackDenylist: [/^\/kalender\.ics/],
         // Enkel de Latijnse lettertypebestanden offline klaarzetten; de rest (Grieks, Cyrillisch…) laadt de browser pas als het nodig is.
         globPatterns: ['**/*.{js,css,html,svg,png}', '**/inter-latin*.woff2'],
+        // Pushmeldingen tonen en openen (public/push-sw.js).
+        importScripts: ['push-sw.js'],
       },
     }),
   ],

@@ -233,6 +233,12 @@ function sqlValue(v: unknown): unknown {
   return v;
 }
 
+/** RPC-argument: een lijst van gewone waarden laat PGlite zelf omzetten (text[] of jsonb, volgens de functie). */
+function rpcValue(v: unknown): unknown {
+  if (Array.isArray(v) && v.every((x) => x === null || typeof x !== 'object')) return v;
+  return sqlValue(v);
+}
+
 // ---------------------------------------------------------------------------
 // Server
 // ---------------------------------------------------------------------------
@@ -275,7 +281,7 @@ async function handleRest(db: PGlite, req: IncomingMessage, url: URL, userId: st
     const fn = path.slice(4);
     const args = ((await body(req)) ?? {}) as Record<string, unknown>;
     const names = Object.keys(args);
-    const params = names.map((n) => sqlValue(args[n]));
+    const params = names.map((n) => rpcValue(args[n]));
     const sql = `select public.${ident(fn)}(${names.map((n, i) => `${ident(n)} => $${i + 1}`).join(', ')}) as result`;
     const result = await asRole(db, userId, (tx) => tx.query<{ result: unknown }>(sql, params, { parsers: PARSERS }));
     return send(res, 200, result.rows[0]?.result ?? null);

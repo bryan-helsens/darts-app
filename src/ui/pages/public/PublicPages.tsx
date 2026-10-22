@@ -21,11 +21,13 @@ import { matchesSearch } from '../../../lib/names';
 import { formatDate, formatLongDate, formatTime, shortTime } from '../../../lib/time';
 import { AddToCalendarButton } from '../../components/Calendar';
 import { AveragesTable, BoardsOverview, Bracket, MastersBadge, MatchTile, PlacementsTable, PoolTable, shortTitle, TileGrid } from '../../components/darts';
+import { HeadToHead } from '../../components/HeadToHead';
 import { LineChart } from '../../components/LineChart';
 import { displayName } from '../../components/players';
+import { PushCard } from '../../pwa/PushCard';
 import { ShareResultButton } from '../../share/ShareResult';
 import { Badge, Button, Card, cx, DateTile, Empty, ErrorBox, Icon, List, LiveBadge, PageTitle, rowClass, rowHover, SearchInput, SectionTitle, Segmented, Select, Spinner, Tabs } from '../../components/ui';
-import { pickCurrentSeason, seasonSettings, useCurrentSeason, useElo, useNow, useSeasonRanking, useUpcoming } from '../../hooks';
+import { pickCurrentSeason, seasonSettings, useCurrentSeason, useElo, useNow, useSeasonRanking, useSeasonX01, useUpcoming } from '../../hooks';
 
 const time = (t: string) => formatTime(shortTime(t));
 
@@ -409,11 +411,12 @@ export function ResultsPage() {
 // Seizoensranking
 // ---------------------------------------------------------------------------
 
-type Board = 'punten' | 'elo' | '180' | 'finish' | 'deelnames' | 'nieuwkomers';
+type Board = 'punten' | 'elo' | 'gemiddelde' | '180' | 'finish' | 'deelnames' | 'nieuwkomers';
 
 const BOARDS: Array<{ id: Board; label: string }> = [
   { id: 'punten', label: 'Punten' },
   { id: 'elo', label: 'Elo' },
+  { id: 'gemiddelde', label: 'Gemiddelde' },
   { id: '180', label: '180’s' },
   { id: 'finish', label: 'Hoogste uitgooi' },
   { id: 'deelnames', label: 'Deelnames' },
@@ -471,7 +474,12 @@ export function RankingPage() {
   const settings = seasonSettings(season);
   const { rows, isLoading, error, data } = useSeasonRanking(season);
   const { elo, firstSeen } = useElo();
+  const { stats: x01 } = useSeasonX01(season);
+  const { data: allEvents } = useEvents();
   const directory = usePlayerDirectory();
+  const mastersEvent = (allEvents ?? []).find((e) => e.season_id === season?.id && isMasters(e));
+  // De Masters-grens: enkel als de Masters aanstaat en er meer spelers zijn dan plaatsen.
+  const mastersCut = settings.masters.enabled && rows.length > settings.masters.size ? settings.masters.size : null;
   const boards = useMemo(
     () =>
       season && data
@@ -541,7 +549,18 @@ export function RankingPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {rows.map((r) => (
+                  {rows.flatMap((r, i) => [
+                    ...(mastersCut !== null && i === mastersCut
+                      ? [
+                          <tr key="masters-cut" data-masters-cut>
+                            <td colSpan={6} className="border-t-2 border-amber-300 bg-amber-50 px-3 py-1 text-2xs font-medium text-amber-900">
+                              <Icon name="trophy" className="mr-1 inline h-3 w-3 align-[-2px]" />
+                              Boven deze lijn: de top {settings.masters.size} voor de Masters
+                              {mastersEvent ? ` op ${formatDate(mastersEvent.event_date)}` : ''}
+                            </td>
+                          </tr>,
+                        ]
+                      : []),
                     <tr key={r.playerId} className="border-t border-zinc-100 first:border-t-0 hover:bg-zinc-50">
                       <td className="py-1.5 text-center">
                         <span className={positionClass(r.position)}>{r.position}</span>
@@ -556,8 +575,8 @@ export function RankingPage() {
                       <td className="text-center text-zinc-500 tabular-nums">{r.events}</td>
                       <td className="hidden text-center text-zinc-500 tabular-nums sm:table-cell">{r.wins}</td>
                       <td className="text-center text-zinc-500 tabular-nums">{r.bestPlace}</td>
-                    </tr>
-                  ))}
+                    </tr>,
+                  ])}
                 </tbody>
               </table>
             </div>
@@ -567,6 +586,27 @@ export function RankingPage() {
           </>
         ))}
       {board === 'elo' && <LeaderTable rows={eloRows} name={directory.name} valueLabel="Elo" detail="Matchen" />}
+      {board === 'gemiddelde' && (
+        <>
+          <LeaderTable
+            rows={[...x01.entries()]
+              .filter(([, t]) => t.average !== null)
+              .sort((a, b) => (b[1].average as number) - (a[1].average as number))
+              .map(([playerId, t], i) => ({
+                playerId,
+                position: i + 1,
+                value: formatDecimal(t.average),
+                detail: `${t.legs} · ${formatDecimal(t.first9Average)}`,
+              }))}
+            name={directory.name}
+            valueLabel="Gem."
+            detail="Legs · 1e 9"
+          />
+          <p className="mt-2 text-2xs text-zinc-500">
+            3-dart gemiddelde over alle matchen die per beurt gescoord werden (501). Eerste 9: het gemiddelde over de eerste drie beurten van elke leg.
+          </p>
+        </>
+      )}
       {board === '180' && boards && <LeaderTable rows={boards.most180} name={directory.name} valueLabel="180’s" />}
       {board === 'finish' && boards && (
         <LeaderTable
@@ -620,6 +660,7 @@ export function PlayerPage() {
   const { season, data: seasons } = useCurrentSeason();
   const { rows, data: seasonData } = useSeasonRanking(season);
   const { elo } = useElo();
+  const { stats: x01 } = useSeasonX01(season);
   const player = directory.byId.get(playerId ?? '');
   const [chart, setChart] = useState<'ranking' | 'elo' | 'average'>('ranking');
   const progress = useMemo(() => {
@@ -721,6 +762,7 @@ export function PlayerPage() {
           lastChange !== null ? `${lastChange >= 0 ? '▲' : '▼'} ${Math.abs(Math.round(lastChange))} laatste avond` : undefined,
         )}
       </div>
+      <PushCard player={player} name={directory.name} className="mt-3" />
       {(progress.length > 0 || eloPoints.length > 0 || averagePoints.length > 0) && (
         <>
           <SectionTitle
@@ -753,6 +795,29 @@ export function PlayerPage() {
           )}
         </>
       )}
+
+      {(() => {
+        const mine = x01.get(player.id);
+        if (!mine || mine.average === null) return null;
+        return (
+          <div data-x01-season>
+            <SectionTitle>501 per beurt · {season?.name}</SectionTitle>
+            <div className="grid grid-cols-4 gap-px overflow-hidden rounded-lg border border-zinc-200/80 bg-zinc-100 shadow-xs">
+              {stat('gemiddelde', formatDecimal(mine.average))}
+              {stat('eerste 9', formatDecimal(mine.first9Average))}
+              {stat('beste leg', mine.bestLeg !== null ? `${mine.bestLeg} darts` : '–')}
+              {stat('uitgooi', mine.highestFinish ?? '–')}
+              {stat('100+', mine.count100)}
+              {stat('140+', mine.count140)}
+              {stat('180', mine.count180)}
+              {stat('legs', `${mine.legsWon}/${mine.legs}`, 'gewonnen')}
+            </div>
+          </div>
+        );
+      })()}
+
+      <SectionTitle>Onderlinge duels</SectionTitle>
+      <HeadToHead playerId={player.id} matches={data?.matches ?? []} events={events ?? []} name={directory.name} />
 
       <SectionTitle>Resultaten per avond</SectionTitle>
       {results.length === 0 ? (

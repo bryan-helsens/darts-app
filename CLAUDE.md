@@ -18,6 +18,7 @@ Webapp voor het maandelijkse dartstoernooi in Brasserie 't Oud Sanatorium (Sijse
 | `npm run build` | Productiebuild naar `dist/` |
 | `npm run seed` | `supabase/seed.sql` opnieuw genereren (na wijzigingen aan engine of schema) |
 | `npm run db:bundle` | `supabase/setup.sql` opnieuw genereren uit de migraties |
+| `npm run vapid` | Eenmalig een VAPID-sleutelpaar voor de pushmeldingen (nooit committen) |
 
 Na een wijziging aan migraties: `npm run db:bundle` (en `npm run seed` als het schema van de seed-tabellen wijzigt). Tests controleren dat beide up-to-date zijn.
 
@@ -35,8 +36,8 @@ src/ui/       React-schermen (components/, layout/, pages/{public,staff,evening,
 src/lib/      Tijd (Europe/Brussels, dd/mm/jjjj, "19u00"), namen (dubbels zoeken), CSV (`toCsv`)
 src/demo/     Demo-dataset (gedeeld door de knop "Demo-data laden" en scripts/seed)
 supabase/     migrations/ (bron van waarheid), config.toml, setup.sql (gebundeld), seed.sql, demo-cleanup.sql, restore-backup.sql
-netlify/      functions/kalender.mts: abonneerbare kalender /kalender.ics (rewrite in netlify.toml, vóór de SPA-regel)
-scripts/      seed-generator, migratiebundel, lokale Supabase-nabootsing (scripts/local), generate-icons (PWA-iconen uit favicon.svg)
+netlify/      functions/kalender.mts: abonneerbare kalender /kalender.ics (rewrite in netlify.toml, vóór de SPA-regel); functions/meldingen.mts: pushmeldingen (scheduled, elke minuut)
+scripts/      seed-generator, migratiebundel, lokale Supabase-nabootsing (scripts/local), generate-icons (PWA-iconen uit favicon.svg), backup (nachtelijke back-up)
 tests/        engine-invarianten + matrix, PGlite-databasetests
 e2e/          Playwright
 ```
@@ -58,6 +59,7 @@ e2e/          Playwright
 - `progress`: verloop voor de spelersgrafieken (`rankingProgress` = plaats na elke avond via `seasonRanking` per prefix; `eloProgress` = Elo na elke avond).
 - `checkout` / `x01` / `x01Sim`: 501 double out per beurt. `checkoutSuggestion` zoekt alle routes (minste darts, dan voorkeur D16/D20/D8 en T20/T19); `applyVisit` herkent busts zelf en vraagt het aantal darts bij een uitgooi als dat niet vastligt (`needs-darts`); een bust = 0 punten en 3 darts; gemiddelde = punten / darts × 3 (`threeDartAverage`). `poolAverages` geeft enkel een gemiddelde als *alle* poulematchen van die speler per beurt gescoord werden. De database volgt dezelfde regels (`private.leg_totals`, `private.checkout_min_darts`; pariteit getest).
 - `masters`: `mastersField(ranking, aanwezig, size)` = de top N van de aanwezigen volgens de ranking (+ geplaatsten die afwezig zijn, vervangers, reserves). `SeasonSettings.masters = { enabled, size }` (standaard uit, 16).
+- `headToHead`: onderlinge duels per tegenstander (walk-overs tellen niet); `x01Stats`: `x01PlayerStats(legs)` over meerdere matchen (gemiddelde, eerste 9 = eerste drie beurten per leg, 100+/140+/180, beste leg, hoogste uitgooi).
 - `scorer`: schrijver-suggestie per bord, afgeleid (niet opgeslagen): verliezer van de vorige match op dat bord, anders wie het langst vrij is; nooit wie speelt of de volgende match op dat bord heeft.
 - Alle randomness via `createRng(seed)` / `lotValue(seed, …)`; de seed per avond is `events.rng_seed`.
 
@@ -68,6 +70,8 @@ e2e/          Playwright
 - 501 per beurt: `match_legs` (beurten als `smallint[]`, null = bust; de trigger controleert de leg en leidt winnaar, darts en punten af). `submit_legs(…, p_player1, p_player2, p_legs, p_final, p_session, p_client_id, p_board)` krijgt telkens alle afgewerkte legs (momentopname); `stale` als de spelers veranderden, `conflict` voor een ander toestel (staff mag overnemen); `p_final` zet in dezelfde transactie de uitslag en `match_stats` (darts, punten, 180's, hoogste score, uitgooi ≥ 100). Regel: **beurten bestaan enkel als ze bij de uitslag passen** (`matches_clear_leg_detail` wist ze bij een andere wijziging van uitslag of spelers, behalve onder `app.skip_advance`).
 - Eerste account wordt automatisch admin (`private.handle_new_user`); volgende accounts zijn `aanvraag` tot een admin ze goedkeurt.
 - Audit-log via triggers; `app.skip_audit` / `app.skip_advance` (transactie-lokaal) voor bulkbewerkingen (seed, samenvoegen, anonimiseren). `app.actor` labelt wie zonder account schreef (`score-pin`, `online-inschrijving`).
+- Nachtelijke back-up: `.github/workflows/backup.yml` + `scripts/backup.ts` (`scripts/backup/collect.ts`: per seizoen `buildSeasonBackup` + `alle-spelers.json`, via de REST-API met de service-sleutel, per 1000 rijen). Versleuteld met 7-Zip (`BACKUP_PASSWORD`, ook de bestandsnamen) en enkel zo als artifact bewaard: de repository is **publiek**.
+- Pushmeldingen: `push_subscriptions` (een toestel = een `endpoint` = één speler; `kinds` ⊆ start/next/scorer/reminder) en `push_sent` (`(event_id, key)`: elke melding vertrekt één keer). Beide zonder policies: enkel via `subscribe_push` / `unsubscribe_push` / `push_status` (anon, wie het endpoint kent, bezit het toestel) en de service-sleutel. Anonimiseren wist de abonnementen (`players_drop_push`).
 - Back-up terugzetten: `supabase/restore-backup.sql` (SQL Editor; enkel ontbrekende avonden, idempotent; getest in `tests/db/backup.test.ts`).
 - Matchcodes (`P1-R2-1`, `A-R1-3`, `P2-BAR-1`, `W-R2-1`, `L-R3-2`, `GF-R1-1`, `M-R1-4`, `P-R2-1`) zijn de engine-id's; `src/data/mappers.ts` zet rijen om.
 - Formats: `events.format` (CHECK) wordt gezet door `start_tournament` uit `p_config.format`; per format enkel de juiste stages (`matches_stage_check`). `add_barrages`/`generate_knockout`/`undo_knockout` enkel bij `poules_ab` (`private.require_format`); `reset_tournament` zet `poules_ab` terug.
@@ -83,6 +87,7 @@ e2e/          Playwright
 - Elo: `fetchEloMatches` haalt alle gespeelde matchen op (via `fetchAll`); `useElo()` (src/ui/hooks.ts) rekent ze om. Bij de start bewaart `TournamentConfig` de gekozen seedingbron en een momentopname `seedRanks` (ook gebruikt voor de KO). "Nu" = max(klok, laatste servertijdstip).
 - `outbox`: scores, legs (501) en check-in gaan via IndexedDB en worden met retry gesynchroniseerd. Een nieuwere legs-momentopname van dezelfde match en hetzelfde toestel vervangt een oudere. `SyncBadge` toont de status. Na een sync werkt `App.tsx` de cache meteen bij.
 - `x01Sessions`: de lopende 501-match per toestel in IndexedDB (`sanapolis-darts-x01`); sessie-id = toestel-id. `eventView` geeft `liveLegs` (legstand van lopende matchen), `dartsTotals`, `averages` en `averagesFor(view, filter)`; het gemiddelde telt als poule-tiebreak enkel als `TournamentConfig.scoring.averageTiebreak` bij de start zo vastgelegd werd.
+- 501 per seizoen: `fetchLegsForEvents` + `useSeasonLegs`, `x01LegInputs` (mappers) en `useSeasonX01(season)` (hooks; zonder de Masters). Ranking-tab "Gemiddelde", blok "501 per beurt" en `HeadToHead` op het spelersprofiel; Masters-grens in de ranking (`data-masters-cut`) en op de tv.
 - `masters`: `isMasters(event)` en `withoutMasters(seasonData)`. `useSeasonRanking` geeft de seizoensgegevens **zonder** de Masters terug: ranking, klassementen, tv-ranking, seeding en seizoensexports negeren haar. Elo (`fetchEloMatches`) rekent wel met alle matchen. Check-in van een Masters: `MastersCheckIn`; `EveningPage` geeft `StartPanel` enkel het veld (`masters` = standaard double elimination en seeding op de ranking).
 - Query-cache wordt bewaard in localStorage (offline tonen); `staleTime: 0`, zodat online altijd ververst wordt.
 - Realtime: `useEventRealtime` + polling elke 30 s als vangnet.
@@ -99,6 +104,7 @@ e2e/          Playwright
 - Indeling (`src/ui/layout/Layouts.tsx`): op gsm een tabbalk onderaan (zoals een app), vanaf `md` de navigatie in de kop. Matchen tonen als scorebord (`MatchLine`: twee regels, legs rechts) en in rasters van tegeltjes (`MatchTile` + `TileGrid`, 2 kolommen op gsm).
 - Scores invoeren: per speler het aantal gewonnen legs (`ScoreEntry`, rijen met `data-legs-row`), of per beurt (`X01Start` + `X01Scorer`, volledig scherm, `data-x01-*`; standaard volgens `SeasonSettings.scoring.defaultMode`). `/score/:eventId?match=CODE` opent een match rechtstreeks. Het tabblad **Matchen** (`MatchesPanel`) laat de leider elke match achteraf invoeren of corrigeren; `MatchModal` toont gemiddelden en `LegsDetail` ("Beurten bekijken").
 - Getallen met decimalen via `formatDecimal` (`src/lib/format.ts`, komma).
+- Pushmeldingen: `src/data/push.ts` (puur: `eventMessages(view, name)` = start/schrijver per bord zolang de match < 10 min bezig is + "straks" op bezette borden via `upcomingByBoard`; `reminderMessage` vanaf 12u00 tot het sluitingsuur, niet voor de Masters), `src/data/pushJob.ts` (`runPushJob(deps)`: ophalen, `buildEventView`, enkel ontvangers per soort, `claim` in `push_sent` met ignore-duplicates, versturen, 404/410 opruimen) en `netlify/functions/meldingen.mts` (`web-push`, env `VITE_SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `VITE_VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `URL`; ontbreekt er een: niets doen). De functie mag geen React of Supabase-client importeren (titels: `src/data/titles.ts`). Client: `src/ui/pwa/push.ts` (`pushSupport`, `enablePush`, `disablePush`, `onPushNavigate`) + `PushCard` (spelersprofiel en na het inschrijven); de service worker laadt `public/push-sw.js` (`workbox.importScripts`). Zonder `VITE_VAPID_PUBLIC_KEY` verschijnt er niets. E2e bootst `serviceWorker.ready`/`pushManager` na.
 - PWA (`vite.config.ts`, `src/ui/pwa`): `registerType: 'prompt'` + `UpdateBanner` (nooit vanzelf herladen, behalve op `/tv`), `InstallCard` (`beforeinstallprompt` wordt vroeg opgevangen in `install.ts`, geïmporteerd in `main.tsx`; iOS-uitleg). PNG-iconen in `public/` (opnieuw maken: `npx tsx scripts/generate-icons.ts`). De service worker laat `/kalender.ics` met rust (`navigateFallbackDenylist`).
 - Agenda: `src/lib/ics.ts` (`buildCalendar`, UTC, escapen, vouwen op 75 bytes) + `src/data/calendar.ts` (`toCalendarEvents`, zonder Supabase-client: ook gebruikt door de Netlify-functie). Knop `AddToCalendarButton`, abonnement `CalendarSubscribe` (`webcal://`).
 - Grafieken: `LineChart` (SVG, geen bibliotheek) met de pure `chartGeometry`.

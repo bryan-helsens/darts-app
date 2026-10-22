@@ -12,6 +12,7 @@ import {
   fetchEloMatches,
   fetchEventBundle,
   fetchEvents,
+  fetchLegsForEvents,
   fetchMatchLegs,
   fetchPlayerData,
   fetchPlayers,
@@ -42,6 +43,7 @@ export const keys = {
   demo: ['demo'] as const,
   elo: ['elo'] as const,
   matchLegs: (matchId: string) => ['match-legs', matchId] as const,
+  seasonLegs: (seasonId: string, eventIds: readonly string[]) => ['season-legs', seasonId, eventIds.join(',')] as const,
 };
 
 export const useSeasons = () => useQuery({ queryKey: keys.seasons, queryFn: fetchSeasons });
@@ -63,6 +65,14 @@ export const useAuditLog = (filter: string, tables: readonly string[] | undefine
 /** Alle beurten van één match ("Beurten bekijken"). */
 export const useMatchLegs = (matchId: string | undefined) =>
   useQuery({ queryKey: keys.matchLegs(matchId ?? ''), queryFn: () => fetchMatchLegs(matchId as string), enabled: Boolean(matchId) });
+
+/** Beurten van de gegeven avonden van een seizoen (501-statistieken). */
+export const useSeasonLegs = (seasonId: string | undefined, eventIds: readonly string[] | undefined) =>
+  useQuery({
+    queryKey: keys.seasonLegs(seasonId ?? '', eventIds ?? []),
+    queryFn: () => fetchLegsForEvents(eventIds ?? []),
+    enabled: Boolean(seasonId && eventIds),
+  });
 
 export const useEloMatches = () => useQuery({ queryKey: keys.elo, queryFn: fetchEloMatches });
 

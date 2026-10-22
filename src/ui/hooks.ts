@@ -1,8 +1,19 @@
 import { useEffect, useMemo, useState } from 'react';
-import { computeElo, placementPoints, seasonRanking, withDefaults, type EloMatch, type EloResult, type RankingRow, type SeasonSettings } from '../engine';
-import { matchFromRow, toMs } from '../data/mappers';
+import {
+  computeElo,
+  placementPoints,
+  seasonRanking,
+  withDefaults,
+  x01PlayerStats,
+  type EloMatch,
+  type EloResult,
+  type RankingRow,
+  type SeasonSettings,
+  type X01PlayerTotals,
+} from '../engine';
+import { matchFromRow, toMs, x01LegInputs } from '../data/mappers';
 import { withoutMasters } from '../data/masters';
-import { useEloMatches, useEvents, useSeasonData, useSeasons } from '../data/queries';
+import { useEloMatches, useEvents, useSeasonData, useSeasonLegs, useSeasons } from '../data/queries';
 import type { EventRow, SeasonRow } from '../data/rows';
 import { todayInBrussels } from '../lib/time';
 
@@ -66,6 +77,15 @@ export function useSeasonRanking(season: SeasonRow | undefined): { rows: Ranking
     return seasonRanking(results, data.matches.map(matchFromRow), settings.bestOf, season.id);
   }, [data, season]);
   return { rows, isLoading, error, data };
+}
+
+/** 501-statistieken per speler over het seizoen (zonder de Masters, zoals de ranking). */
+export function useSeasonX01(season: SeasonRow | undefined): { stats: Map<string, X01PlayerTotals>; isLoading: boolean } {
+  const { data } = useSeasonRanking(season);
+  const eventIds = useMemo(() => data?.events.filter((e) => e.status !== 'gepland').map((e) => e.id), [data]);
+  const legs = useSeasonLegs(season?.id, eventIds);
+  const stats = useMemo(() => (legs.data && data ? x01PlayerStats(x01LegInputs(legs.data, data.matches)) : new Map<string, X01PlayerTotals>()), [legs.data, data]);
+  return { stats, isLoading: legs.isLoading };
 }
 
 /** Seedingrangen voor de loting: de seizoensranking (zonder punten = geen rang). */
