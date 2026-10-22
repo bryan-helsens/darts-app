@@ -144,25 +144,33 @@ export function TvBracket({ stage, matches, name, live }: { stage: BracketStage;
   );
 }
 
-export function TvRanking({ rows, name }: { rows: RankingRow[]; name: NameFn }) {
+export function TvRanking({ rows, name, mastersSize }: { rows: RankingRow[]; name: NameFn; mastersSize?: number | null }) {
   const top = rows.slice(0, 20);
   const columns = [top.slice(0, 10), top.slice(10, 20)].filter((c) => c.length > 0);
   if (top.length === 0) return <div className="text-2xl text-zinc-400">Nog geen punten in dit seizoen.</div>;
   return (
-    <div className="grid grid-cols-2 gap-6">
-      {columns.map((col, ci) => (
-        <div key={ci} className="overflow-hidden rounded-2xl border border-white/10 bg-white/[0.06]">
-          {col.map((r) => (
-            <div key={r.playerId} className="flex items-center gap-4 border-t border-white/5 px-5 py-2.5 text-2xl first:border-t-0">
-              <span className={cx('flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-lg font-bold tabular-nums', MEDAL[r.position - 1] ?? 'text-zinc-400')}>
-                {r.position}
-              </span>
-              <span className="min-w-0 flex-1 truncate">{name(r.playerId)}</span>
-              <span className="font-semibold tabular-nums">{r.counted}</span>
-            </div>
-          ))}
-        </div>
-      ))}
+    <div>
+      <div className="grid grid-cols-2 gap-6">
+        {columns.map((col, ci) => (
+          <div key={ci} className="overflow-hidden rounded-2xl border border-white/10 bg-white/[0.06]">
+            {col.map((r) => (
+              <div key={r.playerId} className="flex items-center gap-4 border-t border-white/5 px-5 py-2.5 text-2xl first:border-t-0">
+                <span className={cx('flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-lg font-bold tabular-nums', MEDAL[r.position - 1] ?? 'text-zinc-400')}>
+                  {r.position}
+                </span>
+                <span className="min-w-0 flex-1 truncate">{name(r.playerId)}</span>
+                {mastersSize && r.position <= mastersSize && (
+                  <span className="text-lg text-amber-400" title="Geplaatst voor de Masters">
+                    🏆
+                  </span>
+                )}
+                <span className="font-semibold tabular-nums">{r.counted}</span>
+              </div>
+            ))}
+          </div>
+        ))}
+      </div>
+      {mastersSize && <p className="mt-4 text-xl text-zinc-400">🏆 De top {mastersSize} plaatst zich voor de Masters.</p>}
     </div>
   );
 }

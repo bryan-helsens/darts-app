@@ -147,6 +147,9 @@ export interface MatchLegRow {
   created_at: string;
 }
 
+/** Een leg met de beurten, zonder de afgeleide kolommen (seizoensstatistieken). */
+export type MatchLegDetail = Pick<MatchLegRow, 'match_id' | 'event_id' | 'leg_no' | 'starter' | 'scores' | 'checkout_darts'>;
+
 /** Wat een avondscherm van een leg nodig heeft (zonder de beurten zelf). */
 export type MatchLegSummary = Pick<MatchLegRow, 'match_id' | 'leg_no' | 'winner' | 'darts1' | 'points1' | 'darts2' | 'points2'>;
 

@@ -55,6 +55,12 @@ De gsm bewaart de lopende match zelf: herladen, de batterij of geen wifi kosten 
 
 **Grafieken:** op het spelersprofiel staat het **verloop**: de plaats in de ranking na elke avond, de Elo en (als er per beurt gescoord werd) het gemiddelde per avond.
 
+**Onderlinge duels:** op elk spelersprofiel staat per tegenstander hoe vaak je won en verloor (en de legs). Tik op een tegenstander voor alle matchen tegen die speler.
+
+**501-statistieken per seizoen:** wie per beurt scoort, krijgt op het spelersprofiel een blok *501 per beurt* (gemiddelde, eerste 9, beste leg, hoogste uitgooi, 100+, 140+, 180's) en op de rankingpagina staat het klassement **Gemiddelde**.
+
+**Masters-tussenstand:** staat de Masters aan, dan toont de ranking (en de tv) een lijn onder de top 16: wie erboven staat, plaatst zich.
+
 **Gemiddelden:** bij matchen die per beurt gescoord werden, toont de app het 3-dart gemiddelde (punten per drie darts): in de poulestand (kolom *Gem.*), bij de match (met **Beurten bekijken**), op de publieke uitslag (*Gemiddelden van de avond*), op de tv en in de matchen-CSV.
 
 **Geen wifi?** Werk gewoon verder. Bovenaan staat dan bv. "2 wachten op verbinding". Zodra er weer netwerk is, wordt alles automatisch verstuurd. Sluit de app gerust tussendoor: er gaat niets verloren.

@@ -22,9 +22,15 @@ test('Masters met een vervanger', async ({ page }) => {
 
   // De ranking vóór de Masters.
   await page.goto(`/ranking/${DEMO_SEASON}`);
-  const rankingRows = page.locator('tbody tr');
+  // Enkel de spelers, niet de Masters-grens (die verschijnt pas als de Masters aanstaat).
+  const rankingRows = page.locator('tbody tr:not([data-masters-cut])');
   await expect(rankingRows.first()).toBeVisible();
   const rankingBefore = await rankingRows.allInnerTexts();
+  await expect(page.locator('[data-masters-cut]')).toHaveCount(0);
+
+  // De laatste demo-avond werd per beurt gescoord: klassement "Gemiddelde".
+  await page.getByRole('button', { name: 'Gemiddelde', exact: true }).click();
+  await expect(page.locator('tbody tr').first()).toBeVisible();
 
   // Masters aanzetten (8 spelers) en aanmaken.
   await page.goto(`/beheer/seizoenen/${DEMO_SEASON}`);
@@ -75,6 +81,14 @@ test('Masters met een vervanger', async ({ page }) => {
   await page.goto(`/ranking/${DEMO_SEASON}`);
   await expect(rankingRows.first()).toBeVisible();
   expect(await rankingRows.allInnerTexts()).toEqual(rankingBefore);
+  // Nu de Masters aanstaat: de grens na de top 8.
+  await expect(page.locator('[data-masters-cut]')).toContainText('top 8 voor de Masters');
+  await expect(page.locator('tbody tr').nth(8)).toHaveAttribute('data-masters-cut');
   await page.getByRole('link', { name: winner, exact: true }).first().click();
   await expect(page.locator('[data-masters-winner]')).toContainText('Masters-winnaar');
+  // Onderlinge duels: openklappen toont de matchen.
+  const duels = page.locator('[data-head-to-head]');
+  await expect(duels).toBeVisible();
+  await duels.locator('tbody tr').first().click();
+  await expect(duels.locator('li').first()).toBeVisible();
 });

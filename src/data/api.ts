@@ -12,6 +12,7 @@ import type {
   EventLogRow,
   EventResultRow,
   EventRow,
+  MatchLegDetail,
   MatchLegRow,
   MatchLegSummary,
   MatchRow,
@@ -110,6 +111,14 @@ export async function fetchEventBundle(eventId: string): Promise<EventBundle> {
     must<EventResultRow[]>(supabase.from('event_results').select('*').eq('event_id', eventId)),
   ]);
   return { event, pools, members, matches, log, stats, legs, results };
+}
+
+/** Alle beurten van een reeks avonden (501-statistieken van een seizoen). */
+export async function fetchLegsForEvents(eventIds: readonly string[]): Promise<MatchLegDetail[]> {
+  if (eventIds.length === 0) return [];
+  return fetchAll<MatchLegDetail>((f, t) =>
+    supabase.from('match_legs').select('match_id,event_id,leg_no,starter,scores,checkout_darts').in('event_id', [...eventIds]).order('match_id').order('leg_no').range(f, t),
+  );
 }
 
 /** Alle beurten van één match ("Beurten bekijken"). */

@@ -101,7 +101,7 @@ export function TvPage() {
       ),
     });
   }
-  if (ranking.length > 0) slides.push({ id: 'ranking', title: `Ranking ${season?.name ?? ''}`.trim(), body: <TvRanking rows={ranking} name={name} /> });
+  if (ranking.length > 0) slides.push({ id: 'ranking', title: `Ranking ${season?.name ?? ''}`.trim(), body: <TvRanking rows={ranking} name={name} mastersSize={settings.masters.enabled ? settings.masters.size : null} /> });
   if (!live && lastFinished && (lastBundle.data?.results.length ?? 0) > 0) {
     slides.push({
       id: 'winnaars',

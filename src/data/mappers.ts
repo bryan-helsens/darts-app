@@ -9,6 +9,7 @@ import {
   MINUTE,
   type Leg,
   type LegsSettings,
+  type X01LegInput,
   type Match,
   type Pool,
   type ScheduleConfig,
@@ -19,7 +20,7 @@ import {
   type TournamentFormat,
 } from '../engine';
 import type { LegPayload } from './api';
-import type { EventLogRow, EventRow, MatchLegRow, MatchRow, PoolMemberRow, PoolRow } from './rows';
+import type { EventLogRow, EventRow, MatchLegDetail, MatchLegRow, MatchRow, PoolMemberRow, PoolRow } from './rows';
 
 export const toMs = (iso: string | null): number | null => (iso === null ? null : Date.parse(iso));
 
@@ -162,3 +163,13 @@ export const legFromRow = (row: Pick<MatchLegRow, 'starter' | 'scores' | 'checko
   visits: row.scores.map((score) => (score === null ? { score: 0, bust: true } : { score, bust: false })),
   checkoutDarts: row.checkout_darts,
 });
+
+/** Legs met hun spelers, voor statistieken over meerdere matchen (enkel beslist, met twee spelers). */
+export function x01LegInputs(legs: readonly MatchLegDetail[], matches: ReadonlyArray<Pick<MatchRow, 'id' | 'player1_id' | 'player2_id' | 'winner_id'>>): X01LegInput[] {
+  const byId = new Map(matches.map((m) => [m.id, m]));
+  return legs.flatMap((l) => {
+    const m = byId.get(l.match_id);
+    if (!m?.player1_id || !m.player2_id || !m.winner_id) return [];
+    return [{ leg: legFromRow(l), players: [m.player1_id, m.player2_id] as const }];
+  });
+}
