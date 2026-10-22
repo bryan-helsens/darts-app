@@ -12,6 +12,7 @@ import {
   STAGE_NAMES,
 } from '../../../engine';
 import { averagesFor, buildEventView, SCHEMA_STAGES } from '../../../data/eventView';
+import { isMasters } from '../../../data/masters';
 import { matchFromRow } from '../../../data/mappers';
 import { useEventBundle, useEvents, usePlayerData, usePlayerDirectory, useRegistrationCounts, useSeasonData, useSeasons } from '../../../data/queries';
 import { onlineRegistrationOpen } from '../../../data/registration';
@@ -19,7 +20,7 @@ import { formatDecimal } from '../../../lib/format';
 import { matchesSearch } from '../../../lib/names';
 import { formatDate, formatLongDate, formatTime, shortTime } from '../../../lib/time';
 import { AddToCalendarButton } from '../../components/Calendar';
-import { AveragesTable, BoardsOverview, Bracket, MatchTile, PlacementsTable, PoolTable, shortTitle, TileGrid } from '../../components/darts';
+import { AveragesTable, BoardsOverview, Bracket, MastersBadge, MatchTile, PlacementsTable, PoolTable, shortTitle, TileGrid } from '../../components/darts';
 import { LineChart } from '../../components/LineChart';
 import { displayName } from '../../components/players';
 import { ShareResultButton } from '../../share/ShareResult';
@@ -75,21 +76,36 @@ export function HomePage() {
           <div className="flex gap-3 p-3">
             <DateTile date={next.event_date} tone="dark" />
             <div className="min-w-0">
-              <div className="text-2xs font-semibold tracking-wider text-accent-500 uppercase">Volgende speelavond</div>
+              <div className="text-2xs font-semibold tracking-wider text-accent-500 uppercase">{isMasters(next) ? 'Masters · eindejaarsfinale' : 'Volgende speelavond'}</div>
               <div className="truncate text-base leading-tight font-semibold">{formatLongDate(next.event_date)}</div>
               <ul className="mt-1.5 space-y-0.5 text-xs text-zinc-400">
                 <li className="flex items-center gap-1.5">
                   <Icon name="clock" className="h-3.5 w-3.5" />
                   <span>
-                    Start <b className="font-medium text-white">{time(next.start_time)}</b> · inschrijven tot <b className="font-medium text-white">{time(next.registration_closes)}</b>
+                    Start <b className="font-medium text-white">{time(next.start_time)}</b>
+                    {!isMasters(next) && (
+                      <>
+                        {' '}
+                        · inschrijven tot <b className="font-medium text-white">{time(next.registration_closes)}</b>
+                      </>
+                    )}
                   </span>
                 </li>
-                <li className="flex items-center gap-1.5">
-                  <Icon name="euro" className="h-3.5 w-3.5" />
-                  <span>
-                    Inleg <b className="font-medium text-white">€{settings.entryFee}</b> · steeldarts · 501 double out
-                  </span>
-                </li>
+                {isMasters(next) ? (
+                  <li className="flex items-center gap-1.5">
+                    <Icon name="trophy" className="h-3.5 w-3.5" />
+                    <span>
+                      Voor de top <b className="font-medium text-white">{settings.masters.size}</b> van de ranking
+                    </span>
+                  </li>
+                ) : (
+                  <li className="flex items-center gap-1.5">
+                    <Icon name="euro" className="h-3.5 w-3.5" />
+                    <span>
+                      Inleg <b className="font-medium text-white">€{settings.entryFee}</b> · steeldarts · 501 double out
+                    </span>
+                  </li>
+                )}
                 <li className="flex items-center gap-1.5">
                   <Icon name="pin" className="h-3.5 w-3.5" />
                   Brasserie ’t Oud Sanatorium, Sijsele
@@ -139,7 +155,10 @@ export function HomePage() {
               </Link>
             }
           >
-            Laatste winnaars · {formatDate(lastFinished.event_date)}
+            <span className="inline-flex items-center gap-1.5">
+              Laatste winnaars · {formatDate(lastFinished.event_date)}
+              {isMasters(lastFinished) && <MastersBadge />}
+            </span>
           </SectionTitle>
           <div className="grid grid-cols-3 gap-2">
             {podium.slice(0, 3).map((r) => (
@@ -150,7 +169,7 @@ export function HomePage() {
               >
                 <span className={cx('flex h-6 w-6 items-center justify-center rounded-full text-xs font-bold', MEDALS[r.place_from - 1])}>{r.place_from}</span>
                 <span className="mt-1 w-full truncate text-[13px] font-medium text-zinc-950">{directory.name(r.player_id)}</span>
-                <span className="text-2xs text-zinc-500 tabular-nums">{r.points} ptn</span>
+                {!isMasters(lastFinished) && <span className="text-2xs text-zinc-500 tabular-nums">{r.points} ptn</span>}
               </Link>
             ))}
           </div>
@@ -166,6 +185,7 @@ export function HomePage() {
               <Link key={e.id} to={`/avond/${e.id}`} className={cx(rowClass, rowHover, 'py-1.5')}>
                 <DateTile date={e.event_date} tone={e.status === 'afgelopen' ? 'muted' : 'light'} />
                 <span className={cx('min-w-0 flex-1 truncate text-[13px]', e.status === 'afgelopen' ? 'text-zinc-500' : 'font-medium text-zinc-950')}>{formatLongDate(e.event_date)}</span>
+                {isMasters(e) && <MastersBadge />}
                 {e.status === 'bezig' ? <LiveBadge /> : <Badge tone={e.status === 'afgelopen' ? 'stone' : 'blue'}>{e.status === 'afgelopen' ? 'uitslag' : time(e.start_time)}</Badge>}
                 <Icon name="chevron" className="h-3.5 w-3.5 text-zinc-300" />
               </Link>
@@ -204,7 +224,8 @@ export function EventPublicPage() {
       : [{ id: 'eindstand', label: 'Eindstand' }, schemaTab, ...poulesTab];
   const active = tab && tabs.some((t) => t.id === tab) ? tab : tabs[0].id;
   const name = directory.name;
-  const points = new Map((bundle.data?.results ?? []).map((r) => [r.player_id, r.points]));
+  // De Masters heeft geen seizoenspunten.
+  const points = isMasters(event) ? undefined : new Map((bundle.data?.results ?? []).map((r) => [r.player_id, r.points]));
   const poolAverages = averagesFor(view, (m) => m.stage === 'pool');
   const recent = view.matches
     .filter((m) => m.finishedAt !== null && !m.walkover)
@@ -218,6 +239,7 @@ export function EventPublicPage() {
         <div className="min-w-0">
           <h1 className="truncate text-lg leading-tight font-semibold tracking-tight text-zinc-950">{formatLongDate(event.event_date)}</h1>
           <div className="mt-0.5 flex flex-wrap items-center gap-2 text-xs text-zinc-500">
+            {isMasters(event) && <MastersBadge />}
             {event.status === 'bezig' ? <LiveBadge /> : <Badge tone={event.status === 'afgelopen' ? 'dark' : 'blue'}>{event.status === 'afgelopen' ? 'afgelopen' : 'gepland'}</Badge>}
             {event.status === 'bezig' && view.live?.forecast.end && <span>verwacht einde rond {formatTime(view.live.forecast.end)}</span>}
             {event.notes && <span className="truncate">{event.notes}</span>}
@@ -226,10 +248,17 @@ export function EventPublicPage() {
       </div>
       {event.status === 'gepland' ? (
         <Card className="space-y-2.5 text-[13px] text-zinc-700">
-          <p>
-            Deze speelavond start om {time(event.start_time)}. Inschrijven kan online of ter plaatse tot {time(event.registration_closes)}. Het schema verschijnt hier
-            zodra het toernooi begint.
-          </p>
+          {isMasters(event) ? (
+            <p>
+              De Masters (eindejaarsfinale) start om {time(event.start_time)}. Ze is voor de top van de seizoensranking: wie er niet is, wordt vervangen door de volgende in de
+              ranking. Inschrijven is niet nodig. Het schema verschijnt hier zodra de Masters begint.
+            </p>
+          ) : (
+            <p>
+              Deze speelavond start om {time(event.start_time)}. Inschrijven kan online of ter plaatse tot {time(event.registration_closes)}. Het schema verschijnt hier
+              zodra het toernooi begint.
+            </p>
+          )}
           <div className="flex flex-wrap gap-2">
             {onlineRegistrationOpen(event, now) && (
               <Link to={`/inschrijven/${event.id}`} className="flex-1">
@@ -247,7 +276,7 @@ export function EventPublicPage() {
             <>
               {event.status === 'afgelopen' && (
                 <div className="mb-2 flex justify-end">
-                  <ShareResultButton view={view} points={points} name={name} />
+                  <ShareResultButton view={view} points={points ?? new Map()} name={name} />
                 </div>
               )}
               <PlacementsTable placements={view.placements.placements} name={name} points={points} />
@@ -350,7 +379,10 @@ export function ResultsPage() {
               <Link key={e.id} to={`/avond/${e.id}`} className={cx(rowClass, rowHover, 'py-1.5')}>
                 <DateTile date={e.event_date} />
                 <span className="min-w-0 flex-1">
-                  <span className="block truncate text-[13px] font-medium text-zinc-950">{formatLongDate(e.event_date)}</span>
+                  <span className="flex items-center gap-1.5 truncate text-[13px] font-medium text-zinc-950">
+                    {formatLongDate(e.event_date)}
+                    {isMasters(e) && <MastersBadge />}
+                  </span>
                   <span className="block truncate text-2xs text-zinc-500">
                     {winner ? (
                       <>
@@ -585,7 +617,7 @@ export function PlayerPage() {
   const directory = usePlayerDirectory();
   const { data, isLoading, error } = usePlayerData(playerId);
   const { data: events } = useEvents();
-  const { season } = useCurrentSeason();
+  const { season, data: seasons } = useCurrentSeason();
   const { rows, data: seasonData } = useSeasonRanking(season);
   const { elo } = useElo();
   const player = directory.byId.get(playerId ?? '');
@@ -615,7 +647,14 @@ export function PlayerPage() {
   if (!player) return <ErrorBox>Speler niet gevonden.</ErrorBox>;
 
   const eventById = new Map((events ?? []).map((e) => [e.id, e]));
-  const results = (data?.results ?? []).map((r) => ({ ...r, date: eventById.get(r.event_id)?.event_date ?? '' })).sort((a, b) => b.date.localeCompare(a.date));
+  const results = (data?.results ?? [])
+    .map((r) => ({ ...r, date: eventById.get(r.event_id)?.event_date ?? '', masters: isMasters(eventById.get(r.event_id)) }))
+    .sort((a, b) => b.date.localeCompare(a.date));
+  // De Masters telt niet mee als deelname of avondzege.
+  const regular = results.filter((r) => !r.masters);
+  const mastersWins = results
+    .filter((r) => r.masters && r.place_from === 1)
+    .map((r) => seasons?.find((s) => s.id === eventById.get(r.event_id)?.season_id)?.name ?? r.date.slice(0, 4));
   const matches = (data?.matches ?? []).map(matchFromRow).filter(isFinished);
   const won = matches.filter((m) => m.winner === player.id && !m.walkover).length;
   const lost = matches.filter((m) => m.winner !== player.id && !m.walkover).length;
@@ -656,12 +695,22 @@ export function PlayerPage() {
             {rank ? `#${rank.position} in ${season?.name ?? 'de ranking'}` : 'nog niet gerankt'}
             {peak !== null && ` · Elo-piek ${Math.round(peak)}`}
           </p>
+          {mastersWins.length > 0 && (
+            <p className="mt-1 flex flex-wrap gap-1" data-masters-winner>
+              {mastersWins.map((name) => (
+                <Badge key={name} tone="amber">
+                  <Icon name="trophy" className="h-3 w-3" />
+                  Masters-winnaar {name}
+                </Badge>
+              ))}
+            </p>
+          )}
         </div>
       </div>
       <div className="grid grid-cols-4 gap-px overflow-hidden rounded-lg border border-zinc-200/80 bg-zinc-100 shadow-xs">
-        {stat('deelnames', results.length)}
-        {stat('zeges', results.filter((r) => r.place_from === 1).length)}
-        {stat('beste', results.length ? Math.min(...results.map((r) => r.place_from)) : '–')}
+        {stat('deelnames', regular.length)}
+        {stat('zeges', regular.filter((r) => r.place_from === 1).length)}
+        {stat('beste', regular.length ? Math.min(...regular.map((r) => r.place_from)) : '–')}
         {stat('matchen', `${won}/${won + lost}`)}
         {stat('legs', `${legsFor}–${legsAgainst}`)}
         {stat('180’s', n180)}
@@ -726,9 +775,14 @@ export function PlayerPage() {
                     <Link to={`/avond/${r.event_id}`} className="font-medium text-zinc-950 hover:text-brand-700">
                       {formatDate(r.date)}
                     </Link>
+                    {r.masters && (
+                      <span className="ml-1.5">
+                        <MastersBadge />
+                      </span>
+                    )}
                   </td>
                   <td className="text-center text-zinc-600 tabular-nums">{formatPlace(r.place_from, r.place_to)}</td>
-                  <td className="text-center font-semibold tabular-nums">{r.points}</td>
+                  <td className="text-center font-semibold tabular-nums">{r.masters ? '–' : r.points}</td>
                   {averageByEvent.size > 0 && (
                     <td className="pr-3 text-right text-zinc-600 tabular-nums">{averageByEvent.has(r.event_id) ? formatDecimal(averageByEvent.get(r.event_id)) : ''}</td>
                   )}

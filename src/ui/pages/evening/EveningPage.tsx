@@ -1,13 +1,15 @@
 import { useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { eloSeedRanks } from '../../../engine';
+import { eloSeedRanks, mastersField } from '../../../engine';
 import { buildEventView, FORMAT_LABEL, PHASE_LABEL } from '../../../data/eventView';
+import { isMasters } from '../../../data/masters';
 import { useEventBundle, usePlayerDirectory, useRegistrations, useScorerPin, useSeasons } from '../../../data/queries';
 import { formatLongDate } from '../../../lib/time';
-import { PlacementsTable } from '../../components/darts';
+import { MastersBadge, PlacementsTable } from '../../components/darts';
 import { Badge, ErrorBox, Icon, Spinner, Tabs } from '../../components/ui';
 import { seasonSettings, seedRanksFrom, useElo, useNow, useSeasonRanking } from '../../hooks';
 import { CheckInPanel } from './CheckInPanel';
+import { MastersCheckIn } from './MastersCheckIn';
 import { BoardsPanel, BracketPanel, FinishPanel, PoolsPanel } from './LivePanels';
 import { MatchesPanel } from './MatchesPanel';
 import { StartPanel } from './StartPanel';
@@ -38,6 +40,14 @@ export function EveningPage() {
   );
   const view = useMemo(() => (bundle.data ? buildEventView(bundle.data, now) : null), [bundle.data, now]);
   const [tab, setTab] = useState<Tab | null>(null);
+  const masters = isMasters(bundle.data?.event);
+  // Masters: enkel het veld (top N van de aanwezigen volgens de ranking) start.
+  const startRegistrations = useMemo(() => {
+    if (!registrations.data || !masters) return registrations.data;
+    const present = new Set(registrations.data.filter((r) => r.present && !r.withdrawn_at).map((r) => r.player_id));
+    const field = new Set(mastersField(ranking, present, settings.masters.size).field);
+    return registrations.data.filter((r) => field.has(r.player_id));
+  }, [registrations.data, masters, ranking, settings.masters.size]);
 
   if (bundle.isLoading) return <Spinner />;
   if (bundle.error || !view) return <ErrorBox error={bundle.error ?? 'Speelavond niet gevonden.'} />;
@@ -77,6 +87,7 @@ export function EveningPage() {
         <div className="min-w-0">
           <h1 className="truncate text-lg leading-tight font-semibold tracking-tight text-zinc-950">{formatLongDate(event.event_date)}</h1>
           <div className="mt-1 flex flex-wrap items-center gap-x-2.5 gap-y-1 text-xs">
+            {masters && <MastersBadge />}
             <Badge tone={event.status === 'bezig' ? 'red' : event.status === 'afgelopen' ? 'dark' : 'blue'}>{PHASE_LABEL[view.phase]}</Badge>
             {!pooled && <Badge>{FORMAT_LABEL[view.format]}</Badge>}
             <Link to={`/avond/${event.id}`} className="inline-flex items-center gap-1 font-medium text-zinc-500 hover:text-zinc-900">
@@ -107,8 +118,16 @@ export function EveningPage() {
 
       <Tabs value={active} onChange={setTab} tabs={tabs} />
 
-      {active === 'checkin' && (registrations.data ? <CheckInPanel event={event} registrations={registrations.data} entryFee={settings.entryFee} /> : <Spinner />)}
-      {active === 'start' && (registrations.data ? <StartPanel event={event} registrations={registrations.data} settings={settings} seedSources={seedSources} /> : <Spinner />)}
+      {active === 'checkin' &&
+        (!registrations.data ? (
+          <Spinner />
+        ) : masters ? (
+          <MastersCheckIn event={event} registrations={registrations.data} ranking={ranking} size={settings.masters.size} />
+        ) : (
+          <CheckInPanel event={event} registrations={registrations.data} entryFee={settings.entryFee} />
+        ))}
+      {active === 'start' &&
+        (startRegistrations ? <StartPanel event={event} registrations={startRegistrations} settings={settings} seedSources={seedSources} masters={masters} /> : <Spinner />)}
       {active === 'borden' && <BoardsPanel view={view} name={name} onGoTo={setTab} />}
       {active === 'matchen' && <MatchesPanel view={view} name={name} />}
       {active === 'poules' && <PoolsPanel view={view} name={name} seedRanks={view.config?.seedRanks ? new Map(Object.entries(view.config.seedRanks)) : rankingRanks} />}
@@ -119,7 +138,7 @@ export function EveningPage() {
           <PlacementsTable
             placements={view.placements.placements}
             name={name}
-            points={new Map((bundle.data?.results ?? []).map((r) => [r.player_id, r.points]))}
+            points={masters ? undefined : new Map((bundle.data?.results ?? []).map((r) => [r.player_id, r.points]))}
           />
         ) : (
           <ErrorBox>Nog geen uitslag.</ErrorBox>

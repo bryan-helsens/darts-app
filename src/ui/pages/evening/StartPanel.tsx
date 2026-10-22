@@ -64,19 +64,22 @@ export function StartPanel({
   registrations,
   settings,
   seedSources,
+  masters,
 }: {
   event: EventRow;
   registrations: RegistrationRow[];
   settings: SeasonSettings;
   /** Seedingrangen per bron (1 = sterkste); "random" is leeg. */
   seedSources: Record<SeedingSource, ReadonlyMap<string, number>>;
+  /** Masters: standaard double elimination en seeding op de ranking. */
+  masters?: boolean;
 }) {
   const qc = useQueryClient();
   const now = useNow(60_000);
   const present = registrations.filter((r) => r.present && !r.withdrawn_at);
   const n = present.length;
   const options = useMemo(() => layoutOptions(n), [n]);
-  const [format, setFormat] = useState<TournamentFormat>('poules_ab');
+  const [format, setFormat] = useState<TournamentFormat>(masters ? 'double_elim' : 'poules_ab');
   const pooled = format === 'poules_ab';
   const [layoutId, setLayoutId] = useState<string | null>(null);
   const layout = options.find((o) => o.id === layoutId) ?? options[0];
@@ -86,7 +89,7 @@ export function StartPanel({
   const [legs, setLegs] = useState<LegsSettings>(settings.legs);
   const [holdFinal, setHoldFinal] = useState(settings.holdFinal);
   const [showLegs, setShowLegs] = useState(false);
-  const [source, setSource] = useState<SeedingSource>(settings.seeding);
+  const [source, setSource] = useState<SeedingSource>(masters ? 'ranking' : settings.seeding);
   const seedRanks = seedSources[source];
   const [confirm, setConfirm] = useState(false);
 

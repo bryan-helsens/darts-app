@@ -55,10 +55,10 @@ from jsonb_populate_recordset(null::public.player_contacts, coalesce((select j -
 on conflict (player_id) do nothing;
 
 insert into public.events (
-  id, season_id, event_date, status, format, boards, main_board, start_time, registration_closes,
+  id, season_id, event_date, status, format, kind, boards, main_board, start_time, registration_closes,
   registration_reopened, notes, settings, rng_seed, started_at, knockout, finalized_at, created_at
 )
-select id, season_id, event_date, status, coalesce(format, 'poules_ab'), boards, main_board, start_time, registration_closes,
+select id, season_id, event_date, status, coalesce(format, 'poules_ab'), coalesce(kind, 'regulier'), boards, main_board, start_time, registration_closes,
        coalesce(registration_reopened, false), notes, coalesce(settings, '{}'::jsonb), rng_seed, started_at, knockout, finalized_at,
        coalesce(created_at, now())
 from restore_events;

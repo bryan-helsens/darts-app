@@ -19,7 +19,7 @@ import type { MatchStatRow } from '../../data/rows';
 import { formatDecimal } from '../../lib/format';
 import { formatTime } from '../../lib/time';
 import { bracketLayout } from './bracketLayout';
-import { Badge, cx, Empty, type Tone } from './ui';
+import { Badge, cx, Empty, Icon, type Tone } from './ui';
 
 type NameFn = (id: string | null | undefined) => string;
 
@@ -442,5 +442,15 @@ export function AveragesTable({ averages, name, limit = 10 }: { averages: Readon
         </tbody>
       </table>
     </div>
+  );
+}
+
+/** Label voor de eindejaarsfinale. */
+export function MastersBadge() {
+  return (
+    <Badge tone="amber">
+      <Icon name="trophy" className="h-3 w-3" />
+      Masters
+    </Badge>
   );
 }

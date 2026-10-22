@@ -1,12 +1,24 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { DEFAULT_SEASON_SETTINGS, validatePointsTable, type BracketLegs, type PointsRule, type ScoringMode, type SeasonSettings, type SeedingSource } from '../../../engine';
+import {
+  DEFAULT_SEASON_SETTINGS,
+  MASTERS_SIZE_MAX,
+  MASTERS_SIZE_MIN,
+  validatePointsTable,
+  type BracketLegs,
+  type PointsRule,
+  type ScoringMode,
+  type SeasonSettings,
+  type SeedingSource,
+} from '../../../engine';
 import { createEvent, createSeason, deleteEvent, updateEvent, updateSeason } from '../../../data/api';
 import { useAuth } from '../../../data/auth';
 import { keys, useEvents, useSeasons } from '../../../data/queries';
-import type { EventRow, SeasonRow } from '../../../data/rows';
+import { isMasters } from '../../../data/masters';
+import type { EventKind, EventRow, SeasonRow } from '../../../data/rows';
 import { formatDate, formatLongDate, shortTime, thirdSaturday, todayInBrussels } from '../../../lib/time';
+import { MastersBadge } from '../../components/darts';
 import { Badge, Button, Card, ConfirmModal, Empty, ErrorBox, Field, Icon, InfoBox, Modal, PageTitle, SectionTitle, Select, Spinner, TextInput } from '../../components/ui';
 import { seasonSettings } from '../../hooks';
 import { SeasonExport } from './SeasonExport';
@@ -74,10 +86,11 @@ export function SeasonDetailPage() {
   const { data: seasons, isLoading } = useSeasons();
   const { data: events } = useEvents();
   const season = seasons?.find((s) => s.id === seasonId);
-  const [editingEvent, setEditingEvent] = useState<EventRow | 'new' | null>(null);
+  const [editingEvent, setEditingEvent] = useState<EventRow | EventKind | null>(null);
   const qc = useQueryClient();
 
   const own = (events ?? []).filter((e) => e.season_id === seasonId).sort((a, b) => a.event_date.localeCompare(b.event_date));
+  const canAddMasters = season ? seasonSettings(season).masters.enabled && !own.some(isMasters) : false;
   const addCalendar = useMutation({
     mutationFn: async () => {
       if (!season) return;
@@ -102,11 +115,16 @@ export function SeasonDetailPage() {
       <SectionTitle
         actions={
           isAdmin && (
-            <div className="flex gap-2">
+            <div className="flex flex-wrap justify-end gap-2">
               <Button size="sm" variant="secondary" onClick={() => addCalendar.mutate()} disabled={addCalendar.isPending}>
                 Alle derde zaterdagen
               </Button>
-              <Button size="sm" onClick={() => setEditingEvent('new')}>
+              {canAddMasters && (
+                <Button size="sm" variant="secondary" onClick={() => setEditingEvent('masters')}>
+                  + Masters
+                </Button>
+              )}
+              <Button size="sm" onClick={() => setEditingEvent('regulier')}>
                 + Avond
               </Button>
             </div>
@@ -123,7 +141,10 @@ export function SeasonDetailPage() {
           {own.map((e) => (
             <div key={e.id} className="flex flex-wrap items-center justify-between gap-2 px-3 py-2">
               <div className="min-w-0">
-                <div className="text-[13px] font-medium text-zinc-950">{formatLongDate(e.event_date)}</div>
+                <div className="flex items-center gap-1.5 text-[13px] font-medium text-zinc-950">
+                  {formatLongDate(e.event_date)}
+                  {isMasters(e) && <MastersBadge />}
+                </div>
                 <div className="text-xs text-zinc-500">
                   {shortTime(e.start_time).replace(':', 'u')} · {e.boards} borden {e.notes && `· ${e.notes}`}
                 </div>
@@ -146,17 +167,27 @@ export function SeasonDetailPage() {
 
       <SeasonExport season={season} />
       {isAdmin && <SeasonSettingsForm season={season} />}
-      {editingEvent && <EventForm season={season} event={editingEvent === 'new' ? null : editingEvent} onClose={() => setEditingEvent(null)} />}
+      {editingEvent && (
+        <EventForm
+          season={season}
+          event={typeof editingEvent === 'string' ? null : editingEvent}
+          kind={typeof editingEvent === 'string' ? editingEvent : (editingEvent.kind ?? 'regulier')}
+          onClose={() => setEditingEvent(null)}
+        />
+      )}
     </div>
   );
 }
 
-function EventForm({ season, event, onClose }: { season: SeasonRow; event: EventRow | null; onClose: () => void }) {
+function EventForm({ season, event, kind, onClose }: { season: SeasonRow; event: EventRow | null; kind: EventKind; onClose: () => void }) {
   const settings = seasonSettings(season);
   const qc = useQueryClient();
   const today = todayInBrussels();
   const year = Number(season.starts_on.slice(0, 4));
-  const suggestion = Array.from({ length: 12 }, (_, i) => thirdSaturday(year, i + 1)).find((d) => d >= today) ?? season.starts_on;
+  const masters = kind === 'masters';
+  // Masters: standaard de laatste zaterdag van het seizoen die nog komt (eind december).
+  const saturdays = Array.from({ length: 12 }, (_, i) => thirdSaturday(year, i + 1));
+  const suggestion = (masters ? [...saturdays].reverse() : saturdays).find((d) => d >= today && d <= season.ends_on) ?? season.starts_on;
   const [date, setDate] = useState(event?.event_date ?? suggestion);
   const [boards, setBoards] = useState(event?.boards ?? 6);
   const [start, setStart] = useState(shortTime(event?.start_time ?? settings.startTime));
@@ -168,7 +199,7 @@ function EventForm({ season, event, onClose }: { season: SeasonRow; event: Event
     mutationFn: async () => {
       const data = { event_date: date, boards, start_time: start, registration_closes: closes, notes: notes.trim() || null };
       if (event) await updateEvent(event.id, data);
-      else await createEvent({ season_id: season.id, ...data });
+      else await createEvent({ season_id: season.id, ...data, kind });
     },
     onSuccess: async () => {
       await qc.invalidateQueries({ queryKey: keys.events });
@@ -184,8 +215,14 @@ function EventForm({ season, event, onClose }: { season: SeasonRow; event: Event
   });
 
   return (
-    <Modal open onClose={onClose} title={event ? 'Speelavond wijzigen' : 'Nieuwe speelavond'}>
+    <Modal open onClose={onClose} title={masters ? (event ? 'Masters wijzigen' : 'Nieuwe Masters') : event ? 'Speelavond wijzigen' : 'Nieuwe speelavond'}>
       <div className="space-y-3">
+        {masters && !event && (
+          <InfoBox>
+            De Masters is de eindejaarsfinale voor de top {settings.masters.size} van de ranking. Ze telt niet mee voor de ranking of de klassementen, wel voor Elo. Inschrijven
+            gebeurt niet online: bij de check-in zet je de geplaatste spelers aanwezig.
+          </InfoBox>
+        )}
         <Field label="Datum">
           <TextInput type="date" value={date} min={season.starts_on} max={season.ends_on} onChange={(e) => setDate(e.target.value)} />
         </Field>
@@ -196,12 +233,12 @@ function EventForm({ season, event, onClose }: { season: SeasonRow; event: Event
           <Field label="Start">
             <TextInput type="time" value={start} onChange={(e) => setStart(e.target.value)} />
           </Field>
-          <Field label="Inschrijving tot">
+          <Field label={masters ? 'Check-in tot' : 'Inschrijving tot'}>
             <TextInput type="time" value={closes} onChange={(e) => setCloses(e.target.value)} />
           </Field>
         </div>
         <Field label="Notities (publiek zichtbaar)">
-          <TextInput value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="bv. Kerstspecial" />
+          <TextInput value={notes} onChange={(e) => setNotes(e.target.value)} placeholder={masters ? 'bv. Masters 2026' : 'bv. Kerstspecial'} />
         </Field>
         {save.error && <ErrorBox error={save.error} />}
         <Button block onClick={() => save.mutate()} disabled={save.isPending || !date}>
@@ -253,6 +290,10 @@ function SeasonSettingsForm({ season }: { season: SeasonRow }) {
   const [name, setName] = useState(season.name);
   const [saved, setSaved] = useState(false);
   const tableError = validatePointsTable(s.points.table);
+  const mastersError =
+    s.masters.enabled && !(Number.isInteger(s.masters.size) && s.masters.size >= MASTERS_SIZE_MIN && s.masters.size <= MASTERS_SIZE_MAX)
+      ? `Tussen ${MASTERS_SIZE_MIN} en ${MASTERS_SIZE_MAX} spelers`
+      : null;
   const save = useMutation({
     mutationFn: () => updateSeason(season.id, { name, settings: s as unknown as Record<string, unknown> }),
     onSuccess: async () => {
@@ -440,6 +481,35 @@ function SeasonSettingsForm({ season }: { season: SeasonRow }) {
         </div>
 
         <div>
+          <h3 className="mb-1.5 text-[13px] font-semibold text-zinc-950">Masters (eindejaarsfinale)</h3>
+          <label className="mb-2 flex items-center gap-2 text-[13px]">
+            <input
+              type="checkbox"
+              className="h-4 w-4 accent-brand-600"
+              checked={s.masters.enabled}
+              onChange={(e) => setS((x) => ({ ...x, masters: { ...x.masters, enabled: e.target.checked } }))}
+            />
+            Een Masters voor de top van de ranking
+          </label>
+          {s.masters.enabled && (
+            <div className="max-w-40">
+              <Field label="Aantal spelers" error={mastersError}>
+                <NumberInput
+                  value={s.masters.size}
+                  min={MASTERS_SIZE_MIN}
+                  max={MASTERS_SIZE_MAX}
+                  onChange={(v) => setS((x) => ({ ...x, masters: { ...x.masters, size: v } }))}
+                />
+              </Field>
+            </div>
+          )}
+          <p className="mt-1.5 text-2xs text-zinc-500">
+            Telt niet mee voor de ranking of de klassementen, wel voor Elo. Wie geplaatst is maar er niet is, wordt vervangen door de volgende in de ranking. Na het opslaan
+            verschijnt bij de speelavonden de knop “+ Masters”.
+          </p>
+        </div>
+
+        <div>
           <h3 className="mb-1.5 text-[13px] font-semibold text-zinc-950">Scores invoeren</h3>
           <div className="max-w-xs">
             <Field label="Standaard bij de schrijver" hint="De schrijver kan per match altijd zelf kiezen.">
@@ -465,7 +535,7 @@ function SeasonSettingsForm({ season }: { season: SeasonRow }) {
 
         {save.error && <ErrorBox error={save.error} />}
         {saved && <InfoBox>Opgeslagen.</InfoBox>}
-        <Button onClick={() => save.mutate()} disabled={save.isPending || Boolean(tableError)}>
+        <Button onClick={() => save.mutate()} disabled={save.isPending || Boolean(tableError) || Boolean(mastersError)}>
           Instellingen opslaan
         </Button>
         <p className="text-xs text-zinc-500">

@@ -75,4 +75,12 @@ describe('ics', () => {
     const orphan = { id: 'c', season_id: 'x', event_date: '2027-03-20', start_time: '19:00:00', registration_closes: '18:30:00', notes: null };
     expect(toCalendarEvents([orphan], [], '')[0].end).toBe('23:15');
   });
+
+  it('de Masters heeft een eigen titel, zonder inschrijving of inleg', () => {
+    const masters = { id: 'm', season_id: 's', event_date: '2027-12-18', start_time: '19:00:00', registration_closes: '18:30:00', notes: null, kind: 'masters' as const };
+    const [e] = toCalendarEvents([masters], [{ id: 's', settings: { masters: { enabled: true, size: 8 } } }], '');
+    expect(e.title).toBe('Sanapolis Darts – Masters');
+    expect(e.description).toContain('top 8');
+    expect(e.description).not.toContain('Inleg');
+  });
 });

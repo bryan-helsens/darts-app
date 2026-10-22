@@ -8,7 +8,7 @@ export function registrationClosesAt(event: Pick<EventRow, 'event_date' | 'regis
   return brusselsToUtc(event.event_date, shortTime(event.registration_closes));
 }
 
-/** Online inschrijven kan zolang de avond gepland is en het sluitingsuur niet voorbij is. */
-export function onlineRegistrationOpen(event: Pick<EventRow, 'status' | 'event_date' | 'registration_closes'>, now: number): boolean {
-  return event.status === 'gepland' && now < registrationClosesAt(event);
+/** Online inschrijven kan zolang de avond gepland is en het sluitingsuur niet voorbij is (niet voor een Masters). */
+export function onlineRegistrationOpen(event: Pick<EventRow, 'status' | 'event_date' | 'registration_closes' | 'kind'>, now: number): boolean {
+  return event.kind !== 'masters' && event.status === 'gepland' && now < registrationClosesAt(event);
 }

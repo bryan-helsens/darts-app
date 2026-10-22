@@ -12,6 +12,7 @@ import {
 } from '../../../engine';
 import { addBarrages, addLogEntry, finalizeEvent, generateKnockout, resetTournament, undoKnockout, updateEvent, withdrawPlayer } from '../../../data/api';
 import { averagesFor, SCHEMA_STAGES, type EventView } from '../../../data/eventView';
+import { isMasters } from '../../../data/masters';
 import { matchToInsert } from '../../../data/mappers';
 import { usePendingScores } from '../../../data/outbox';
 import { keys } from '../../../data/queries';
@@ -407,7 +408,14 @@ export function FinishPanel({ view, name, settings }: { view: EventView; name: N
   const [reset, setReset] = useState(false);
   const [resetText, setResetText] = useState('');
   const placements = view.placements;
-  const points = placements ? eventPoints(placements.placements, settings.points) : [];
+  // De Masters telt niet voor de ranking: enkel de plaatsen, zonder punten.
+  const masters = isMasters(view.event);
+  const points = !placements
+    ? []
+    : masters
+      ? placements.placements.map((p) => ({ playerId: p.playerId, placeFrom: p.from, placeTo: p.to, placementPoints: 0, participationPoints: 0, total: 0 }))
+      : eventPoints(placements.placements, settings.points);
+  const pointsMap = masters ? undefined : new Map(points.map((p) => [p.playerId, p.total]));
   const finalize = useMutation({
     mutationFn: () =>
       finalizeEvent(
@@ -442,18 +450,23 @@ export function FinishPanel({ view, name, settings }: { view: EventView; name: N
         <>
           {view.event.status === 'afgelopen' ? (
             <InfoBox>
-              Deze avond is afgesloten op {view.event.finalized_at ? formatTime(Date.parse(view.event.finalized_at)) : ''}. Na een correctie kan je de punten opnieuw berekenen.
+              Deze {masters ? 'Masters' : 'avond'} is afgesloten op {view.event.finalized_at ? formatTime(Date.parse(view.event.finalized_at)) : ''}.{' '}
+              {masters ? 'Na een correctie kan je de eindplaatsen opnieuw opslaan.' : 'Na een correctie kan je de punten opnieuw berekenen.'}
             </InfoBox>
           ) : (
-            <InfoBox>Alle matchen zijn gespeeld. Controleer de eindplaatsen en sluit de avond af om de ranking bij te werken.</InfoBox>
+            <InfoBox>
+              {masters
+                ? 'Alle matchen zijn gespeeld. Controleer de eindplaatsen en sluit de Masters af. Ze telt niet mee voor de seizoensranking.'
+                : 'Alle matchen zijn gespeeld. Controleer de eindplaatsen en sluit de avond af om de ranking bij te werken.'}
+            </InfoBox>
           )}
-          <PlacementsTable placements={placements.placements} name={name} points={new Map(points.map((p) => [p.playerId, p.total]))} />
+          <PlacementsTable placements={placements.placements} name={name} points={pointsMap} />
           <Button size="lg" block onClick={() => setConfirm(true)}>
-            {view.event.status === 'afgelopen' ? 'Punten opnieuw berekenen' : 'Avond afsluiten'}
+            {view.event.status === 'afgelopen' ? (masters ? 'Eindplaatsen opnieuw opslaan' : 'Punten opnieuw berekenen') : masters ? 'Masters afsluiten' : 'Avond afsluiten'}
           </Button>
           {view.event.status === 'afgelopen' && (
             <div className="flex justify-center">
-              <ShareResultButton view={view} points={new Map(points.map((p) => [p.playerId, p.total]))} name={name} size="md" />
+              <ShareResultButton view={view} points={pointsMap ?? new Map()} name={name} size="md" />
             </div>
           )}
           {finalize.error && <ErrorBox error={finalize.error} />}
@@ -470,8 +483,17 @@ export function FinishPanel({ view, name, settings }: { view: EventView; name: N
         </Button>
       </details>
 
-      <ConfirmModal open={confirm} title="Avond afsluiten?" confirmLabel="Afsluiten" busy={finalize.isPending} onClose={() => setConfirm(false)} onConfirm={() => finalize.mutate()}>
-        De eindplaatsen en punten worden opgeslagen en de seizoensranking wordt bijgewerkt.
+      <ConfirmModal
+        open={confirm}
+        title={masters ? 'Masters afsluiten?' : 'Avond afsluiten?'}
+        confirmLabel="Afsluiten"
+        busy={finalize.isPending}
+        onClose={() => setConfirm(false)}
+        onConfirm={() => finalize.mutate()}
+      >
+        {masters
+          ? 'De eindplaatsen worden opgeslagen. De Masters telt niet mee voor de seizoensranking of de klassementen.'
+          : 'De eindplaatsen en punten worden opgeslagen en de seizoensranking wordt bijgewerkt.'}
       </ConfirmModal>
       <ConfirmModal
         open={reset}

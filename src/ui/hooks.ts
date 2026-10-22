@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { computeElo, placementPoints, seasonRanking, withDefaults, type EloMatch, type EloResult, type RankingRow, type SeasonSettings } from '../engine';
 import { matchFromRow, toMs } from '../data/mappers';
+import { withoutMasters } from '../data/masters';
 import { useEloMatches, useEvents, useSeasonData, useSeasons } from '../data/queries';
 import type { EventRow, SeasonRow } from '../data/rows';
 import { todayInBrussels } from '../lib/time';
@@ -43,8 +44,14 @@ export function useUpcoming(): { next?: EventRow; live?: EventRow; events: Event
   }, [data, isLoading]);
 }
 
+/**
+ * Seizoensranking. `data` zijn de seizoensgegevens zonder de Masters: die telt
+ * niet mee voor de ranking, de klassementen en de exports (wel voor Elo).
+ */
 export function useSeasonRanking(season: SeasonRow | undefined): { rows: RankingRow[]; isLoading: boolean; error: unknown; data: ReturnType<typeof useSeasonData>['data'] } {
-  const { data, isLoading, error } = useSeasonData(season?.id);
+  const query = useSeasonData(season?.id);
+  const { isLoading, error } = query;
+  const data = useMemo(() => (query.data ? withoutMasters(query.data) : undefined), [query.data]);
   const rows = useMemo(() => {
     if (!data || !season) return [];
     const settings = seasonSettings(season);

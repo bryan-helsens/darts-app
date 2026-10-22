@@ -57,6 +57,7 @@ e2e/          Playwright
 - `leaderboards`: extra klassementen (180's, hoogste uitgooi, deelnames, beste nieuwkomer).
 - `progress`: verloop voor de spelersgrafieken (`rankingProgress` = plaats na elke avond via `seasonRanking` per prefix; `eloProgress` = Elo na elke avond).
 - `checkout` / `x01` / `x01Sim`: 501 double out per beurt. `checkoutSuggestion` zoekt alle routes (minste darts, dan voorkeur D16/D20/D8 en T20/T19); `applyVisit` herkent busts zelf en vraagt het aantal darts bij een uitgooi als dat niet vastligt (`needs-darts`); een bust = 0 punten en 3 darts; gemiddelde = punten / darts × 3 (`threeDartAverage`). `poolAverages` geeft enkel een gemiddelde als *alle* poulematchen van die speler per beurt gescoord werden. De database volgt dezelfde regels (`private.leg_totals`, `private.checkout_min_darts`; pariteit getest).
+- `masters`: `mastersField(ranking, aanwezig, size)` = de top N van de aanwezigen volgens de ranking (+ geplaatsten die afwezig zijn, vervangers, reserves). `SeasonSettings.masters = { enabled, size }` (standaard uit, 16).
 - `scorer`: schrijver-suggestie per bord, afgeleid (niet opgeslagen): verliezer van de vorige match op dat bord, anders wie het langst vrij is; nooit wie speelt of de volgende match op dat bord heeft.
 - Alle randomness via `createRng(seed)` / `lotValue(seed, …)`; de seed per avond is `events.rng_seed`.
 
@@ -71,6 +72,7 @@ e2e/          Playwright
 - Matchcodes (`P1-R2-1`, `A-R1-3`, `P2-BAR-1`, `W-R2-1`, `L-R3-2`, `GF-R1-1`, `M-R1-4`, `P-R2-1`) zijn de engine-id's; `src/data/mappers.ts` zet rijen om.
 - Formats: `events.format` (CHECK) wordt gezet door `start_tournament` uit `p_config.format`; per format enkel de juiste stages (`matches_stage_check`). `add_barrages`/`generate_knockout`/`undo_knockout` enkel bij `poules_ab` (`private.require_format`); `reset_tournament` zet `poules_ab` terug.
 - Online inschrijven: `preregister(p_event_id, p_player_id | p_name, p_email, p_phone)` (anon, rem 40 pogingen per avond per 10 min via `registration_attempts`). Nieuwe namen worden spelers met `pending = true`: onzichtbaar voor anon (RLS) tot ze bij de check-in aanwezig gezet worden (trigger `registrations_confirm_player`).
+- Masters: `events.kind` (`regulier` | `masters`, CHECK) met een unieke index per seizoen voor `masters`; `preregister` weigert een Masters (`closed`). `finalize_event` is ongewijzigd: de app stuurt de plaatsen met 0 punten.
 - Demo-data: `load_demo_data(jsonb)` / `remove_demo_data()` / `has_demo_data()` (admin). Alle demo-id's beginnen met `de000000-`; enkel die rijen worden geladen of verwijderd. De dataset bouwt `src/demo/demoData.ts` in de browser (zelfde bouwer als de seed).
 
 ### Data en offline (src/data)
@@ -81,6 +83,7 @@ e2e/          Playwright
 - Elo: `fetchEloMatches` haalt alle gespeelde matchen op (via `fetchAll`); `useElo()` (src/ui/hooks.ts) rekent ze om. Bij de start bewaart `TournamentConfig` de gekozen seedingbron en een momentopname `seedRanks` (ook gebruikt voor de KO). "Nu" = max(klok, laatste servertijdstip).
 - `outbox`: scores, legs (501) en check-in gaan via IndexedDB en worden met retry gesynchroniseerd. Een nieuwere legs-momentopname van dezelfde match en hetzelfde toestel vervangt een oudere. `SyncBadge` toont de status. Na een sync werkt `App.tsx` de cache meteen bij.
 - `x01Sessions`: de lopende 501-match per toestel in IndexedDB (`sanapolis-darts-x01`); sessie-id = toestel-id. `eventView` geeft `liveLegs` (legstand van lopende matchen), `dartsTotals`, `averages` en `averagesFor(view, filter)`; het gemiddelde telt als poule-tiebreak enkel als `TournamentConfig.scoring.averageTiebreak` bij de start zo vastgelegd werd.
+- `masters`: `isMasters(event)` en `withoutMasters(seasonData)`. `useSeasonRanking` geeft de seizoensgegevens **zonder** de Masters terug: ranking, klassementen, tv-ranking, seeding en seizoensexports negeren haar. Elo (`fetchEloMatches`) rekent wel met alle matchen. Check-in van een Masters: `MastersCheckIn`; `EveningPage` geeft `StartPanel` enkel het veld (`masters` = standaard double elimination en seeding op de ranking).
 - Query-cache wordt bewaard in localStorage (offline tonen); `staleTime: 0`, zodat online altijd ververst wordt.
 - Realtime: `useEventRealtime` + polling elke 30 s als vangnet.
 
@@ -106,4 +109,4 @@ e2e/          Playwright
 ## Fasering
 - Fase 1 (klaar): alles hierboven.
 - Fase 2 (klaar, PR #7–#10): online voorinschrijving (RPC met rem), TV-modus `/tv`, schrijver-suggestie, Elo (seedingbron), extra klassementen, deelbare uitslagafbeelding, double elimination en knock-out met plate, logboek, CSV/JSON-export.
-- Fase 3: 3a (PWA, .ics, grafieken) klaar (PR #11); 3b 501-scorer per beurt klaar op de branch; 3c Masters. Plan: zie `.claude/memory/PROJECT_MEMORY.md`.
+- Fase 3: 3a (PWA, .ics, grafieken) klaar (PR #11); 3b 501-scorer per beurt klaar (PR #12); 3c Masters klaar op de branch. Plan: zie `.claude/memory/PROJECT_MEMORY.md`.

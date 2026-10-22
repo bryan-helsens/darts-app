@@ -12,5 +12,7 @@ describe('online inschrijven', () => {
     expect(onlineRegistrationOpen(event, Date.parse('2026-11-21T17:29:00Z'))).toBe(true);
     expect(onlineRegistrationOpen(event, Date.parse('2026-11-21T17:30:00Z'))).toBe(false);
     expect(onlineRegistrationOpen({ ...event, status: 'bezig' }, Date.parse('2026-11-01T12:00:00Z'))).toBe(false);
+    // De Masters: enkel de top van de ranking, geen online inschrijving.
+    expect(onlineRegistrationOpen({ ...event, kind: 'masters' }, Date.parse('2026-11-21T12:00:00Z'))).toBe(false);
   });
 });
