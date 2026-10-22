@@ -115,4 +115,5 @@ e2e/          Playwright
 ## Fasering
 - Fase 1 (klaar): alles hierboven.
 - Fase 2 (klaar, PR #7–#10): online voorinschrijving (RPC met rem), TV-modus `/tv`, schrijver-suggestie, Elo (seedingbron), extra klassementen, deelbare uitslagafbeelding, double elimination en knock-out met plate, logboek, CSV/JSON-export.
-- Fase 3 (klaar, PR #11–#13): PWA, .ics en grafieken; 501-scorer per beurt met gemiddelden; Masters. Status en vervolg: zie `.claude/memory/PROJECT_MEMORY.md`.
+- Fase 3 (klaar, PR #11–#13): PWA, .ics en grafieken; 501-scorer per beurt met gemiddelden; Masters.
+- Fase 4 (klaar, PR #15): onderlinge duels, Masters-grens, 501-statistieken per seizoen, nachtelijke versleutelde back-up, pushmeldingen. Status en vervolg: zie `.claude/memory/PROJECT_MEMORY.md`.
